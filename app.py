@@ -55,7 +55,7 @@ def confirm_delete_dialog(asset_id, ticker):
     col_yes, col_no = st.columns(2)
     with col_yes:
         if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
-            db.delete_asset(asset_id)
+            db.delete_asset(asset_id, st.session_state.user_id)
             st.session_state.refresh_id += 1
             st.session_state.viewing_history = None
             st.session_state.table_key += 1
@@ -74,9 +74,9 @@ def confirm_delete_operation_dialog(op_data, asset_id):
     col_yes, col_no = st.columns(2)
     with col_yes:
         if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
-            db.delete_asset_operation(op_data['id'], asset_id)
+            db.delete_asset_operation(op_data['id'], asset_id, st.session_state.user_id)
             st.session_state.refresh_id += 1
-            st.session_state.viewing_history = db.get_asset_by_id(asset_id) # Atualiza dados do ativo no estado
+            st.session_state.viewing_history = db.get_asset_by_id(asset_id, st.session_state.user_id) # Atualiza dados do ativo no estado
             st.session_state.show_confirm_delete_op = False
             st.success("Operação excluída!")
             st.rerun()
@@ -478,6 +478,7 @@ def show_asset_details_screen(asset_data):
         else:
             db.update_asset(
                 asset_id, 
+                st.session_state.user_id,
                 ticker, 
                 new_asset_type, 
                 asset_data.get('quantity', 0.0), 
@@ -681,6 +682,45 @@ def dialog_user_profile():
     if st.button("Fechar", use_container_width=True):
         st.rerun()
 
+@st.dialog("Importar Proventos")
+def dialog_importar_proventos():
+    st.markdown("""
+    A funcionalidade de importar dados de Proventos é bem simples. 
+    Gere um arquivo com extensão **CSV** com o seguinte layout:
+
+    1. **Ano** (4 caracteres no formato AAAA)
+    2. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
+    3. **Janeiro** a **Dezembro** (valor recebido por ativo em cada mês)
+
+    **Regras Importantes:**
+    - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
+    - Não use símbolos de moeda (R$, $).
+    - O separador de colunas deve ser `,` (vírgula).
+
+    **Exemplo de registro:**
+    `2025,ITSA4,,,132.45,,,,,,,54.01`
+    *(Neste exemplo, houve recebimento de R$ 132,45 em Abril e R$ 54,01 em Dezembro)*
+    """)
+    
+    arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed")
+    
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
+            with st.spinner("Aguarde a importação dos dados ser finalizada..."):
+                success, msg = db.import_proventos_csv(arquivo_upload, st.session_state.user_id)
+            if success:
+                st.success(msg)
+                st.session_state.refresh_id += 1
+                st.session_state.navigation_tab = "Proventos Recebidos"
+                st.rerun()
+            else:
+                st.error(msg)
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
 @st.dialog("Altere sua senha")
 def dialog_change_password():
     st.markdown("**Defina sua nova credencial de acesso.**")
@@ -843,18 +883,11 @@ with col_logout:
 st.markdown('<div style="margin-bottom: 2rem;"></div>', unsafe_allow_html=True)
 
 # Navegação Principal (Tabs/Seções)
-current_view = st.sidebar.radio("Navegação", ["Visão Geral", "Proventos Recebidos", "Opções"])
+current_view = st.sidebar.radio("Navegação", ["Visão Geral", "Proventos Recebidos", "Opções"], key="navigation_tab")
 
 st.sidebar.markdown("---")
-if st.sidebar.button("Importar Proventos.csv", use_container_width=True):
-    csv_path = r"C:\Users\Julio Nietto\Downloads\Proventos.csv"
-    success, msg = db.import_proventos_csv(csv_path, st.session_state.user_id)
-    if success:
-        st.sidebar.success(msg)
-        st.session_state.refresh_id += 1
-        st.rerun()
-    else:
-        st.sidebar.error(msg)
+if st.sidebar.button("Importar Proventos", use_container_width=True):
+    dialog_importar_proventos()
 
 if st.sidebar.button("Importar Opções.tsv", use_container_width=True):
     tsv_path = r"C:\Users\Julio Nietto\Downloads\Opcoes.tsv"

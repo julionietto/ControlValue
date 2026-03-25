@@ -350,11 +350,9 @@ def import_from_csv(file_path, user_id):
     except Exception as e:
         return False, f"Erro ao importar: {str(e)}"
 
-def import_proventos_csv(file_path, user_id):
+def import_proventos_csv(file_content, user_id):
     import csv
-    import os
-    if not os.path.exists(file_path):
-        return False, "Arquivo não encontrado."
+    import io
     
     meses_map = {
         'Jan': 'Janeiro', 'Feb': 'Fevereiro', 'Mar': 'Março', 'Apr': 'Abril',
@@ -363,45 +361,69 @@ def import_proventos_csv(file_path, user_id):
     }
     
     try:
-        with open(file_path, mode='r', encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter=',')
-            try:
-                header = next(reader)
-                meses_colunas = [col.strip() for col in header[2:]]
-            except StopIteration:
-                return False, "Arquivo vazio."
+        if isinstance(file_content, str):
+            import os
+            if not os.path.exists(file_content):
+                return False, "Arquivo não encontrado."
+            f = open(file_content, mode='r', encoding='utf-8')
+        else:
+            # Assume it's a file-like object (BytesIO or StringIO from st.file_uploader)
+            if hasattr(file_content, 'getvalue'):
+                content = file_content.getvalue()
+                if isinstance(content, bytes):
+                    content = content.decode('utf-8')
+                f = io.StringIO(content)
+            else:
+                f = file_content
+
+        reader = csv.reader(f, delimiter=',')
+        try:
+            header = next(reader)
+            meses_colunas = [col.strip() for col in header[2:]]
+        except StopIteration:
+            return False, "Arquivo vazio."
             
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM proventos WHERE user_id = ?", (user_id,))
-                
-                for row in reader:
-                    if not row or len(row) < 3:
-                        continue
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM proventos WHERE user_id = ?", (user_id,))
+            
+            for row in reader:
+                if not row or len(row) < 3:
+                    continue
+                    
+                try:
+                    ano = int(row[0].strip())
+                    ticker = row[1].strip().upper()
+                    
+                    # Lógica automática de .SA para ativos brasileiros (4 letras + 1 ou 2 números)
+                    if "." not in ticker and len(ticker) >= 4:
+                        ticker += ".SA"
                         
-                    try:
-                        ano = int(row[0].strip())
-                        ticker = row[1].strip().upper()
-                        
-                        for idx, val_str in enumerate(row[2:]):
-                            val_str = val_str.strip()
-                            if not val_str:
-                                continue
-                                
-                            if idx < len(meses_colunas):
-                                mes_original = meses_colunas[idx]
-                                mes_pt = meses_map.get(mes_original, mes_original)
-                                val_clean = val_str.replace(',', '')
-                                valor = float(val_clean)
-                                
-                                if valor > 0:
-                                    cursor.execute(
-                                        "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (?, ?, ?, ?, ?)",
-                                        (ano, mes_pt, ticker, valor, user_id)
-                                    )
-                    except (ValueError, IndexError):
-                        continue
-                conn.commit()
+                    for idx, val_str in enumerate(row[2:]):
+                        val_str = val_str.strip()
+                        if not val_str:
+                            continue
+                            
+                        if idx < len(meses_colunas):
+                            mes_original = meses_colunas[idx]
+                            mes_pt = meses_map.get(mes_original, mes_original)
+                            
+                            # Limpeza robusta de valores (remove cifrão, troca vírgula decimal por ponto)
+                            val_clean = val_str.replace('R$', '').replace('$', '').replace(',', '.').strip()
+                            valor = float(val_clean)
+                            
+                            if valor > 0:
+                                cursor.execute(
+                                    "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (?, ?, ?, ?, ?)",
+                                    (ano, mes_pt, ticker, valor, user_id)
+                                )
+                except (ValueError, IndexError):
+                    continue
+            conn.commit()
+        
+        if isinstance(file_content, str) and 'f' in locals():
+            f.close()
+            
         return True, "Importação de Proventos concluída com sucesso."
     except Exception as e:
         return False, f"Erro ao importar Proventos: {str(e)}"
