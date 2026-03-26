@@ -9,6 +9,17 @@ def hash_password(password):
     """Gera um hash SHA-256 para a senha."""
     return hashlib.sha256(password.encode()).hexdigest()
 
+def infer_asset_type(ticker):
+    ticker = ticker.upper()
+    if ticker.endswith('.SA'):
+        if '11.SA' in ticker:
+            return 'Fiis'
+        return 'Ações'
+    elif '-' in ticker or ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+        return 'Cripto'
+    else:
+        return 'Reits'
+
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -427,6 +438,84 @@ def import_proventos_csv(file_content, user_id):
         return True, "Importação de Proventos concluída com sucesso."
     except Exception as e:
         return False, f"Erro ao importar Proventos: {str(e)}"
+
+def import_assets_csv(file_content, user_id):
+    import csv
+    import io
+    from datetime import datetime
+    try:
+        if isinstance(file_content, str):
+            import os
+            if not os.path.exists(file_content):
+                return False, "Arquivo não encontrado."
+            f = open(file_content, mode='r', encoding='utf-8')
+        else:
+            if hasattr(file_content, 'getvalue'):
+                content = file_content.getvalue()
+                if isinstance(content, bytes):
+                    content = content.decode('utf-8')
+                f = io.StringIO(content)
+            else:
+                f = file_content
+
+        reader = csv.reader(f, delimiter=',')
+        try:
+            next(reader) # pular cabeçalho
+        except StopIteration:
+            return False, "Arquivo vazio."
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            for row in reader:
+                if not row or len(row) < 4:
+                    continue
+                
+                ticker = row[0].strip().upper()
+                if "." not in ticker and len(ticker) >= 4:
+                    ticker += ".SA"
+                
+                date_str = row[1].strip()
+                try:
+                    dt = datetime.strptime(date_str, '%d/%m/%Y')
+                    db_date = dt.strftime('%Y-%m-%d')
+                except ValueError:
+                    continue 
+                
+                try:
+                    quantity = float(row[2].strip().replace(',', '.'))
+                    unit_price = float(row[3].strip().replace(',', '.'))
+                except ValueError:
+                    continue
+                
+                asset_type = infer_asset_type(ticker)
+                
+                # Verifica se o ativo existe
+                cursor.execute("SELECT id FROM assets WHERE ticker = ? AND user_id = ?", (ticker, user_id))
+                res = cursor.fetchone()
+                if not res:
+                    cursor.execute(
+                        "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, ?, 0, 0, ?)",
+                        (ticker, asset_type, user_id)
+                    )
+                    asset_id = cursor.lastrowid
+                else:
+                    asset_id = res[0]
+                
+                cursor.execute(
+                    "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                    (asset_id, db_date, quantity, unit_price)
+                )
+                
+                recalculate_asset_balance(asset_id, conn)
+            
+            conn.commit()
+            
+        if isinstance(file_content, str) and 'f' in locals():
+            f.close()
+            
+        return True, "Importação de Ativos concluída com sucesso."
+    except Exception as e:
+        return False, f"Erro ao importar Ativos: {str(e)}"
 
 def get_total_proventos_by_ticker(ticker, user_id):
     ticker = ticker.strip().upper()

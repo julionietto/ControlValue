@@ -721,6 +721,47 @@ def dialog_importar_proventos():
         if st.button("Cancelar", use_container_width=True):
             st.rerun()
 
+@st.dialog("Importar Ativos")
+def dialog_importar_ativos():
+    st.markdown("""
+    A funcionalidade de importar dados de Ativos é bem simples. 
+    Gere um arquivo com extensão **CSV** com o seguinte layout:
+
+    1. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
+    2. **DtOperação** (formato dd/MM/aaaa)
+    3. **Quantidade** (quantidade comprada ou vendida)
+    4. **Valor** (valor pago pelo ativo no momento da operação)
+
+    **Regras Importantes:**
+    - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
+    - Não use símbolos de moeda (R$, $).
+    - O separador de colunas deve ser `,` (vírgula).
+
+    **Exemplo de registro:**
+    `ITSA4,10/01/2026,100,12.01`
+    *(Neste exemplo, você comprou 100 ações de ITSA4 a R$ 12,01 cada)*
+    """)
+    
+    arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed")
+    
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
+            with st.spinner("Aguarde a importação dos dados ser finalizada..."):
+                success, msg = db.import_assets_csv(arquivo_upload, st.session_state.user_id)
+            if success:
+                st.success(msg)
+                st.session_state.refresh_id += 1
+                st.session_state.navigation_tab = "Visão Geral"
+                st.rerun()
+            else:
+                st.error(msg)
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.session_state.navigation_tab = "Visão Geral"
+            st.rerun()
+
 @st.dialog("Altere sua senha")
 def dialog_change_password():
     st.markdown("**Defina sua nova credencial de acesso.**")
@@ -889,15 +930,8 @@ st.sidebar.markdown("---")
 if st.sidebar.button("Importar Proventos", use_container_width=True):
     dialog_importar_proventos()
 
-if st.sidebar.button("Importar Opções.tsv", use_container_width=True):
-    tsv_path = r"C:\Users\Julio Nietto\Downloads\Opcoes.tsv"
-    success, msg = db.import_opcoes_tsv(tsv_path, st.session_state.user_id)
-    if success:
-        st.sidebar.success(msg)
-        st.session_state.refresh_id += 1
-        st.rerun()
-    else:
-        st.sidebar.error(msg)
+if st.sidebar.button("Importar Ativos", use_container_width=True):
+    dialog_importar_ativos()
 
 # Área Principal - Divisão de Telas Baseada na Seleção
 # Área Principal - Divisão de Telas Baseada na Seleção
@@ -1918,10 +1952,15 @@ else:
     st.markdown("---")
     st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Análise de Gráficos</h2>', unsafe_allow_html=True)
     
+    # Verifica se há opções para exibir a aba de Dividendos Sintéticos
+    has_options_data = not db.get_opcoes(st.session_state.user_id).empty
+
     tabs_labels = ["Distribuição do Portfólio", "Distribuição por Setores"]
     if has_us_assets:
         tabs_labels.append("Ativos EUA")
-    tabs_labels.extend(["Fundos Imobiliários (FII)", "Renda Passiva", "Dividendos Sintéticos"])
+    tabs_labels.extend(["Fundos Imobiliários (FII)", "Renda Passiva"])
+    if has_options_data:
+        tabs_labels.append("Dividendos Sintéticos")
     
     tabs = st.tabs(tabs_labels)
     tab_dist = tabs[0]
@@ -1936,7 +1975,12 @@ else:
         
     tab_fii = tabs[idx]; idx += 1
     tab_passiva = tabs[idx]; idx += 1
-    tab_sinteticos = tabs[idx]
+    
+    if has_options_data:
+        tab_sinteticos = tabs[idx]
+        idx += 1
+    else:
+        tab_sinteticos = None
     
     with tab_dist:
         col_g1, col_g2 = st.columns(2)
@@ -2289,34 +2333,35 @@ else:
         else:
             st.info("Registre proventos para visualizar a evolução da renda passiva.")
 
-    with tab_sinteticos:
-        # Gráficos de Dividendos Sintéticos (Vl Prêmio de Opções)
-        opcoes_db = db.get_opcoes(st.session_state.user_id)
-        if not opcoes_db.empty:
-            opcoes_db['ano'] = pd.to_datetime(opcoes_db['dt_operacao']).dt.year
-            resumo_sintetico = opcoes_db.groupby('ano')['vl_premio'].sum().reset_index()
-            resumo_sintetico['ano'] = resumo_sintetico['ano'].astype(str)
-            resumo_sintetico = resumo_sintetico.sort_values('ano', ascending=True)
-            
-            st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">💰 Evolução de Dividendos Sintéticos</h3>', unsafe_allow_html=True)
-            
-            fig_sint = px.bar(
-                resumo_sintetico,
-                x='ano',
-                y='vl_premio',
-                title='Total Anual de Prêmios Recebidos (R$)',
-                text_auto='.2f',
-                labels={'vl_premio': 'Total Prêmio (R$)', 'ano': 'Ano'}
-            )
-            
-            x_data_sint = np.arange(len(resumo_sintetico))
-            y_data_sint = resumo_sintetico['vl_premio'].values
-            if len(x_data_sint) > 1:
-                z_sint = np.polyfit(x_data_sint, y_data_sint, 1)
-                p_sint = np.poly1d(z_sint)
-                fig_sint.add_scatter(x=resumo_sintetico['ano'], y=p_sint(x_data_sint), mode='lines', name='Tendência', line=dict(color='yellow', dash='dash'))
+    if has_options_data and tab_sinteticos:
+        with tab_sinteticos:
+            # Gráficos de Dividendos Sintéticos (Vl Prêmio de Opções)
+            opcoes_db = db.get_opcoes(st.session_state.user_id)
+            if not opcoes_db.empty:
+                opcoes_db['ano'] = pd.to_datetime(opcoes_db['dt_operacao']).dt.year
+                resumo_sintetico = opcoes_db.groupby('ano')['vl_premio'].sum().reset_index()
+                resumo_sintetico['ano'] = resumo_sintetico['ano'].astype(str)
+                resumo_sintetico = resumo_sintetico.sort_values('ano', ascending=True)
                 
-            fig_sint.update_xaxes(type='category')
-            st.plotly_chart(fig_sint, use_container_width=True)
-        else:
-            st.info("Não há registros de opções para apresentar o gráfico de dividendos sintéticos. Vá para a aba Opções e importe seus dados.")
+                st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">💰 Evolução de Dividendos Sintéticos</h3>', unsafe_allow_html=True)
+                
+                fig_sint = px.bar(
+                    resumo_sintetico,
+                    x='ano',
+                    y='vl_premio',
+                    title='Total Anual de Prêmios Recebidos (R$)',
+                    text_auto='.2f',
+                    labels={'vl_premio': 'Total Prêmio (R$)', 'ano': 'Ano'}
+                )
+                
+                x_data_sint = np.arange(len(resumo_sintetico))
+                y_data_sint = resumo_sintetico['vl_premio'].values
+                if len(x_data_sint) > 1:
+                    z_sint = np.polyfit(x_data_sint, y_data_sint, 1)
+                    p_sint = np.poly1d(z_sint)
+                    fig_sint.add_scatter(x=resumo_sintetico['ano'], y=p_sint(x_data_sint), mode='lines', name='Tendência', line=dict(color='yellow', dash='dash'))
+                    
+                fig_sint.update_xaxes(type='category')
+                st.plotly_chart(fig_sint, use_container_width=True)
+            else:
+                st.info("Não há registros de opções para apresentar o gráfico de dividendos sintéticos. Vá para a aba Opções e importe seus dados.")
