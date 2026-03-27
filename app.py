@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import database as db
+import time
 import services as svc
 import plotly.express as px
 import numpy as np
@@ -583,8 +584,33 @@ if 'authenticated' not in st.session_state:
 if 'table_key' not in st.session_state:
     st.session_state.table_key = 0
 
+@st.dialog("Criar Conta")
+def dialog_register_user():
+    st.markdown("### 📝 Cadastre-se")
+    reg_username = st.text_input("Nome de Usuário", placeholder="Como quer ser chamado")
+    reg_email = st.text_input("Email", placeholder="seu@email.com")
+    reg_birth = st.date_input("Data de Nascimento", min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
+    reg_pass = st.text_input("Senha", type="password", placeholder="Sua senha")
+    reg_confirm = st.text_input("Confirmar Senha", type="password", placeholder="Repita a senha")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Criar Conta", type="primary", use_container_width=True):
+            if reg_username and reg_email and reg_pass:
+                if reg_pass == reg_confirm:
+                    db.create_user(reg_username, reg_email, reg_birth.strftime("%Y-%m-%d"), reg_pass)
+                    st.success("Conta criada com sucesso! Faça login.")
+                    st.rerun()
+                else:
+                    st.error("As senhas não conferem.")
+            else:
+                st.error("Preencha todos os campos obrigatórios.")
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
 if not st.session_state.authenticated:
-    # Centraliza o login usando colunas [30%, 40%, 30%] para dar o efeito de compactação solicitado
+    # Centraliza o login usando colunas [30%, 40%, 30%]
     _, login_col, _ = st.columns([0.3, 0.4, 0.3])
     
     with login_col:
@@ -595,48 +621,54 @@ if not st.session_state.authenticated:
         
         if user_count == 0:
             st.info("Nenhum usuário cadastrado. Crie sua conta de administrador.")
-            with st.form("register_form"):
-                # Fazendo os campos ocuparem cerca de 50% do card
-                _, field_col, _ = st.columns([0.25, 0.5, 0.25])
+            with st.form("register_form_admin"):
+                _, field_col, _ = st.columns([0.1, 0.8, 0.1])
                 with field_col:
-                    new_user = st.text_input("Usuário", placeholder="Escolha um nome")
+                    new_user = st.text_input("Usuário", value="admin", disabled=True)
+                    new_email = st.text_input("Email", placeholder="seu@email.com")
+                    new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
                     new_pass = st.text_input("Senha", type="password", placeholder="Sua senha")
                     confirm_pass = st.text_input("Confirmar", type="password", placeholder="Repita a senha")
-                    submit_reg = st.form_submit_button("Criar Conta", use_container_width=True)
+                    submit_reg = st.form_submit_button("Criar Conta de Admin", use_container_width=True)
                 
                 if submit_reg:
-                    if new_user and new_pass:
+                    if new_user and new_email and new_pass:
                         if new_pass == confirm_pass:
-                            db.create_user(new_user, new_pass)
-                            success, uid = db.verify_user(new_user, new_pass)
-                            st.session_state.authenticated = True
-                            st.session_state.user_id = uid
-                            st.session_state.username = new_user
-                            st.success("Usuário cadastrado!")
-                            st.rerun()
+                            db.create_user(new_user, new_email, new_birth.strftime("%Y-%m-%d"), new_pass)
+                            success, uid, uname = db.verify_user(new_user, new_pass)
+                            if success:
+                                st.session_state.authenticated = True
+                                st.session_state.user_id = uid
+                                st.session_state.username = uname
+                                st.session_state.is_admin = True
+                                st.success("Administrador cadastrado!")
+                                st.rerun()
                         else:
                             st.error("As senhas não conferem.")
                     else:
                         st.error("Preencha todos os campos.")
         else:
             with st.form("login_form"):
-                # Fazendo os campos ocuparem cerca de 50% do card
-                _, field_col, _ = st.columns([0.25, 0.5, 0.25])
+                _, field_col, _ = st.columns([0.1, 0.8, 0.1])
                 with field_col:
-                    user = st.text_input("Usuário", placeholder="Seu nome")
+                    user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
                     password = st.text_input("Senha", type="password", placeholder="Sua senha")
                     submit_login = st.form_submit_button("Entrar", use_container_width=True)
                 
                 if submit_login:
-                    success, uid = db.verify_user(user, password)
+                    success, uid, uname = db.verify_user(user_input, password)
                     if success:
                         st.session_state.authenticated = True
                         st.session_state.user_id = uid
-                        st.session_state.username = user
-                        st.session_state.is_admin = (user == 'admin')
+                        st.session_state.username = uname
+                        st.session_state.is_admin = (uname == 'admin')
                         st.rerun()
                     else:
                         st.error("Usuário ou senha incorretos.")
+            
+            # Link para criar conta se não for admin
+            if st.button("Não tem conta? Criar conta", use_container_width=True):
+                dialog_register_user()
         
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
@@ -674,116 +706,158 @@ st_autorefresh(interval=300000, key="datarefresh")
 def dialog_user_profile():
     u_details = db.get_user_details(st.session_state.user_id)
     if u_details:
-        st.markdown(f"**Usuário:** `{u_details['username']}`")
-        dt_criacao = pd.to_datetime(u_details['created_at']).strftime('%d/%m/%Y')
-        st.markdown(f"**Membro desde:** `{dt_criacao}`")
+        st.markdown(f"### 👤 Perfil: `{u_details['username']}`")
+        
+        edit_email = st.text_input("Email", value=u_details['email'] if u_details['email'] else "")
+        
+        try:
+            default_birth = pd.to_datetime(u_details['birth_date']).date() if u_details['birth_date'] else pd.to_datetime('2000-01-01').date()
+        except:
+            default_birth = pd.to_datetime('2000-01-01').date()
+            
+        edit_birth = st.date_input("Data de Nascimento", value=default_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
+        
+        st.markdown("---")
+        st.markdown("**🔐 Alterar Senha** (opcional)")
+        new_pwd = st.text_input("Nova Senha", type="password", placeholder="Deixe vazio para manter atual")
+        confirm_pwd = st.text_input("Confirmar Nova Senha", type="password")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Salvar Alterações", type="primary", use_container_width=True):
+                if edit_email:
+                    pwd_to_save = None
+                    if new_pwd:
+                        if new_pwd == confirm_pwd:
+                            pwd_to_save = new_pwd
+                        else:
+                            st.error("As senhas não conferem.")
+                            st.stop()
+                    
+                    db.update_user_profile(st.session_state.user_id, u_details['username'], edit_email, edit_birth.strftime("%Y-%m-%d"), pwd_to_save)
+                    st.success("Dados atualizados com sucesso")
+                    if pwd_to_save:
+                        st.session_state.clear()
+                        st.rerun()
+                    
+                    st.session_state.navigation_tab = "Visão Geral"
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("O Email é obrigatório.")
+        with col2:
+            if st.button("Fechar", use_container_width=True):
+                st.rerun()
     else:
         st.error("Erro ao carregar dados do perfil.")
-    if st.button("Fechar", use_container_width=True):
-        st.rerun()
 
 @st.dialog("Importar Proventos")
 def dialog_importar_proventos():
-    st.markdown("""
-    A funcionalidade de importar dados de Proventos é bem simples. 
-    Gere um arquivo com extensão **CSV** com o seguinte layout:
-
-    1. **Ano** (4 caracteres no formato AAAA)
-    2. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
-    3. **Janeiro** a **Dezembro** (valor recebido por ativo em cada mês)
-
-    **Regras Importantes:**
-    - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
-    - Não use símbolos de moeda (R$, $).
-    - O separador de colunas deve ser `,` (vírgula).
-
-    **Exemplo de registro:**
-    `2025,ITSA4,,,132.45,,,,,,,54.01`
-    *(Neste exemplo, houve recebimento de R$ 132,45 em Abril e R$ 54,01 em Dezembro)*
-    """)
-    
-    arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed")
-    
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
-            with st.spinner("Aguarde a importação dos dados ser finalizada..."):
-                success, msg = db.import_proventos_csv(arquivo_upload, st.session_state.user_id)
-            if success:
-                st.success(msg)
-                st.session_state.refresh_id += 1
-                st.session_state.navigation_tab = "Proventos Recebidos"
+    if st.session_state.get('confirm_imp_proventos', False):
+        st.warning("⚠️ **Atenção:** Todos os dados de Proventos atuais deste usuário serão **APAGADOS** e substituídos pelos dados do arquivo. Deseja continuar?")
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Sim, apagar e importar", type="primary", use_container_width=True):
+                arquivo = st.session_state.pop('arquivo_prov_pendente')
+                with st.spinner("Aguarde a importação dos dados ser finalizada..."):
+                    success, msg = db.import_proventos_csv(arquivo, st.session_state.user_id)
+                if success:
+                    st.success(msg)
+                    st.session_state.refresh_id += 1
+                    st.session_state.navigation_tab = "Proventos Recebidos"
+                    st.session_state.confirm_imp_proventos = False
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error(msg)
+                    st.session_state.confirm_imp_proventos = False
+        with col_c2:
+            if st.button("Não, cancelar", use_container_width=True):
+                st.session_state.confirm_imp_proventos = False
                 st.rerun()
-            else:
-                st.error(msg)
-    with col2:
-        if st.button("Cancelar", use_container_width=True):
-            st.rerun()
+    else:
+        st.markdown("""
+        A funcionalidade de importar dados de Proventos é bem simples. 
+        Gere um arquivo com extensão **CSV** com o seguinte layout:
+
+        1. **Ano** (4 caracteres no formato AAAA)
+        2. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
+        3. **Janeiro** a **Dezembro** (valor recebido por ativo em cada mês)
+
+        **Regras Importantes:**
+        - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
+        - Não use símbolos de moeda (R$, $).
+        - O separador de colunas deve ser `,` (vírgula).
+        """)
+        
+        arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed", key="uploader_proventos")
+        
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
+                st.session_state.confirm_imp_proventos = True
+                st.session_state.arquivo_prov_pendente = arquivo_upload
+                st.rerun()
+        with col2:
+            if st.button("Cancelar", use_container_width=True):
+                st.rerun()
 
 @st.dialog("Importar Ativos")
 def dialog_importar_ativos():
-    st.markdown("""
-    A funcionalidade de importar dados de Ativos é bem simples. 
-    Gere um arquivo com extensão **CSV** com o seguinte layout:
 
-    1. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
-    2. **DtOperação** (formato dd/MM/aaaa)
-    3. **Quantidade** (quantidade comprada ou vendida)
-    4. **Valor** (valor pago pelo ativo no momento da operação)
-
-    **Regras Importantes:**
-    - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
-    - Não use símbolos de moeda (R$, $).
-    - O separador de colunas deve ser `,` (vírgula).
-
-    **Exemplo de registro:**
-    `ITSA4,10/01/2026,100,12.01`
-    *(Neste exemplo, você comprou 100 ações de ITSA4 a R$ 12,01 cada)*
-    """)
-    
-    arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed")
-    
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
-            with st.spinner("Aguarde a importação dos dados ser finalizada..."):
-                success, msg = db.import_assets_csv(arquivo_upload, st.session_state.user_id)
-            if success:
-                st.success(msg)
-                st.session_state.refresh_id += 1
-                st.session_state.navigation_tab = "Visão Geral"
-                st.rerun()
-            else:
-                st.error(msg)
-    with col2:
-        if st.button("Cancelar", use_container_width=True):
-            st.session_state.navigation_tab = "Visão Geral"
-            st.rerun()
-
-@st.dialog("Altere sua senha")
-def dialog_change_password():
-    st.markdown("**Defina sua nova credencial de acesso.**")
-    new_pwd = st.text_input("Nova Senha", type="password")
-    confirm_pwd = st.text_input("Confirmar Nova Senha", type="password")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Salvar Senha", type="primary", use_container_width=True):
-            if new_pwd and confirm_pwd:
-                if new_pwd == confirm_pwd:
-                    db.update_user_password(st.session_state.user_id, new_pwd)
-                    st.success("Senha alterada com sucesso! Faça login novamente.")
-                    st.session_state.authenticated = False
+    if st.session_state.get('confirm_imp_ativos', False):
+        st.warning("⚠️ **Atenção:** Todos os dados de Ativos e Histórico de Operações atuais deste usuário serão **APAGADOS** e substituídos pelos dados do arquivo. Deseja continuar?")
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Sim, apagar e importar", type="primary", use_container_width=True):
+                arquivo = st.session_state.pop('arquivo_ativos_pendente')
+                with st.spinner("Aguarde a importação dos dados ser finalizada..."):
+                    success, msg = db.import_assets_csv(arquivo, st.session_state.user_id)
+                if success:
+                    st.success(msg)
+                    st.session_state.refresh_id += 1
+                    st.session_state.navigation_tab = "Visão Geral"
+                    st.session_state.confirm_imp_ativos = False
+                    time.sleep(1.5)
                     st.rerun()
                 else:
-                    st.error("As senhas não conferem.")
-            else:
-                st.error("Preencha todos os campos.")
-    with col2:
-        if st.button("Cancelar", use_container_width=True):
-            st.rerun()
+                    st.error(msg)
+                    st.session_state.confirm_imp_ativos = False
+        with col_c2:
+            if st.button("Não, cancelar", use_container_width=True):
+                st.session_state.confirm_imp_ativos = False
+                st.rerun()
+    else:
+        st.markdown("""
+        A funcionalidade de importar dados de Ativos é bem simples. 
+        Gere um arquivo com extensão **CSV** com o seguinte layout:
+
+        1. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
+        2. **DtOperação** (formato dd/MM/aaaa)
+        3. **Quantidade** (quantidade comprada ou vendida)
+        4. **Valor** (valor pago pelo ativo no momento da operação)
+
+        **Regras Importantes:**
+        - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
+        - O separador de colunas deve ser `,` (vírgula).
+        """)
+        
+        arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed", key="uploader_ativos")
+        
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
+                st.session_state.confirm_imp_ativos = True
+                st.session_state.arquivo_ativos_pendente = arquivo_upload
+                st.rerun()
+        with col2:
+            if st.button("Cancelar", use_container_width=True):
+                st.session_state.navigation_tab = "Visão Geral"
+                st.rerun()
+
+# dialog_change_password removido pois foi integrado no dialog_user_profile
 
 def render_profile_popover():
     username_display = st.session_state.get('username', 'Perfil')
@@ -791,12 +865,9 @@ def render_profile_popover():
     with st.popover("👤 Menu de Perfil", use_container_width=True):
         if st.button("Seu perfil", use_container_width=True):
             dialog_user_profile()
-        if st.button("Altere sua senha", use_container_width=True):
-            dialog_change_password()
         st.markdown("---")
         if st.button("Sair", type="primary", use_container_width=True):
-            st.session_state.authenticated = False
-            st.session_state.is_admin = False
+            st.session_state.clear()
             st.rerun()
 
 
@@ -816,7 +887,8 @@ if st.session_state.get('is_admin', False):
     # 1. Metricas
     users_df = db.get_all_users()
     if 'created_at' in users_df.columns:
-        users_df['created_at'] = pd.to_datetime(users_df['created_at'], errors='coerce').dt.strftime('%d/%m/%Y')
+        users_df['created_at_dt'] = pd.to_datetime(users_df['created_at'], errors='coerce')
+        users_df['created_at'] = users_df['created_at_dt'].dt.strftime('%d/%m/%Y')
     total_users = len(users_df)
     
     col1, col2, col3, col4 = st.columns(4)
@@ -837,38 +909,55 @@ if st.session_state.get('is_admin', False):
     @st.dialog("Criar Novo Usuário")
     def dialog_add_user():
         new_username = st.text_input("Usuário")
+        new_email = st.text_input("Email")
+        new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
         new_password = st.text_input("Senha", type="password")
         if st.button("Salvar", use_container_width=True):
-            if new_username and new_password:
-                db.admin_create_user(new_username, new_password)
+            if new_username and new_email and new_password:
+                db.admin_create_user(new_username, new_email, new_birth.strftime("%Y-%m-%d"), new_password)
                 st.success("Criado com sucesso!")
                 st.session_state.show_add_user = False
                 st.rerun()
             else:
-                st.error("Preencha todos os campos.")
+                st.error("Preencha todos os campos obrigatórios.")
                 
     if st.session_state.get('show_add_user', False):
         dialog_add_user()
         
     # 3. Tabela
     if not users_df.empty:
-        st.dataframe(users_df, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key="admin_users_table")
+        # Reordena para mostrar Email e Nascimento
+        display_users = users_df[['id', 'username', 'email', 'birth_date', 'created_at']].copy()
+        # Formata a data de nascimento para dd/MM/yyyy
+        display_users['birth_date'] = pd.to_datetime(display_users['birth_date'], errors='coerce').dt.strftime('%d/%m/%Y')
+        display_users.columns = ['ID', 'Usuário', 'Email', 'Nascimento', 'Cadastro']
+        
+        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key="admin_users_table")
         if st.session_state.admin_users_table.selection.rows and not st.session_state.get('show_add_user', False):
             row_idx = st.session_state.admin_users_table.selection.rows[0]
             if row_idx < len(users_df):
-                user_data = users_df.iloc[row_idx]
+                user_data_row = users_df.iloc[row_idx]
                 
                 @st.dialog("Editar / Excluir Usuário")
                 def dialog_edit_user(u_data):
-                    st.write(f"**Data de Cadastro:** {u_data['created_at']}")
+                    st.write(f"**ID:** {u_data['id']} | **Data de Cadastro:** {u_data['created_at']}")
                     edit_username = st.text_input("Usuário", value=u_data['username'])
+                    edit_email = st.text_input("Email", value=u_data['email'] if u_data['email'] else "")
+                    
+                    try:
+                        def_birth = pd.to_datetime(u_data['birth_date']).date() if u_data['birth_date'] else pd.to_datetime('2000-01-01').date()
+                    except:
+                        def_birth = pd.to_datetime('2000-01-01').date()
+                        
+                    edit_birth = st.date_input("Data de Nascimento", value=def_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
                     edit_password = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", placeholder="*** (Criptografada)")
                     
                     colA, colB = st.columns(2)
                     with colA:
                         if st.button("Atualizar", type="primary", use_container_width=True):
-                            db.admin_update_user(int(u_data['id']), edit_username, edit_password if edit_password else None)
-                            st.success("Usuário atualizado!")
+                            db.admin_update_user(int(u_data['id']), edit_username, edit_email, edit_birth.strftime("%Y-%m-%d"), edit_password if edit_password else None)
+                            st.success("Dados atualizados com sucesso")
+                            time.sleep(1)
                             st.rerun()
                     with colB:
                         if st.button("Excluir", type="secondary", use_container_width=True):
@@ -876,10 +965,11 @@ if st.session_state.get('is_admin', False):
                                 st.error("O administrador principal não pode ser excluído.")
                             else:
                                 db.admin_delete_user(int(u_data['id']))
-                                st.success("Excluído com sucesso!")
+                                st.success("Excluido com sucesso!")
+                                time.sleep(1)
                                 st.rerun()
                                 
-                dialog_edit_user(user_data)
+                dialog_edit_user(user_data_row)
             
     st.stop()
 # ==============================
@@ -1206,42 +1296,45 @@ if current_view == "Proventos Recebidos":
             st.dataframe(styled_resumo, hide_index=True, use_container_width=True)
 
             # ---- Tabela de Proventos Stocks e Reits ----
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">Proventos Recebidos de ativos dolarizados. (Valores em R$)</h3>', unsafe_allow_html=True)
-            
             assets_df_all = db.get_all_assets(st.session_state.user_id) # Note: this only returns qty > 0
-            # To get types for all historical tickers, we need to check assets even with qty 0
-            with db.get_db_connection() as conn:
-                full_assets_map = {row['ticker']: row['asset_type'] for _, row in pd.read_sql_query("SELECT ticker, asset_type FROM assets", conn).iterrows()}
-            
-            all_hist_tickers = proventos_df['ticker'].unique()
-            us_tickers = [t for t in all_hist_tickers if full_assets_map.get(t, infer_asset_type(t)) in ['Stocks', 'Reits']]
-            df_us_prov = proventos_df[proventos_df['ticker'].isin(us_tickers)]
-            
-            if not df_us_prov.empty:
-                resumo_us = df_us_prov.groupby('ano')['valor'].sum().reset_index()
-                resumo_us.columns = ['Ano', 'Valor']
-                resumo_us['Ano'] = resumo_us['Ano'].astype(str)
-                resumo_us = resumo_us.sort_values('Ano', ascending=True)
+            has_us_assets_active = not assets_df_all[assets_df_all['asset_type'].isin(['Stocks', 'Reits'])].empty
+
+            if has_us_assets_active:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">Proventos Recebidos de ativos dolarizados. (Valores em R$)</h3>', unsafe_allow_html=True)
                 
-                # Formatação
-                display_us = resumo_us.copy()
-                display_us['Valor'] = display_us['Valor'].apply(format_provento)
+                # To get types for all historical tickers, we need to check assets even with qty 0
+                with db.get_db_connection() as conn:
+                    full_assets_map = {row['ticker']: row['asset_type'] for _, row in pd.read_sql_query("SELECT ticker, asset_type FROM assets", conn).iterrows()}
                 
-                styled_us = display_us.style.set_properties(**{'text-align': 'center'}, subset=['Ano']) \
-                                           .set_properties(**{'text-align': 'right'}, subset=['Valor'])
+                all_hist_tickers = proventos_df['ticker'].unique()
+                us_tickers = [t for t in all_hist_tickers if full_assets_map.get(t, infer_asset_type(t)) in ['Stocks', 'Reits']]
+                df_us_prov = proventos_df[proventos_df['ticker'].isin(us_tickers)]
                 
-                st.dataframe(
-                    styled_us, 
-                    hide_index=True, 
-                    use_container_width=True,
-                    column_config={
-                        "Ano": st.column_config.TextColumn(width="small"),
-                        "Valor": st.column_config.TextColumn(width="small")
-                    }
-                )
-            else:
-                st.info("Nenhum provento de Stocks ou Reits registrado.")
+                if not df_us_prov.empty:
+                    resumo_us = df_us_prov.groupby('ano')['valor'].sum().reset_index()
+                    resumo_us.columns = ['Ano', 'Valor']
+                    resumo_us['Ano'] = resumo_us['Ano'].astype(str)
+                    resumo_us = resumo_us.sort_values('Ano', ascending=True)
+                    
+                    # Formatação
+                    display_us = resumo_us.copy()
+                    display_us['Valor'] = display_us['Valor'].apply(format_provento)
+                    
+                    styled_us = display_us.style.set_properties(**{'text-align': 'center'}, subset=['Ano']) \
+                                               .set_properties(**{'text-align': 'right'}, subset=['Valor'])
+                    
+                    st.dataframe(
+                        styled_us, 
+                        hide_index=True, 
+                        use_container_width=True,
+                        column_config={
+                            "Ano": st.column_config.TextColumn(width="small"),
+                            "Valor": st.column_config.TextColumn(width="small")
+                        }
+                    )
+                else:
+                    st.info("Nenhum provento de Stocks ou Reits registrado.")
 
     st.stop()
 
@@ -1908,6 +2001,8 @@ else:
     st.markdown("---")
 
     # --- SEÇÃO RADAR ---
+    st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 2rem; margin-bottom: 2rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
+
     def show_radar_table(title, asset_types, df):
         st.subheader(title)
         radar_df = df[df['asset_type'].isin(asset_types)].copy()
@@ -1941,11 +2036,11 @@ else:
     if has_us_assets:
         col_radar1, col_radar2 = st.columns(2)
         with col_radar1:
-            show_radar_table("Radar BR (Ações e Fiis)", ['Ações', 'Fiis'], assets_df)
+            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df)
         with col_radar2:
-            show_radar_table("Radar USA (Stocks e Reits)", ['Stocks', 'Reits'], assets_df)
+            show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df)
     else:
-        show_radar_table("Radar BR (Ações e Fiis)", ['Ações', 'Fiis'], assets_df)
+        show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df)
 
 
     # Gráficos
@@ -1999,6 +2094,163 @@ else:
                 st.plotly_chart(fig_asset, use_container_width=True)
             else:
                 st.write("Sem valor suficiente para gráfico.")
+        
+        # --- NOVO GRÁFICO: Performance do Portfólio ---
+        st.markdown("---")
+        st.subheader("📊 Rentabilidade do Portfólio vs Índices (Últimos 12 Meses)")
+        
+        with st.spinner("Calculando rentabilidade histórica..."):
+            # 1. Buscar Histórico de Índices
+            indices = svc.get_major_indices_history(months=12)
+            
+            # 2. Reconstruir Histórico do Portfólio
+            # Precisamos dos tickers que compuseram o portfólio nos últimos 12 meses
+            all_assets_user = db.get_all_assets(st.session_state.user_id)
+            if not all_assets_user.empty:
+                # Obter datas dos últimos 12 meses (fim de cada mês)
+                # 2. Calcular histórico do portfólio
+                hoje = pd.Timestamp.now().normalize()
+                meses_fechamento = []
+                for i in range(12, -1, -1):
+                    d = hoje - pd.DateOffset(months=i)
+                    last_day = d + pd.offsets.MonthEnd(0)
+                    meses_fechamento.append(last_day.normalize())
+                
+                # Buscar histórico de preços para todos os tickers
+                tickers_port = all_assets_user['ticker'].unique().tolist()
+                
+                # Fetch historical prices
+                price_history = {}
+                for t in tickers_port:
+                    asset_row = all_assets_user[all_assets_user['ticker']==t]
+                    if not asset_row.empty:
+                        tyf = f"{t}-USD" if (asset_row['asset_type'].iloc[0]=='Cripto' and '-' not in t) else t
+                        hist = svc.get_index_history(tyf, period="1y")
+                        if not hist.empty:
+                            # Normaliza timezone e hora
+                            if hist.index.tz is not None:
+                                hist.index = hist.index.tz_localize(None)
+                            hist.index = hist.index.normalize()
+                            price_history[tyf] = hist
+                
+                usd_rate_hist = svc.get_index_history("BRL=X", period="1y")
+                if not usd_rate_hist.empty:
+                    if usd_rate_hist.index.tz is not None:
+                        usd_rate_hist.index = usd_rate_hist.index.tz_localize(None)
+                    usd_rate_hist.index = usd_rate_hist.index.normalize()
+                
+                # Calcular valor do portfólio em cada fechamento de mês
+                portfolio_values = []
+                for dt in meses_fechamento:
+                    total_dt = 0.0
+                    for _, asset in all_assets_user.iterrows():
+                        # Quantidade na data dt
+                        history_asset = db.get_asset_history(asset['id'], st.session_state.user_id)
+                        if not history_asset.empty:
+                            history_asset['date'] = pd.to_datetime(history_asset['date'], format='mixed', dayfirst=False).dt.normalize()
+                            qty_at_dt = history_asset[history_asset['date'] <= dt]['quantity'].sum()
+                            
+                            if qty_at_dt > 0:
+                                # Preço na data dt (ou o mais próximo anterior)
+                                t = asset['ticker']
+                                tyf = t + "-USD" if (asset['asset_type']=='Cripto' and '-' not in t) else t
+                                if tyf in price_history:
+                                    p_hist = price_history[tyf]
+                                    available_dates = p_hist.index[p_hist.index <= dt]
+                                    if not available_dates.empty:
+                                        p = p_hist.loc[available_dates[-1]]
+                                        
+                                        # Conversão se necessário
+                                        if asset['asset_type'] in ['Stocks', 'Reits', 'Cripto']:
+                                            u_dates = usd_rate_hist.index[usd_rate_hist.index <= dt]
+                                            rate = usd_rate_hist.loc[u_dates[-1]] if not u_dates.empty else usd_to_brl_rate
+                                            p = p * rate
+                                        
+                                        total_dt += qty_at_dt * p
+                        elif asset['asset_type'] == 'Renda Fixa':
+                            total_dt += asset['average_price']
+                    
+                    portfolio_values.append(total_dt)
+                
+                # Preparar DataFrame de Performance
+                perf_df = pd.DataFrame({'Data': meses_fechamento, 'Portfolio': portfolio_values})
+                perf_df['Data'] = perf_df['Data'].dt.normalize()
+                
+                base_val = perf_df['Portfolio'].iloc[0]
+                if base_val > 0:
+                    perf_df['Portfolio %'] = (perf_df['Portfolio'] / base_val - 1) * 100
+                else:
+                    perf_df['Portfolio %'] = 0.0
+                
+                # 3. Processar Índices
+                # CDI Acumulado
+                cdi_vals = indices['cdi']
+                if not cdi_vals.empty:
+                    if cdi_vals.index.tz is not None: cdi_vals.index = cdi_vals.index.tz_localize(None)
+                    # Acumular. CDI vem em % mensal.
+                    cdi_cum = (1 + cdi_vals / 100).cumprod()
+                    # Reindexar para todas as datas do intervalo para preencher lacunas
+                    full_range = pd.date_range(start=cdi_cum.index.min(), end=perf_df['Data'].max(), freq='D')
+                    cdi_cum_daily = cdi_cum.reindex(full_range).ffill().bfill()
+                    # Agora resample para as datas do gráfico
+                    cdi_resampled = cdi_cum_daily.reindex(perf_df['Data']).ffill().bfill()
+                    if not cdi_resampled.empty and cdi_resampled.iloc[0] != 0:
+                        perf_df['CDI %'] = ((cdi_resampled / cdi_resampled.iloc[0] - 1) * 100).values
+                    else:
+                        perf_df['CDI %'] = 0.0
+                
+                # IPCA Acumulado
+                ipca_vals = indices['ipca']
+                if not ipca_vals.empty:
+                    if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
+                    ipca_cum = (1 + ipca_vals / 100).cumprod()
+                    full_range = pd.date_range(start=ipca_cum.index.min(), end=perf_df['Data'].max(), freq='D')
+                    ipca_daily = ipca_cum.reindex(full_range).ffill().bfill()
+                    ipca_resampled = ipca_daily.reindex(perf_df['Data']).ffill().bfill()
+                    if not ipca_resampled.empty and ipca_resampled.iloc[0] != 0:
+                        perf_df['IPCA %'] = ((ipca_resampled / ipca_resampled.iloc[0] - 1) * 100).values
+                    else:
+                        perf_df['IPCA %'] = 0.0
+                
+                # IBOV %
+                ibov_h = indices['ibov']
+                if not ibov_h.empty:
+                    if ibov_h.index.tz is not None: ibov_h.index = ibov_h.index.tz_localize(None)
+                    full_range = pd.date_range(start=ibov_h.index.min(), end=perf_df['Data'].max(), freq='D')
+                    ibov_daily = ibov_h.reindex(full_range).ffill().bfill()
+                    ibov_m = ibov_daily.reindex(perf_df['Data']).ffill().bfill()
+                    if not ibov_m.empty and ibov_m.iloc[0] != 0:
+                        perf_df['IBOV %'] = ((ibov_m / ibov_m.iloc[0] - 1) * 100).values
+                
+                # IFIX %
+                # Se IFIX via YF falhar (poucos dados), tentamos manter se houver algo
+                ifix_h = indices['ifix']
+                if not ifix_h.empty and len(ifix_h) > 1:
+                    if ifix_h.index.tz is not None: ifix_h.index = ifix_h.index.tz_localize(None)
+                    full_range = pd.date_range(start=ifix_h.index.min(), end=perf_df['Data'].max(), freq='D')
+                    ifix_daily = ifix_h.reindex(full_range).ffill().bfill()
+                    ifix_m = ifix_daily.reindex(perf_df['Data']).ffill().bfill()
+                    if not ifix_m.empty and ifix_m.iloc[0] != 0:
+                        perf_df['IFIX %'] = ((ifix_m / ifix_m.iloc[0] - 1) * 100).values
+                
+                # 4. Plotar Gráfico
+                perf_df = perf_df.fillna(0.0)
+                y_cols = [c for c in ['Portfolio %', 'CDI %', 'IBOV %', 'IFIX %', 'IPCA %'] if c in perf_df.columns]
+                fig_perf = px.line(
+                    perf_df, x='Data', 
+                    y=y_cols,
+                    title='Rentabilidade Acumulada (%) - Últimos 12 Meses',
+                    labels={'value': 'Rentabilidade (%)', 'variable': 'Indicador'},
+                    markers=True
+                )
+                fig_perf.update_layout(
+                    hovermode="x unified", 
+                    yaxis=dict(ticksuffix="%", hoverformat=".2f"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_perf, use_container_width=True)
+            else:
+                st.info("Adicione ativos para visualizar o gráfico de performance.")
                 
     with tab_setores:
         rv_assets = assets_df[assets_df['asset_type'] != 'Renda Fixa']

@@ -52,6 +52,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
+            email TEXT,
+            birth_date TEXT,
             password TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -93,22 +95,29 @@ def get_user_count():
         cursor.execute("SELECT COUNT(*) FROM users")
         return cursor.fetchone()[0]
 
-def create_user(username, password):
+def create_user(username, email, birth_date, password):
     hashed = hash_password(password)
     from datetime import datetime
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)", (username, hashed, now_str))
+        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (?, ?, ?, ?, ?)", (username, email, birth_date, hashed, now_str))
         conn.commit()
 
-def verify_user(username, password):
+def verify_user(login_identifier, password):
+    """
+    Verifica o usuário pelo email ou pelo nome 'admin' (se for o caso).
+    Retorna (sucesso, id, username).
+    """
     hashed = hash_password(password)
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, hashed))
+        if login_identifier == 'admin':
+            cursor.execute("SELECT id, username FROM users WHERE username = ? AND password = ?", (login_identifier, hashed))
+        else:
+            cursor.execute("SELECT id, username FROM users WHERE email = ? AND password = ?", (login_identifier, hashed))
         row = cursor.fetchone()
-        return (True, row[0]) if row else (False, None)
+        return (True, row[0], row[1]) if row else (False, None, None)
 
 @contextmanager
 def get_db_connection():
@@ -372,13 +381,13 @@ def import_proventos_csv(file_content, user_id):
     }
     
     try:
+        # Prepara o conteúdo do arquivo
         if isinstance(file_content, str):
             import os
             if not os.path.exists(file_content):
                 return False, "Arquivo não encontrado."
             f = open(file_content, mode='r', encoding='utf-8')
         else:
-            # Assume it's a file-like object (BytesIO or StringIO from st.file_uploader)
             if hasattr(file_content, 'getvalue'):
                 content = file_content.getvalue()
                 if isinstance(content, bytes):
@@ -387,26 +396,47 @@ def import_proventos_csv(file_content, user_id):
             else:
                 f = file_content
 
-        reader = csv.reader(f, delimiter=',')
+        # 1. Validação do Layout (sem deletar nada ainda)
+        content_for_validation = f.read()
+        f.seek(0)
+        
+        validation_f = io.StringIO(content_for_validation)
+        reader = csv.reader(validation_f, delimiter=',')
         try:
             header = next(reader)
-            meses_colunas = [col.strip() for col in header[2:]]
-        except StopIteration:
-            return False, "Arquivo vazio."
+            if not header or len(header) < 14: # Ano, Ativo + 12 meses
+                return False, "Layout do arquivo de Proventos inválido (faltam colunas)."
             
+            # Valida primeira linha de dados se existir
+            first_row = next(reader, None)
+            if first_row:
+                if not first_row[0].isdigit() or len(first_row[0]) != 4:
+                    return False, f"Layout inválido: O ano '{first_row[0]}' deve ter 4 dígitos."
+        except Exception as ve:
+            return False, f"Erro na validação do layout: {str(ve)}"
+
+        # 2. Processo de Importação com Transação
         with get_db_connection() as conn:
+            conn.isolation_level = None # Manual transaction control
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM proventos WHERE user_id = ?", (user_id,))
+            cursor.execute("BEGIN TRANSACTION")
             
-            for row in reader:
-                if not row or len(row) < 3:
-                    continue
-                    
-                try:
+            try:
+                # Deleta dados atuais
+                cursor.execute("DELETE FROM proventos WHERE user_id = ?", (user_id,))
+                
+                # Reinicia o reader ( StringIO já foi seek(0) )
+                reader = csv.reader(io.StringIO(content_for_validation), delimiter=',')
+                next(reader) # pular cabeçalho
+                
+                meses_colunas = [col.strip() for col in header[2:]]
+                
+                for row in reader:
+                    if not row or len(row) < 3:
+                        continue
+                        
                     ano = int(row[0].strip())
                     ticker = row[1].strip().upper()
-                    
-                    # Lógica automática de .SA para ativos brasileiros (4 letras + 1 ou 2 números)
                     if "." not in ticker and len(ticker) >= 4:
                         ticker += ".SA"
                         
@@ -418,8 +448,6 @@ def import_proventos_csv(file_content, user_id):
                         if idx < len(meses_colunas):
                             mes_original = meses_colunas[idx]
                             mes_pt = meses_map.get(mes_original, mes_original)
-                            
-                            # Limpeza robusta de valores (remove cifrão, troca vírgula decimal por ponto)
                             val_clean = val_str.replace('R$', '').replace('$', '').replace(',', '.').strip()
                             valor = float(val_clean)
                             
@@ -428,22 +456,25 @@ def import_proventos_csv(file_content, user_id):
                                     "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (?, ?, ?, ?, ?)",
                                     (ano, mes_pt, ticker, valor, user_id)
                                 )
-                except (ValueError, IndexError):
-                    continue
-            conn.commit()
-        
+                
+                cursor.execute("COMMIT")
+                return True, "Importação de Proventos concluída com sucesso."
+                
+            except Exception as e:
+                cursor.execute("ROLLBACK")
+                return False, f"Erro durante a importação (Operação Cancelada): {str(e)}"
+    except Exception as e:
+        return False, f"Erro ao processar o arquivo: {str(e)}"
+    finally:
         if isinstance(file_content, str) and 'f' in locals():
             f.close()
-            
-        return True, "Importação de Proventos concluída com sucesso."
-    except Exception as e:
-        return False, f"Erro ao importar Proventos: {str(e)}"
 
 def import_assets_csv(file_content, user_id):
     import csv
     import io
     from datetime import datetime
     try:
+        # Prepara o conteúdo do arquivo
         if isinstance(file_content, str):
             import os
             if not os.path.exists(file_content):
@@ -458,64 +489,87 @@ def import_assets_csv(file_content, user_id):
             else:
                 f = file_content
 
-        reader = csv.reader(f, delimiter=',')
+        # 1. Validação do Layout
+        content_for_validation = f.read()
+        f.seek(0)
+        
+        validation_f = io.StringIO(content_for_validation)
+        reader = csv.reader(validation_f, delimiter=',')
         try:
-            next(reader) # pular cabeçalho
-        except StopIteration:
-            return False, "Arquivo vazio."
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            for row in reader:
-                if not row or len(row) < 4:
-                    continue
-                
-                ticker = row[0].strip().upper()
-                if "." not in ticker and len(ticker) >= 4:
-                    ticker += ".SA"
-                
-                date_str = row[1].strip()
+            header = next(reader)
+            if not header or len(header) < 4:
+                return False, "Layout do arquivo de Ativos inválido (faltam colunas: Ativo, Data, Quantidade, Valor)."
+            
+            # Valida primeira linha de dados
+            first_row = next(reader, None)
+            if first_row:
                 try:
-                    dt = datetime.strptime(date_str, '%d/%m/%Y')
-                    db_date = dt.strftime('%Y-%m-%d')
+                    datetime.strptime(first_row[1].strip(), '%d/%m/%Y')
                 except ValueError:
-                    continue 
+                    return False, f"Layout inválido: A data '{first_row[1]}' deve estar no formato DD/MM/AAAA."
+        except Exception as ve:
+            return False, f"Erro na validação do layout: {str(ve)}"
+
+        # 2. Processo de Importação com Transação
+        with get_db_connection() as conn:
+            conn.isolation_level = None # Manual transaction control
+            cursor = conn.cursor()
+            cursor.execute("BEGIN TRANSACTION")
+            
+            try:
+                # Deleta dados atuais (Ativos e Histórico)
+                cursor.execute("DELETE FROM asset_history WHERE asset_id IN (SELECT id FROM assets WHERE user_id = ?)", (user_id,))
+                cursor.execute("DELETE FROM assets WHERE user_id = ?", (user_id,))
                 
-                try:
+                # Reinicia o reader
+                reader = csv.reader(io.StringIO(content_for_validation), delimiter=',')
+                next(reader) # pular cabeçalho
+                
+                # Cache para IDs de ativos criados durante esta importação
+                assets_map = {}
+                
+                for row in reader:
+                    if not row or len(row) < 4:
+                        continue
+                    
+                    ticker = row[0].strip().upper()
+                    if "." not in ticker and len(ticker) >= 4:
+                        ticker += ".SA"
+                    
+                    db_date = datetime.strptime(row[1].strip(), '%d/%m/%Y').strftime('%Y-%m-%d')
                     quantity = float(row[2].strip().replace(',', '.'))
                     unit_price = float(row[3].strip().replace(',', '.'))
-                except ValueError:
-                    continue
-                
-                asset_type = infer_asset_type(ticker)
-                
-                # Verifica se o ativo existe
-                cursor.execute("SELECT id FROM assets WHERE ticker = ? AND user_id = ?", (ticker, user_id))
-                res = cursor.fetchone()
-                if not res:
+                    
+                    if ticker not in assets_map:
+                        asset_type = infer_asset_type(ticker)
+                        cursor.execute(
+                            "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, ?, 0, 0, ?)",
+                            (ticker, asset_type, user_id)
+                        )
+                        assets_map[ticker] = cursor.lastrowid
+                    
+                    asset_id = assets_map[ticker]
                     cursor.execute(
-                        "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, ?, 0, 0, ?)",
-                        (ticker, asset_type, user_id)
+                        "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                        (asset_id, db_date, quantity, unit_price)
                     )
-                    asset_id = cursor.lastrowid
-                else:
-                    asset_id = res[0]
                 
-                cursor.execute(
-                    "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (?, ?, ?, ?)",
-                    (asset_id, db_date, quantity, unit_price)
-                )
+                # Recalcula saldos finais
+                for aid in assets_map.values():
+                    recalculate_asset_balance(aid, conn)
                 
-                recalculate_asset_balance(asset_id, conn)
-            
-            conn.commit()
-            
+                cursor.execute("COMMIT")
+                return True, "Importação de Ativos concluída com sucesso."
+                
+            except Exception as e:
+                cursor.execute("ROLLBACK")
+                return False, f"Erro durante a importação (Operação Cancelada): {str(e)}"
+                
+    except Exception as e:
+        return False, f"Erro ao processar o arquivo: {str(e)}"
+    finally:
         if isinstance(file_content, str) and 'f' in locals():
             f.close()
-            
-        return True, "Importação de Ativos concluída com sucesso."
-    except Exception as e:
-        return False, f"Erro ao importar Ativos: {str(e)}"
 
 def get_total_proventos_by_ticker(ticker, user_id):
     ticker = ticker.strip().upper()
@@ -666,26 +720,26 @@ def delete_opcao(opcao_id, user_id):
 
 def get_all_users():
     with get_db_connection() as conn:
-        df = pd.read_sql_query("SELECT id, username, created_at FROM users", conn)
+        df = pd.read_sql_query("SELECT id, username, email, birth_date, created_at FROM users", conn)
     return df
 
-def admin_create_user(username, password):
+def admin_create_user(username, email, birth_date, password):
     hashed = hash_password(password)
     from datetime import datetime
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)", (username, hashed, now_str))
+        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (?, ?, ?, ?, ?)", (username, email, birth_date, hashed, now_str))
         conn.commit()
 
-def admin_update_user(user_id, username, new_password=None):
+def admin_update_user(user_id, username, email, birth_date, new_password=None):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if new_password:
             hashed = hash_password(new_password)
-            cursor.execute("UPDATE users SET username = ?, password = ? WHERE id = ?", (username, hashed, user_id))
+            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ?, password = ? WHERE id = ?", (username, email, birth_date, hashed, user_id))
         else:
-            cursor.execute("UPDATE users SET username = ? WHERE id = ?", (username, user_id))
+            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ? WHERE id = ?", (username, email, birth_date, user_id))
         conn.commit()
 
 def admin_delete_user(user_id):
@@ -702,9 +756,19 @@ def get_user_details(user_id):
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, created_at FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT id, username, email, birth_date, created_at FROM users WHERE id = ?", (user_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
+
+def update_user_profile(user_id, username, email, birth_date, password=None):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if password:
+            hashed = hash_password(password)
+            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ?, password = ? WHERE id = ?", (username, email, birth_date, hashed, user_id))
+        else:
+            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ? WHERE id = ?", (username, email, birth_date, user_id))
+        conn.commit()
 
 def update_user_password(user_id, new_password):
     hashed = hash_password(new_password)

@@ -175,3 +175,60 @@ def fetch_asset_sectors(df_assets_tuple, refresh_id=0):
             except Exception:
                 sectors[ticker] = 'Outros'
     return sectors
+
+@st.cache_data(ttl=3600)
+def get_index_history(ticker, period="1y"):
+    """Busca histórico de um índice via yfinance."""
+    try:
+        data = yf.Ticker(ticker).history(period=period)
+        if not data.empty:
+            return data['Close']
+    except Exception as e:
+        print(f"Erro ao buscar histórico de {ticker}: {e}")
+    return pd.Series()
+
+@st.cache_data(ttl=3600)
+def get_bcb_history(code, start_date):
+    """Busca histórico de uma série do BCB (SGS)."""
+    import requests
+    from datetime import datetime
+    
+    url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            df = pd.DataFrame(data)
+            df['data'] = pd.to_datetime(df['data'], dayfirst=True)
+            df['valor'] = df['valor'].astype(float)
+            
+            # Filtra pela data de início
+            start_dt = pd.to_datetime(start_date)
+            df = df[df['data'] >= start_dt]
+            return df.set_index('data')['valor']
+    except Exception as e:
+        print(f"Erro ao buscar BCB {code}: {e}")
+    return pd.Series()
+
+def get_major_indices_history(months=18):
+    """Retorna um DataFrame com o histórico acumulado dos principais índices."""
+    from datetime import datetime, timedelta
+    start_date = (datetime.now() - timedelta(days=months*31)).strftime('%Y-%m-%d')
+    
+    # 1. IBOV
+    ibov = get_index_history("^BVSP", period="2y")
+    
+    # 2. IFIX
+    # Tentamos IFIX.SA mas sabemos que pode ser instável
+    ifix = get_index_history("IFIX.SA", period="2y")
+    
+    # 3. CDI (4391) e 4. IPCA (433)
+    cdi_mensal = get_bcb_history(4391, start_date)
+    ipca_mensal = get_bcb_history(433, start_date)
+    
+    return {
+        'ibov': ibov,
+        'ifix': ifix,
+        'cdi': cdi_mensal,
+        'ipca': ipca_mensal
+    }
