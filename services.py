@@ -222,9 +222,9 @@ def get_major_indices_history(months=18):
     # Tentamos IFIX.SA mas sabemos que pode ser instável
     ifix = get_index_history("IFIX.SA", period="2y")
     
-    # 3. CDI (4391) e 4. IPCA (433)
+    # 3. CDI (4391) e 4. IPCA (432 - Número Índice)
     cdi_mensal = get_bcb_history(4391, start_date)
-    ipca_mensal = get_bcb_history(433, start_date)
+    ipca_mensal = get_bcb_history(432, start_date)
     
     return {
         'ibov': ibov,

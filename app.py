@@ -2111,7 +2111,7 @@ else:
                 # 2. Calcular histórico do portfólio
                 hoje = pd.Timestamp.now().normalize()
                 meses_fechamento = []
-                for i in range(12, -1, -1):
+                for i in range(13, -1, -1):
                     d = hoje - pd.DateOffset(months=i)
                     last_day = d + pd.offsets.MonthEnd(0)
                     meses_fechamento.append(last_day.normalize())
@@ -2125,7 +2125,7 @@ else:
                     asset_row = all_assets_user[all_assets_user['ticker']==t]
                     if not asset_row.empty:
                         tyf = f"{t}-USD" if (asset_row['asset_type'].iloc[0]=='Cripto' and '-' not in t) else t
-                        hist = svc.get_index_history(tyf, period="1y")
+                        hist = svc.get_index_history(tyf, period="2y")
                         if not hist.empty:
                             # Normaliza timezone e hora
                             if hist.index.tz is not None:
@@ -2133,7 +2133,7 @@ else:
                             hist.index = hist.index.normalize()
                             price_history[tyf] = hist
                 
-                usd_rate_hist = svc.get_index_history("BRL=X", period="1y")
+                usd_rate_hist = svc.get_index_history("BRL=X", period="2y")
                 if not usd_rate_hist.empty:
                     if usd_rate_hist.index.tz is not None:
                         usd_rate_hist.index = usd_rate_hist.index.tz_localize(None)
@@ -2203,9 +2203,9 @@ else:
                 ipca_vals = indices['ipca']
                 if not ipca_vals.empty:
                     if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
-                    ipca_cum = (1 + ipca_vals / 100).cumprod()
-                    full_range = pd.date_range(start=ipca_cum.index.min(), end=perf_df['Data'].max(), freq='D')
-                    ipca_daily = ipca_cum.reindex(full_range).ffill().bfill()
+                    # IPCA agora vem como Número Índice (432). Basta dividir pelo valor base.
+                    full_range = pd.date_range(start=ipca_vals.index.min(), end=perf_df['Data'].max(), freq='D')
+                    ipca_daily = ipca_vals.reindex(full_range).ffill().bfill()
                     ipca_resampled = ipca_daily.reindex(perf_df['Data']).ffill().bfill()
                     if not ipca_resampled.empty and ipca_resampled.iloc[0] != 0:
                         perf_df['IPCA %'] = ((ipca_resampled / ipca_resampled.iloc[0] - 1) * 100).values
