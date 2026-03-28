@@ -12,6 +12,14 @@ def format_ticker_for_display(ticker_str):
         return ticker_str[:-3]
     return ticker_str
 
+import html
+
+def escape_html(text):
+    """Sanitiza strings de entrada convertendo caracteres perigosos (XSS) em HTML entities."""
+    if text is None: return ""
+    return html.escape(str(text))
+
+
 def format_brl(value):
     """Formata um float para o padrão de moeda brasileiro (R$ X.XXX,XX)"""
     try:
@@ -22,17 +30,21 @@ def format_brl(value):
 
 def create_card(label, value, delta=None):
     """Cria um card premium usando HTML/CSS personalizado."""
+    safe_label = escape_html(label)
+    safe_value = escape_html(value)
+    
     delta_html = ""
     if delta:
+        safe_delta = escape_html(delta)
         # Tenta identificar se é positivo ou negativo para cor
         color_class = "delta-positive" if "+" in str(delta) or ("-" not in str(delta) and str(delta) != "0,00%") else "delta-negative"
         if str(delta) == "0,00%": color_class = ""
-        delta_html = f'<div class="metric-delta {color_class}">{delta}</div>'
+        delta_html = f'<div class="metric-delta {color_class}">{safe_delta}</div>'
     
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-label">{label}</div>
-        <div class="metric-value">{value}</div>
+        <div class="metric-label">{safe_label}</div>
+        <div class="metric-value">{safe_value}</div>
         {delta_html}
     </div>
     """, unsafe_allow_html=True)
@@ -322,7 +334,8 @@ def show_asset_details_screen(asset_data):
     
     col_h1, col_h2 = st.columns([3, 1])
     with col_h1:
-        st.markdown(f'<h2 style="color: #ffffff; margin-top: 0;">Detalhe do Ativo: {display_ticker}</h2>', unsafe_allow_html=True)
+        st.markdown(f'<h2 style="color: #ffffff; margin-top: 0;">Detalhe do Ativo: {escape_html(display_ticker)}</h2>', unsafe_allow_html=True)
+
     with col_h2:
         color = "#00CC96" if init_guidance == "COMPRA" else "#EF553B"
         st.markdown(f'<div style="background-color: {color}; color: white; padding: 6px 12px; border-radius: 4px; text-align: center; font-weight: bold; font-size: 1.2rem;">{init_guidance}</div>', unsafe_allow_html=True)
@@ -706,7 +719,7 @@ st_autorefresh(interval=300000, key="datarefresh")
 def dialog_user_profile():
     u_details = db.get_user_details(st.session_state.user_id)
     if u_details:
-        st.markdown(f"### 👤 Perfil: `{u_details['username']}`")
+        st.markdown(f"### 👤 Perfil: `{escape_html(u_details['username'])}`")
         
         edit_email = st.text_input("Email", value=u_details['email'] if u_details['email'] else "")
         

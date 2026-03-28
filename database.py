@@ -1,13 +1,35 @@
 import sqlite3
 import pandas as pd
 import hashlib
+import bcrypt
 from contextlib import contextmanager
 
 DB_NAME = "portfolio.db"
 
 def hash_password(password):
-    """Gera um hash SHA-256 para a senha."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Gera um hash bcrypt para a senha."""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode(), salt).decode()
+
+def verify_password(plain_password, hashed_password):
+    """
+    Verifica se a senha coincide com o hash atual (bcrypt) ou legado (SHA-256).
+    Retorna dois booleanos: (is_valid, needs_rehash).
+    """
+    plain_bytes = plain_password.encode()
+    if hashed_password.startswith('$2b$'):
+        # Hash novo (bcrypt)
+        try:
+            is_valid = bcrypt.checkpw(plain_bytes, hashed_password.encode())
+            return is_valid, False
+        except Exception:
+            return False, False
+    else:
+        # Hash antigo (SHA-256)
+        legacy_hash = hashlib.sha256(plain_bytes).hexdigest()
+        if legacy_hash == hashed_password:
+            return True, True  # A senha está correta, mas o hash está desatualizado
+        return False, False
 
 def infer_asset_type(ticker):
     ticker = ticker.upper()
@@ -107,17 +129,33 @@ def create_user(username, email, birth_date, password):
 def verify_user(login_identifier, password):
     """
     Verifica o usuário pelo email ou pelo nome 'admin' (se for o caso).
+    Realiza a migração automática de senhas antigas para o padrão bcrypt.
     Retorna (sucesso, id, username).
     """
-    hashed = hash_password(password)
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if login_identifier == 'admin':
-            cursor.execute("SELECT id, username FROM users WHERE username = ? AND password = ?", (login_identifier, hashed))
+            cursor.execute("SELECT id, username, password FROM users WHERE username = ?", (login_identifier,))
         else:
-            cursor.execute("SELECT id, username FROM users WHERE email = ? AND password = ?", (login_identifier, hashed))
+            cursor.execute("SELECT id, username, password FROM users WHERE email = ?", (login_identifier,))
+        
         row = cursor.fetchone()
-        return (True, row[0], row[1]) if row else (False, None, None)
+        
+        if not row:
+            return (False, None, None)
+            
+        user_id, username, hashed_password = row
+        is_valid, needs_rehash = verify_password(password, hashed_password)
+        
+        if is_valid:
+            if needs_rehash:
+                # Rehash in background without interrupting user flow
+                new_hash = hash_password(password)
+                cursor.execute("UPDATE users SET password = ? WHERE id = ?", (new_hash, user_id))
+                conn.commit()
+            return True, user_id, username
+            
+        return False, None, None
 
 @contextmanager
 def get_db_connection():
