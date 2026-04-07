@@ -4,3 +4,6 @@ pandas
 plotly
 streamlit-autorefresh
 bcrypt
+psycopg2-binary
+SQLAlchemy
+python-dotenv

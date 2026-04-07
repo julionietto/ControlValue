@@ -1,10 +1,14 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
+import os
+from dotenv import load_dotenv
+load_dotenv()
 import pandas as pd
 import hashlib
 import bcrypt
 from contextlib import contextmanager
 
-DB_NAME = "portfolio.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/investcontrol")
 
 def hash_password(password):
     """Gera um hash bcrypt para a senha."""
@@ -43,12 +47,12 @@ def infer_asset_type(ticker):
         return 'Reits'
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
     # Tabela de Ativos (consolidado)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS assets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             ticker TEXT NOT NULL,
             asset_type TEXT NOT NULL,
             quantity REAL NOT NULL,
@@ -61,7 +65,7 @@ def init_db():
     # Tabela de Histórico de Operações
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS asset_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             asset_id INTEGER NOT NULL,
             date TEXT NOT NULL,
             quantity REAL NOT NULL,
@@ -72,7 +76,7 @@ def init_db():
     # Tabela de Usuários
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT NOT NULL,
             email TEXT,
             birth_date TEXT,
@@ -83,7 +87,7 @@ def init_db():
     # Tabela de Proventos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS proventos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             ano INTEGER NOT NULL,
             mes TEXT NOT NULL,
             ticker TEXT NOT NULL,
@@ -94,7 +98,7 @@ def init_db():
     # Tabela de Opções
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS opcoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             ativo TEXT NOT NULL,
             strike REAL,
             tp_opcao TEXT,
@@ -123,7 +127,7 @@ def create_user(username, email, birth_date, password):
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (?, ?, ?, ?, ?)", (username, email, birth_date, hashed, now_str))
+        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (%s, %s, %s, %s, %s)", (username, email, birth_date, hashed, now_str))
         conn.commit()
 
 def verify_user(login_identifier, password):
@@ -135,9 +139,9 @@ def verify_user(login_identifier, password):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if login_identifier == 'admin':
-            cursor.execute("SELECT id, username, password FROM users WHERE username = ?", (login_identifier,))
+            cursor.execute("SELECT id, username, password FROM users WHERE username = %s", (login_identifier,))
         else:
-            cursor.execute("SELECT id, username, password FROM users WHERE email = ?", (login_identifier,))
+            cursor.execute("SELECT id, username, password FROM users WHERE email = %s", (login_identifier,))
         
         row = cursor.fetchone()
         
@@ -151,7 +155,7 @@ def verify_user(login_identifier, password):
             if needs_rehash:
                 # Rehash in background without interrupting user flow
                 new_hash = hash_password(password)
-                cursor.execute("UPDATE users SET password = ? WHERE id = ?", (new_hash, user_id))
+                cursor.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, user_id))
                 conn.commit()
             return True, user_id, username
             
@@ -159,7 +163,7 @@ def verify_user(login_identifier, password):
 
 @contextmanager
 def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
+    conn = psycopg2.connect(DATABASE_URL)
     try:
         yield conn
     finally:
@@ -168,7 +172,7 @@ def get_db_connection():
 def recalculate_asset_balance(asset_id, conn):
     """Recalcula a quantidade e o preço médio de um ativo com base no histórico."""
     cursor = conn.cursor()
-    cursor.execute("SELECT quantity, unit_price FROM asset_history WHERE asset_id = ?", (asset_id,))
+    cursor.execute("SELECT quantity, unit_price FROM asset_history WHERE asset_id = %s", (asset_id,))
     history = cursor.fetchall()
     
     total_quantity = 0.0
@@ -179,16 +183,16 @@ def recalculate_asset_balance(asset_id, conn):
         if qty > 0: # Compra: aumenta o custo total
             total_cost += qty * price
             
-    cursor.execute("SELECT SUM(quantity), SUM(quantity * unit_price) FROM asset_history WHERE asset_id = ? AND quantity > 0", (asset_id,))
+    cursor.execute("SELECT SUM(quantity), SUM(quantity * unit_price) FROM asset_history WHERE asset_id = %s AND quantity > 0", (asset_id,))
     total_buy_qty, total_buy_cost = cursor.fetchone()
     
     avg_price = total_buy_cost / total_buy_qty if total_buy_qty and total_buy_qty > 0 else 0.0
     
-    cursor.execute("SELECT SUM(quantity) FROM asset_history WHERE asset_id = ?", (asset_id,))
+    cursor.execute("SELECT SUM(quantity) FROM asset_history WHERE asset_id = %s", (asset_id,))
     final_qty = cursor.fetchone()[0] or 0.0
     
     cursor.execute(
-        "UPDATE assets SET quantity = ?, average_price = ? WHERE id = ?",
+        "UPDATE assets SET quantity = %s, average_price = %s WHERE id = %s",
         (final_qty, avg_price, asset_id)
     )
 
@@ -196,12 +200,12 @@ def add_empty_asset(ticker, asset_type, user_id):
     ticker = ticker.upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE ticker = ? AND user_id = ?", (ticker, user_id))
+        cursor.execute("SELECT id FROM assets WHERE ticker = %s AND user_id = %s", (ticker, user_id))
         existing_asset = cursor.fetchone()
         
         if not existing_asset:
             cursor.execute(
-                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, ?, 0, 0, ?)",
+                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, %s, 0, 0, %s)",
                 (ticker, asset_type, user_id)
             )
             conn.commit()
@@ -210,19 +214,19 @@ def add_empty_asset(ticker, asset_type, user_id):
 
 def get_asset_by_id(asset_id, user_id):
     with get_db_connection() as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT * FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
         row = cursor.fetchone()
         return dict(row) if row else None
 
 def add_asset_operation(asset_id, user_id, date, quantity, unit_price):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+        cursor.execute("SELECT id FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
         if cursor.fetchone():
             cursor.execute(
-                "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (%s, %s, %s, %s)",
                 (asset_id, date, quantity, unit_price)
             )
             recalculate_asset_balance(asset_id, conn)
@@ -231,10 +235,10 @@ def add_asset_operation(asset_id, user_id, date, quantity, unit_price):
 def update_asset_operation(operation_id, asset_id, user_id, date, quantity, unit_price):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+        cursor.execute("SELECT id FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
         if cursor.fetchone():
             cursor.execute(
-                "UPDATE asset_history SET date = ?, quantity = ?, unit_price = ? WHERE id = ? AND asset_id = ?",
+                "UPDATE asset_history SET date = %s, quantity = %s, unit_price = %s WHERE id = %s AND asset_id = %s",
                 (date, quantity, unit_price, operation_id, asset_id)
             )
             recalculate_asset_balance(asset_id, conn)
@@ -243,9 +247,9 @@ def update_asset_operation(operation_id, asset_id, user_id, date, quantity, unit
 def delete_asset_operation(operation_id, asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+        cursor.execute("SELECT id FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
         if cursor.fetchone():
-            cursor.execute("DELETE FROM asset_history WHERE id = ? AND asset_id = ?", (operation_id, asset_id))
+            cursor.execute("DELETE FROM asset_history WHERE id = %s AND asset_id = %s", (operation_id, asset_id))
             recalculate_asset_balance(asset_id, conn)
             conn.commit()
 
@@ -254,18 +258,18 @@ def add_or_update_fixed_income_asset(ticker, saldo, user_id):
     ticker = ticker.upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE ticker = ? AND user_id = ?", (ticker, user_id))
+        cursor.execute("SELECT id FROM assets WHERE ticker = %s AND user_id = %s", (ticker, user_id))
         existing_asset = cursor.fetchone()
         
         if existing_asset:
             asset_id = existing_asset[0]
             cursor.execute(
-                "UPDATE assets SET quantity = 1, average_price = ?, asset_type = 'Renda Fixa' WHERE id = ? AND user_id = ?",
+                "UPDATE assets SET quantity = 1, average_price = %s, asset_type = 'Renda Fixa' WHERE id = %s AND user_id = %s",
                 (saldo, asset_id, user_id)
             )
         else:
             cursor.execute(
-                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, 'Renda Fixa', 1, ?, ?)",
+                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, 'Renda Fixa', 1, %s, %s)",
                 (ticker, saldo, user_id)
             )
         conn.commit()
@@ -276,24 +280,24 @@ def save_provento(ano, mes, ticker, valor, user_id):
     valor = float(valor)
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM proventos WHERE ano = ? AND mes = ? AND ticker = ? AND user_id = ?", (ano, mes, ticker, user_id))
+        cursor.execute("SELECT id FROM proventos WHERE ano = %s AND mes = %s AND ticker = %s AND user_id = %s", (ano, mes, ticker, user_id))
         res = cursor.fetchone()
         
         if res:
-            cursor.execute("UPDATE proventos SET valor = ? WHERE id = ? AND user_id = ?", (valor, res[0], user_id))
+            cursor.execute("UPDATE proventos SET valor = %s WHERE id = %s AND user_id = %s", (valor, res[0], user_id))
         else:
-            cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (?, ?, ?, ?, ?)", (ano, mes, ticker, valor, user_id))
+            cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, %s, %s, %s, %s)", (ano, mes, ticker, valor, user_id))
         conn.commit()
 
 def delete_proventos_ativo_ano(ano, ticker, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM proventos WHERE ano = ? AND ticker = ? AND user_id = ?", (ano, ticker, user_id))
+        cursor.execute("DELETE FROM proventos WHERE ano = %s AND ticker = %s AND user_id = %s", (ano, ticker, user_id))
         conn.commit()
 
 def get_all_assets(user_id):
     with get_db_connection() as conn:
-        df = pd.read_sql_query("SELECT * FROM assets WHERE user_id = ? AND (quantity > 0 OR asset_type = 'Renda Fixa')", conn, params=(user_id,))
+        df = _query_to_df("SELECT * FROM assets WHERE user_id = %s AND (quantity > 0 OR asset_type = 'Renda Fixa')", conn, params=(user_id,))
     return df
 
 def get_asset_history(asset_id, user_id):
@@ -301,16 +305,16 @@ def get_asset_history(asset_id, user_id):
         query = '''
             SELECT h.* FROM asset_history h 
             JOIN assets a ON h.asset_id = a.id 
-            WHERE a.id = ? AND a.user_id = ? 
+            WHERE a.id = %s AND a.user_id = %s 
             ORDER BY h.date DESC
         '''
-        df = pd.read_sql_query(query, conn, params=(asset_id, user_id))
+        df = _query_to_df(query, conn, params=(asset_id, user_id))
     return df
 
 def get_proventos(user_id):
     import struct
     with get_db_connection() as conn:
-        df = pd.read_sql_query("SELECT * FROM proventos WHERE user_id = ? ORDER BY ano DESC, mes, ticker", conn, params=(user_id,))
+        df = _query_to_df("SELECT * FROM proventos WHERE user_id = %s ORDER BY ano DESC, mes, ticker", conn, params=(user_id,))
     if not df.empty:
         def safe_int_ano(val):
             if isinstance(val, bytes):
@@ -328,12 +332,12 @@ def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price,
         cursor = conn.cursor()
         if asset_type == 'Renda Fixa':
             cursor.execute(
-                "UPDATE assets SET ticker = ?, asset_type = ?, quantity = ?, average_price = ?, price_ceiling = ?, fair_value = ? WHERE id = ? AND user_id = ?",
+                "UPDATE assets SET ticker = %s, asset_type = %s, quantity = %s, average_price = %s, price_ceiling = %s, fair_value = %s WHERE id = %s AND user_id = %s",
                 (ticker, asset_type, quantity, average_price, price_ceiling, fair_value, asset_id, user_id)
             )
         else:
             cursor.execute(
-                "UPDATE assets SET ticker = ?, asset_type = ?, price_ceiling = ?, fair_value = ? WHERE id = ? AND user_id = ?",
+                "UPDATE assets SET ticker = %s, asset_type = %s, price_ceiling = %s, fair_value = %s WHERE id = %s AND user_id = %s",
                 (ticker, asset_type, price_ceiling, fair_value, asset_id, user_id)
             )
         conn.commit()
@@ -341,10 +345,10 @@ def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price,
 def delete_asset(asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+        cursor.execute("SELECT id FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
         if cursor.fetchone():
-            cursor.execute("DELETE FROM asset_history WHERE asset_id = ?", (asset_id,))
-            cursor.execute("DELETE FROM assets WHERE id = ?", (asset_id,))
+            cursor.execute("DELETE FROM asset_history WHERE asset_id = %s", (asset_id,))
+            cursor.execute("DELETE FROM assets WHERE id = %s", (asset_id,))
             conn.commit()
 
 def import_from_csv(file_path, user_id):
@@ -363,7 +367,7 @@ def import_from_csv(file_path, user_id):
             
             with get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT ticker, id FROM assets WHERE user_id = ?", (user_id,))
+                cursor.execute("SELECT ticker, id FROM assets WHERE user_id = %s", (user_id,))
                 assets_map = {row[0]: row[1] for row in cursor.fetchall()}
                 
                 for row in reader:
@@ -389,14 +393,14 @@ def import_from_csv(file_path, user_id):
                     
                     if ticker not in assets_map:
                         cursor.execute(
-                            "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, ?, 0, 0, ?)",
+                            "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, %s, 0, 0, %s)",
                             (ticker, asset_type, user_id)
                         )
                         assets_map[ticker] = cursor.lastrowid
                     
                     asset_id = assets_map[ticker]
                     cursor.execute(
-                        "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                        "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (%s, %s, %s, %s)",
                         (asset_id, date, quantity, unit_price)
                     )
                 
@@ -455,13 +459,13 @@ def import_proventos_csv(file_content, user_id):
 
         # 2. Processo de Importação com Transação
         with get_db_connection() as conn:
-            conn.isolation_level = None # Manual transaction control
+            conn.autocommit = True # Manual transaction control
             cursor = conn.cursor()
             cursor.execute("BEGIN TRANSACTION")
             
             try:
                 # Deleta dados atuais
-                cursor.execute("DELETE FROM proventos WHERE user_id = ?", (user_id,))
+                cursor.execute("DELETE FROM proventos WHERE user_id = %s", (user_id,))
                 
                 # Reinicia o reader ( StringIO já foi seek(0) )
                 reader = csv.reader(io.StringIO(content_for_validation), delimiter=',')
@@ -491,7 +495,7 @@ def import_proventos_csv(file_content, user_id):
                             
                             if valor > 0:
                                 cursor.execute(
-                                    "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (?, ?, ?, ?, ?)",
+                                    "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, %s, %s, %s, %s)",
                                     (ano, mes_pt, ticker, valor, user_id)
                                 )
                 
@@ -550,14 +554,14 @@ def import_assets_csv(file_content, user_id):
 
         # 2. Processo de Importação com Transação
         with get_db_connection() as conn:
-            conn.isolation_level = None # Manual transaction control
+            conn.autocommit = True # Manual transaction control
             cursor = conn.cursor()
             cursor.execute("BEGIN TRANSACTION")
             
             try:
                 # Deleta dados atuais (Ativos e Histórico)
-                cursor.execute("DELETE FROM asset_history WHERE asset_id IN (SELECT id FROM assets WHERE user_id = ?)", (user_id,))
-                cursor.execute("DELETE FROM assets WHERE user_id = ?", (user_id,))
+                cursor.execute("DELETE FROM asset_history WHERE asset_id IN (SELECT id FROM assets WHERE user_id = %s)", (user_id,))
+                cursor.execute("DELETE FROM assets WHERE user_id = %s", (user_id,))
                 
                 # Reinicia o reader
                 reader = csv.reader(io.StringIO(content_for_validation), delimiter=',')
@@ -581,14 +585,14 @@ def import_assets_csv(file_content, user_id):
                     if ticker not in assets_map:
                         asset_type = infer_asset_type(ticker)
                         cursor.execute(
-                            "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (?, ?, 0, 0, ?)",
+                            "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, %s, 0, 0, %s)",
                             (ticker, asset_type, user_id)
                         )
                         assets_map[ticker] = cursor.lastrowid
                     
                     asset_id = assets_map[ticker]
                     cursor.execute(
-                        "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                        "INSERT INTO asset_history (asset_id, date, quantity, unit_price) VALUES (%s, %s, %s, %s)",
                         (asset_id, db_date, quantity, unit_price)
                     )
                 
@@ -613,7 +617,7 @@ def get_total_proventos_by_ticker(ticker, user_id):
     ticker = ticker.strip().upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT SUM(valor) FROM proventos WHERE ticker = ? AND user_id = ?", (ticker, user_id))
+        cursor.execute("SELECT SUM(valor) FROM proventos WHERE ticker = %s AND user_id = %s", (ticker, user_id))
         res = cursor.fetchone()
         return res[0] if res[0] is not None else 0.0
 
@@ -626,18 +630,18 @@ def check_and_create_next_year_dashboard(user_id):
     if now.month == 12:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id FROM proventos WHERE ano = ? AND user_id = ? LIMIT 1", (next_year, user_id))
+            cursor.execute("SELECT id FROM proventos WHERE ano = %s AND user_id = %s LIMIT 1", (next_year, user_id))
             if cursor.fetchone() is None:
-                cursor.execute("SELECT DISTINCT ticker FROM proventos WHERE ano = ? AND user_id = ?", (current_year, user_id))
+                cursor.execute("SELECT DISTINCT ticker FROM proventos WHERE ano = %s AND user_id = %s", (current_year, user_id))
                 tickers = cursor.fetchall()
                 if not tickers:
-                    cursor.execute("SELECT DISTINCT ticker FROM assets WHERE user_id = ?", (user_id,))
+                    cursor.execute("SELECT DISTINCT ticker FROM assets WHERE user_id = %s", (user_id,))
                     tickers = cursor.fetchall()
                 
                 for row in tickers:
                     ticker = row[0]
                     cursor.execute(
-                        "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (?, 'Janeiro', ?, 0.0, ?)",
+                        "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, 'Janeiro', %s, 0.0, %s)",
                         (next_year, ticker, user_id)
                     )
                 conn.commit()
@@ -647,13 +651,13 @@ def check_and_create_next_year_dashboard(user_id):
 def get_all_total_proventos(user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT SUM(valor) FROM proventos WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT SUM(valor) FROM proventos WHERE user_id = %s", (user_id,))
         res = cursor.fetchone()
         return res[0] if res[0] is not None else 0.0
 
 def get_all_proventos(user_id):
     with get_db_connection() as conn:
-        return pd.read_sql_query("SELECT * FROM proventos WHERE user_id = ?", conn, params=(user_id,))
+        return _query_to_df("SELECT * FROM proventos WHERE user_id = %s", conn, params=(user_id,))
 
 def import_opcoes_tsv(file_path, user_id):
     import csv
@@ -671,7 +675,7 @@ def import_opcoes_tsv(file_path, user_id):
             
             with get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM opcoes WHERE user_id = ?", (user_id,))
+                cursor.execute("DELETE FROM opcoes WHERE user_id = %s", (user_id,))
                 
                 for row in reader:
                     if not row or len(row) < 10:
@@ -716,7 +720,7 @@ def import_opcoes_tsv(file_path, user_id):
                         
                         cursor.execute('''
                             INSERT INTO opcoes (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id))
                     except (ValueError, IndexError):
                         continue
@@ -728,7 +732,7 @@ def import_opcoes_tsv(file_path, user_id):
 
 def get_opcoes(user_id):
     with get_db_connection() as conn:
-        df = pd.read_sql_query("SELECT * FROM opcoes WHERE user_id = ? ORDER BY dt_vencimento ASC, ativo ASC", conn, params=(user_id,))
+        df = _query_to_df("SELECT * FROM opcoes WHERE user_id = %s ORDER BY dt_vencimento ASC, ativo ASC", conn, params=(user_id,))
     return df
 
 def insert_opcao(ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id):
@@ -736,7 +740,7 @@ def insert_opcao(ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO opcoes (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id))
         conn.commit()
 
@@ -745,20 +749,20 @@ def update_opcao(opcao_id, user_id, ativo, strike, tp_opcao, dt_operacao, dt_ven
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE opcoes 
-            SET ativo=?, strike=?, tp_opcao=?, dt_operacao=?, dt_vencimento=?, derivativo=?, quantidade=?, vl_opcao=?, vl_premio=?, status=?
-            WHERE id=? AND user_id=?
+            SET ativo=%s, strike=%s, tp_opcao=%s, dt_operacao=%s, dt_vencimento=%s, derivativo=%s, quantidade=%s, vl_opcao=%s, vl_premio=%s, status=%s
+            WHERE id=%s AND user_id=%s
         ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, opcao_id, user_id))
         conn.commit()
 
 def delete_opcao(opcao_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM opcoes WHERE id=? AND user_id=?", (opcao_id, user_id))
+        cursor.execute("DELETE FROM opcoes WHERE id=%s AND user_id=%s", (opcao_id, user_id))
         conn.commit()
 
 def get_all_users():
     with get_db_connection() as conn:
-        df = pd.read_sql_query("SELECT id, username, email, birth_date, created_at FROM users", conn)
+        df = _query_to_df("SELECT id, username, email, birth_date, created_at FROM users", conn)
     return df
 
 def admin_create_user(username, email, birth_date, password):
@@ -767,7 +771,7 @@ def admin_create_user(username, email, birth_date, password):
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (?, ?, ?, ?, ?)", (username, email, birth_date, hashed, now_str))
+        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (%s, %s, %s, %s, %s)", (username, email, birth_date, hashed, now_str))
         conn.commit()
 
 def admin_update_user(user_id, username, email, birth_date, new_password=None):
@@ -775,26 +779,26 @@ def admin_update_user(user_id, username, email, birth_date, new_password=None):
         cursor = conn.cursor()
         if new_password:
             hashed = hash_password(new_password)
-            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ?, password = ? WHERE id = ?", (username, email, birth_date, hashed, user_id))
+            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s, password = %s WHERE id = %s", (username, email, birth_date, hashed, user_id))
         else:
-            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ? WHERE id = ?", (username, email, birth_date, user_id))
+            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s WHERE id = %s", (username, email, birth_date, user_id))
         conn.commit()
 
 def admin_delete_user(user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM asset_history WHERE asset_id IN (SELECT id FROM assets WHERE user_id = ?)", (user_id,))
-        cursor.execute("DELETE FROM assets WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM proventos WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM opcoes WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        cursor.execute("DELETE FROM asset_history WHERE asset_id IN (SELECT id FROM assets WHERE user_id = %s)", (user_id,))
+        cursor.execute("DELETE FROM assets WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM proventos WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM opcoes WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
         conn.commit()
 
 def get_user_details(user_id):
     with get_db_connection() as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, username, email, birth_date, created_at FROM users WHERE id = ?", (user_id,))
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT id, username, email, birth_date, created_at FROM users WHERE id = %s", (user_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
 
@@ -803,14 +807,22 @@ def update_user_profile(user_id, username, email, birth_date, password=None):
         cursor = conn.cursor()
         if password:
             hashed = hash_password(password)
-            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ?, password = ? WHERE id = ?", (username, email, birth_date, hashed, user_id))
+            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s, password = %s WHERE id = %s", (username, email, birth_date, hashed, user_id))
         else:
-            cursor.execute("UPDATE users SET username = ?, email = ?, birth_date = ? WHERE id = ?", (username, email, birth_date, user_id))
+            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s WHERE id = %s", (username, email, birth_date, user_id))
         conn.commit()
 
 def update_user_password(user_id, new_password):
     hashed = hash_password(new_password)
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed, user_id))
+        cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed, user_id))
         conn.commit()
+
+def _query_to_df(query, conn, params=None):
+    cursor = conn.cursor()
+    cursor.execute(query, params) if params else cursor.execute(query)
+    data = cursor.fetchall()
+    cols = [desc[0] for desc in cursor.description] if cursor.description else []
+    import pandas as pd
+    return pd.DataFrame(data, columns=cols)

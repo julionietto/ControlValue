@@ -1,4 +1,5 @@
 import streamlit as st
+import base64
 import pandas as pd
 import database as db
 import time
@@ -6,6 +7,8 @@ import services as svc
 import plotly.express as px
 import numpy as np
 from streamlit_autorefresh import st_autorefresh
+from contextlib import contextmanager
+
 
 def format_ticker_for_display(ticker_str):
     if isinstance(ticker_str, str) and ticker_str.endswith(".SA"):
@@ -618,76 +621,81 @@ def dialog_register_user():
                     st.error("As senhas não conferem.")
             else:
                 st.error("Preencha todos os campos obrigatórios.")
+    close_login_dialog = False
     with col2:
         if st.button("Cancelar", use_container_width=True):
-            st.rerun()
+            close_login_dialog = True
+            
+    if close_login_dialog:
+        st.rerun()
 
 if not st.session_state.authenticated:
-    # Centraliza o login usando colunas [30%, 40%, 30%]
-    _, login_col, _ = st.columns([0.3, 0.4, 0.3])
+    # Centraliza o login usando colunas [15%, 70%, 15%]
+    _, login_col, _ = st.columns([0.15, 0.7, 0.15])
     
     with login_col:
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.title("🔐 Acesso")
-        
-        user_count = db.get_user_count()
-        
-        if user_count == 0:
-            st.info("Nenhum usuário cadastrado. Crie sua conta de administrador.")
-            with st.form("register_form_admin"):
-                _, field_col, _ = st.columns([0.1, 0.8, 0.1])
-                with field_col:
-                    new_user = st.text_input("Usuário", value="admin", disabled=True)
-                    new_email = st.text_input("Email", placeholder="seu@email.com")
-                    new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
-                    new_pass = st.text_input("Senha", type="password", placeholder="Sua senha")
-                    confirm_pass = st.text_input("Confirmar", type="password", placeholder="Repita a senha")
-                    submit_reg = st.form_submit_button("Criar Conta de Admin", use_container_width=True)
-                
-                if submit_reg:
-                    if new_user and new_email and new_pass:
-                        if new_pass == confirm_pass:
-                            db.create_user(new_user, new_email, new_birth.strftime("%Y-%m-%d"), new_pass)
-                            success, uid, uname = db.verify_user(new_user, new_pass)
-                            if success:
-                                st.session_state.authenticated = True
-                                st.session_state.user_id = uid
-                                st.session_state.username = uname
-                                st.session_state.is_admin = True
-                                st.success("Administrador cadastrado!")
-                                st.rerun()
-                        else:
-                            st.error("As senhas não conferem.")
-                    else:
-                        st.error("Preencha todos os campos.")
-        else:
-            with st.form("login_form"):
-                _, field_col, _ = st.columns([0.1, 0.8, 0.1])
-                with field_col:
-                    user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
-                    password = st.text_input("Senha", type="password", placeholder="Sua senha")
-                    submit_login = st.form_submit_button("Entrar", use_container_width=True)
-                
-                if submit_login:
-                    success, uid, uname = db.verify_user(user_input, password)
-                    if success:
-                        st.session_state.authenticated = True
-                        st.session_state.user_id = uid
-                        st.session_state.username = uname
-                        st.session_state.is_admin = (uname == 'admin')
-                        st.rerun()
-                    else:
-                        st.error("Usuário ou senha incorretos.")
+        # Usamos um container com borda para criar o efeito de card de forma nativa e limpa
+        with st.container(border=True):
+            col_logo, col_form = st.columns([0.6, 0.4], gap="medium", vertical_alignment="bottom")
             
-            # Link para criar conta se não for admin
-            if st.button("Não tem conta? Criar conta", use_container_width=True):
-                dialog_register_user()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+            with col_logo:
+                st.image("images/logoInvestControl.png", use_container_width=True)
+                
+            with col_form:
+                st.markdown('<h1 style="text-align: left; margin-top: 0; margin-bottom: 24px; font-size: 2.25rem; font-weight: 700; color: #ffffff;">🔐 Acesso</h1>', unsafe_allow_html=True)
+                
+                user_count = db.get_user_count()
+                
+                if user_count == 0:
+                    st.info("Nenhum usuário cadastrado. Crie sua conta de administrador.")
+                    with st.form("register_form_admin"):
+                        new_user = st.text_input("Usuário", value="admin", disabled=True)
+                        new_email = st.text_input("Email", placeholder="seu@email.com")
+                        new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
+                        new_pass = st.text_input("Senha", type="password", placeholder="Sua senha")
+                        confirm_pass = st.text_input("Confirmar", type="password", placeholder="Repita a senha")
+                        submit_reg = st.form_submit_button("Criar Conta de Admin", use_container_width=True)
+                    
+                    if submit_reg:
+                        if new_user and new_email and new_pass:
+                            if new_pass == confirm_pass:
+                                db.create_user(new_user, new_email, new_birth.strftime("%Y-%m-%d"), new_pass)
+                                success, uid, uname = db.verify_user(new_user, new_pass)
+                                if success:
+                                    st.session_state.authenticated = True
+                                    st.session_state.user_id = uid
+                                    st.session_state.username = uname
+                                    st.session_state.is_admin = True
+                                    st.success("Administrador cadastrado!")
+                                    st.rerun()
+                            else:
+                                st.error("As senhas não conferem.")
+                        else:
+                            st.error("Preencha todos os campos.")
+                else:
+                    with st.form("login_form"):
+                        user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
+                        password = st.text_input("Senha", type="password", placeholder="Sua senha")
+                        submit_login = st.form_submit_button("Entrar", use_container_width=True)
+                    
+                    if submit_login:
+                        success, uid, uname = db.verify_user(user_input, password)
+                        if success:
+                            st.session_state.authenticated = True
+                            st.session_state.user_id = uid
+                            st.session_state.username = uname
+                            st.session_state.is_admin = (uname == 'admin')
+                            st.rerun()
+                        else:
+                            st.error("Usuário ou senha incorretos.")
+                
+            # Link para criar conta se não for admin: posicionado abaixo das colunas para manter o alinhamento do logo com o botão Entrar
+            if user_count > 0:
+                st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
+                if st.button("Não tem conta? Criar conta", use_container_width=True):
+                    dialog_register_user()
     st.stop()
 
-    st.markdown('<h1 style="color: #ffffff; font-size: 2.25rem; margin-bottom: 0.5rem;">Ativos Financeiros</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #a1a1aa; font-size: 1rem; margin-bottom: 2rem;">Controle de investimentos e análise de performance em tempo real.</p>', unsafe_allow_html=True)
 
 # Inicializar variáveis de controle no session_state para limpar o form
 if 'form_ticker' not in st.session_state:
@@ -758,9 +766,14 @@ def dialog_user_profile():
                     st.rerun()
                 else:
                     st.error("O Email é obrigatório.")
+        close_perfil_dialog = False
         with col2:
             if st.button("Fechar", use_container_width=True):
-                st.rerun()
+                close_perfil_dialog = True
+                
+        if close_perfil_dialog:
+            st.rerun()
+            
     else:
         st.error("Erro ao carregar dados do perfil.")
 
@@ -812,9 +825,13 @@ def dialog_importar_proventos():
                 st.session_state.confirm_imp_proventos = True
                 st.session_state.arquivo_prov_pendente = arquivo_upload
                 st.rerun()
+        close_prov_dialog = False
         with col2:
             if st.button("Cancelar", use_container_width=True):
-                st.rerun()
+                close_prov_dialog = True
+                
+        if close_prov_dialog:
+            st.rerun()
 
 @st.dialog("Importar Ativos")
 def dialog_importar_ativos():
@@ -865,37 +882,136 @@ def dialog_importar_ativos():
                 st.session_state.confirm_imp_ativos = True
                 st.session_state.arquivo_ativos_pendente = arquivo_upload
                 st.rerun()
+        close_ativos_dialog = False
         with col2:
             if st.button("Cancelar", use_container_width=True):
                 st.session_state.navigation_tab = "Visão Geral"
-                st.rerun()
+                close_ativos_dialog = True
+                
+        if close_ativos_dialog:
+            st.rerun()
 
 # dialog_change_password removido pois foi integrado no dialog_user_profile
 
 def render_profile_popover():
     username_display = st.session_state.get('username', 'Perfil')
     st.markdown(f'<div style="text-align: right; color: #e4e4e7; font-size: 0.9rem; margin-bottom: 8px;">Logado como: <b>{username_display}</b></div>', unsafe_allow_html=True)
-    with st.popover("👤 Menu de Perfil", use_container_width=True):
-        if st.button("Seu perfil", use_container_width=True):
-            dialog_user_profile()
-        st.markdown("---")
+    
+    label_suffix = "\u200b" * (st.session_state.get('pop_ctrl', 0) % 2)
+    with st.popover(f"👤 Menu de Perfil{label_suffix}", use_container_width=True):
+        if st.button("Visão Geral", use_container_width=True):
+            st.session_state.navigation_tab = "Visão Geral"
+            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+            st.rerun()
+        if st.button("Proventos Recebidos", use_container_width=True):
+            st.session_state.navigation_tab = "Proventos Recebidos"
+            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+            st.rerun()
+        if st.button("Derivativos", use_container_width=True):
+            st.session_state.navigation_tab = "Derivativos"
+            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+            st.rerun()
+        if st.button("Importar Ativos", use_container_width=True):
+            st.session_state.trigger_dialog_ativos = True
+            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+            st.rerun()
+        if st.button("Importar Proventos", use_container_width=True):
+            st.session_state.trigger_dialog_proventos = True
+            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+            st.rerun()
+        if st.button("Seu Perfil", use_container_width=True):
+            st.session_state.trigger_dialog_perfil = True
+            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+            st.rerun()
         if st.button("Sair", type="primary", use_container_width=True):
             st.session_state.clear()
             st.rerun()
 
 
-# ==============================
-# ADMIN DASHBOARD
-# ==============================
-if st.session_state.get('is_admin', False):
-    col_title, col_logout = st.columns([0.85, 0.15])
+
+    # Dispara os diálogos de forma segura por fora do popover para que funcionem bem após recriação
+    if st.session_state.pop('trigger_dialog_ativos', False):
+        dialog_importar_ativos()
+    if st.session_state.pop('trigger_dialog_proventos', False):
+        dialog_importar_proventos()
+    if st.session_state.pop('trigger_dialog_perfil', False):
+        dialog_user_profile()
+
+def get_base64_image(image_path):
+    """Lê uma imagem e retorna sua representação em base64."""
+    try:
+        import os
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as img_file:
+                return base64.b64encode(img_file.read()).decode()
+    except Exception:
+        pass
+    return ""
+
+def render_top_header(title, subtitle):
+    """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
+    
+    col_logo, col_title, col_logout = st.columns([0.15, 0.7, 0.15], gap="small", vertical_alignment="center")
+    with col_logo:
+        logo_b64 = get_base64_image("images/logoHome.png")
+        if logo_b64:
+            st.markdown(
+                f"""
+                <style>
+                .st-key-home_logo_btn button {{
+                    background-image: url('data:image/png;base64,{logo_b64}');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: left center;
+                    background-color: transparent !important;
+                    border: none !important;
+                    width: 192px !important;
+                    height: 64px !important;
+                    box-shadow: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    transition: transform 0.2s ease, filter 0.2s ease;
+                }}
+                .st-key-home_logo_btn button:hover {{
+                    transform: scale(1.05);
+                    filter: brightness(1.2);
+                    background-color: transparent !important;
+                    border: none !important;
+                }}
+                .st-key-home_logo_btn button p {{
+                    display: none !important;
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+            if st.button("home", key="home_logo_btn", help="Voltar para Visão Geral"):
+                st.session_state.navigation_tab = "Visão Geral"
+                st.rerun()
+        else:
+            # Fallback se a imagem não for encontrada
+            if st.button("🏠", key="home_fallback_btn", help="Voltar para Visão Geral"):
+                st.session_state.navigation_tab = "Visão Geral"
+                st.rerun()
+                
     with col_title:
-        st.markdown('<h1 style="color: #ffffff; font-size: 2.25rem;">🛡️ Painel de Administração</h1>', unsafe_allow_html=True)
-        st.markdown('<p style="color: #a1a1aa; font-size: 1rem; margin-bottom: 2rem;">Gestão de usuários do sistema.</p>', unsafe_allow_html=True)
+        st.markdown(f'''
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <h1 style="color: #ffffff; font-size: 2.25rem; margin: 0; padding: 0; line-height: 1.1;">{title}</h1>
+                <p style="color: #a1a1aa; font-size: 1rem; margin: 0; padding: 0; line-height: 1.2; margin-top: 4px;">{subtitle}</p>
+            </div>
+        ''', unsafe_allow_html=True)
+    
     with col_logout:
         st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
         render_profile_popover()
         st.markdown('</div>', unsafe_allow_html=True)
+
+# ==============================
+# ADMIN DASHBOARD
+# ==============================
+if st.session_state.get('is_admin', False):
+    render_top_header("🛡️ Painel de Administração", "Gestão de usuários do sistema.")
     
     # 1. Metricas
     users_df = db.get_all_users()
@@ -1014,27 +1130,9 @@ def update_ticker():
     st.session_state.form_ticker = clean_ticker
 
 # Top Header com Título e Logout
-col_title, col_logout = st.columns([0.85, 0.15])
-with col_title:
-    st.markdown('<h1 style="margin: 0; padding: 0;">Ativos Financeiros</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #a1a1aa; font-size: 1rem; margin-top: -10px;">Controle de investimentos e análise de performance em tempo real.</p>', unsafe_allow_html=True)
-
-with col_logout:
-    st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
-    render_profile_popover()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('<div style="margin-bottom: 2rem;"></div>', unsafe_allow_html=True)
-
-# Navegação Principal (Tabs/Seções)
-current_view = st.sidebar.radio("Navegação", ["Visão Geral", "Proventos Recebidos", "Opções"], key="navigation_tab")
-
-st.sidebar.markdown("---")
-if st.sidebar.button("Importar Proventos", use_container_width=True):
-    dialog_importar_proventos()
-
-if st.sidebar.button("Importar Ativos", use_container_width=True):
-    dialog_importar_ativos()
+render_top_header("Ativos Financeiros", "Controle de investimentos e análise de performance em tempo real.")
+# Pega a navegação inicial do estado (que é inicializada posteriormente, mas tratamos aqui)
+current_view = st.session_state.get('navigation_tab', 'Visão Geral')
 
 # Área Principal - Divisão de Telas Baseada na Seleção
 # Área Principal - Divisão de Telas Baseada na Seleção
@@ -1082,8 +1180,16 @@ if current_view == "Proventos Recebidos":
         with col1:
             if st.button("✅ Adicionar", type="primary", use_container_width=True):
                 if ticker_novo:
-                    # Insere o ativo com valor 0 em Janeiro para registrar a existência
-                    db.save_provento(ano, 'Janeiro', ticker_novo, 0.0, st.session_state.user_id)
+                    # Aplica as regras de sufixo .SA (Ações e Fiis) conhecidas
+                    if len(ticker_novo) >= 4 and "." not in ticker_novo:
+                        if ticker_novo not in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+                            ticker_novo += ".SA"
+                            
+                    # Cria todos os registros mensais (Janeiro a Dezembro) simultaneamente
+                    # Assim toda edição posterior atuará alterando os registros já existentes
+                    for mes in meses_ordem:
+                        db.save_provento(ano, mes, ticker_novo, 0.0, st.session_state.user_id)
+                        
                     st.session_state.refresh_id += 1
                     st.rerun()
                 else:
@@ -1149,6 +1255,7 @@ if current_view == "Proventos Recebidos":
                 for col in display_df.columns:
                     display_df[col] = display_df[col].apply(format_provento)
                 display_df = display_df.reset_index()
+                display_df['OriginalTicker'] = display_df['ticker']
                 display_df['ticker'] = display_df['ticker'].apply(format_ticker_for_display)
                 display_df.rename(columns={'ticker': 'Ativo'}, inplace=True)
                 
@@ -1165,12 +1272,13 @@ if current_view == "Proventos Recebidos":
                     use_container_width=True,
                     on_select="rerun",
                     selection_mode="single-row",
+                    column_config={"OriginalTicker": None},
                     key=key_df
                 )
                 
                 if selected.selection.rows:
                     row_idx = selected.selection.rows[0]
-                    ticker_selecionado = display_df.iloc[row_idx]['Ativo']
+                    ticker_selecionado = display_df.iloc[row_idx]['OriginalTicker']
                     st.session_state.editing_provento = {'ano': ano, 'ticker': ticker_selecionado}
                     st.rerun()
 
@@ -1416,8 +1524,8 @@ if current_view == "Proventos Recebidos":
 
     st.stop()
 
-if current_view == "Opções":
-    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Opções</h2>', unsafe_allow_html=True)
+if current_view == "Derivativos":
+    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Derivativos</h2>', unsafe_allow_html=True)
     
     @st.dialog("Editar Opção", width="large")
     def dialog_edit_opcao(op_data):
@@ -1610,7 +1718,7 @@ if current_view == "Opções":
     opcoes_df = db.get_opcoes(st.session_state.user_id)
     
     if opcoes_df.empty:
-        st.info("Nenhum dado de Opções registrado. Por favor, importe o arquivo Opcoes.tsv na barra lateral.")
+        st.info("Nenhum dado de Opções registrado. Por favor, importe o arquivo Opcoes.tsv no Menu de Perfil -> Importar Dados.")
         if st.button("Adicionar Opção", type="primary"):
             dialog_add_opcao()
     else:
@@ -2694,4 +2802,4 @@ else:
                 fig_sint.update_xaxes(type='category')
                 st.plotly_chart(fig_sint, use_container_width=True)
             else:
-                st.info("Não há registros de opções para apresentar o gráfico de dividendos sintéticos. Vá para a aba Opções e importe seus dados.")
+                st.info("Não há registros de opções para apresentar o gráfico de dividendos sintéticos. Vá para a aba Derivativos e importe seus dados.")
