@@ -1153,6 +1153,7 @@ if current_view == "Proventos Recebidos":
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
         novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val)
         st.markdown("")
+        st.markdown("")
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("💾 Salvar", type="primary", use_container_width=True):
@@ -1161,11 +1162,24 @@ if current_view == "Proventos Recebidos":
                 st.rerun()
         with col2:
             if st.button("🗑️ Excluir Ativo", type="secondary", use_container_width=True):
-                db.delete_proventos_ativo_ano(ano, ticker, st.session_state.user_id)
-                st.session_state.refresh_id += 1
+                st.session_state.confirming_delete_provento = {'ano': ano, 'ticker': ticker}
                 st.rerun()
         with col3:
             if st.button("Cancelar", use_container_width=True):
+                st.rerun()
+
+    # ---- Popup: Confirmar Exclusão Provento ----
+    @st.dialog("⚠️ Confirmar Exclusão")
+    def dialog_confirmar_exclusao_provento(ano, ticker):
+        st.warning("Tem certeza que deseja excluir este ativo da tabela dos proventos deste ano?")
+        c_yes, c_no = st.columns(2)
+        with c_yes:
+            if st.button("Sim, confirmar", type="primary", use_container_width=True):
+                db.delete_proventos_ativo_ano(ano, ticker, st.session_state.user_id)
+                st.session_state.refresh_id += 1
+                st.rerun()
+        with c_no:
+            if st.button("Não, cancelar", use_container_width=True):
                 st.rerun()
     
     # ---- Popup: Adicionar Ativo ----
@@ -1190,7 +1204,10 @@ if current_view == "Proventos Recebidos":
                     for mes in meses_ordem:
                         db.save_provento(ano, mes, ticker_novo, 0.0, st.session_state.user_id)
                         
+                    st.success(f"Novo ativo {ticker_novo} adicionado com sucesso !")
                     st.session_state.refresh_id += 1
+                    import time
+                    time.sleep(1.5)
                     st.rerun()
                 else:
                     st.warning("Informe o código do ativo.")
@@ -1199,6 +1216,10 @@ if current_view == "Proventos Recebidos":
                 st.rerun()
     
     # ---- Aciona popups se houver estado ativo ----
+    if st.session_state.get('confirming_delete_provento'):
+        c_data = st.session_state.pop('confirming_delete_provento')
+        dialog_confirmar_exclusao_provento(c_data['ano'], c_data['ticker'])
+        
     if st.session_state.get('editing_provento'):
         edit_data = st.session_state.pop('editing_provento')
         if edit_data['ticker'] == '__NOVO__':
