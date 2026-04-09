@@ -219,8 +219,8 @@ def get_major_indices_history(months=18):
     ibov = get_index_history("^BVSP", period="2y")
     
     # 2. IFIX
-    # Tentamos IFIX.SA mas sabemos que pode ser instável
-    ifix = get_index_history("IFIX.SA", period="2y")
+    # Usamos o XFIX11.SA (Trend ETF IFIX) como proxy altamente fidedigna pois IFIX.SA quebrou no YahooFinance
+    ifix = get_index_history("XFIX11.SA", period="2y")
     
     # 3. CDI (4391) e 4. IPCA (432 - Número Índice)
     cdi_mensal = get_bcb_history(4391, start_date)

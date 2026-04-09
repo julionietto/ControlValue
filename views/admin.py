@@ -1,0 +1,120 @@
+import streamlit as st
+import pandas as pd
+import time
+import database as db
+from components.ui import render_top_header
+
+def render_admin_view():
+    render_top_header("🛡️ Painel de Administração", "Gestão de usuários do sistema.")
+    
+    # 1. Metricas
+    users_df = db.get_all_users()
+    if 'created_at' in users_df.columns:
+        users_df['created_at_dt'] = pd.to_datetime(users_df['created_at'], errors='coerce')
+        users_df['created_at'] = users_df['created_at_dt'].dt.strftime('%d/%m/%Y')
+    total_users = len(users_df)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f'''
+        <div class="metric-card">
+            <div class="metric-title">Total de Usuários</div>
+            <div class="metric-value">{total_users}</div>
+        </div>
+        ''', unsafe_allow_html=True)
+    
+    st.markdown('<br>', unsafe_allow_html=True)
+    
+    # 2. Cadastro
+    if st.button("➕ Novo Usuário", type="primary"):
+        st.session_state.show_add_user = True
+        
+    @st.dialog("Criar Novo Usuário")
+    def dialog_add_user():
+        new_username = st.text_input("Usuário")
+        new_email = st.text_input("Email")
+        new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
+        new_password = st.text_input("Senha", type="password")
+        if st.button("Salvar", use_container_width=True):
+            if new_username and new_email and new_password:
+                db.admin_create_user(new_username, new_email, new_birth.strftime("%Y-%m-%d"), new_password)
+                st.success("Criado com sucesso!")
+                st.session_state.show_add_user = False
+                st.rerun()
+            else:
+                st.error("Preencha todos os campos obrigatórios.")
+                
+    if st.session_state.get('show_add_user', False):
+        dialog_add_user()
+        
+    # 3. Tabela
+    if not users_df.empty:
+        # Reordena para mostrar Email e Nascimento
+        display_users = users_df[['id', 'username', 'email', 'birth_date', 'created_at']].copy()
+        # Formata a data de nascimento para dd/MM/yyyy
+        display_users['birth_date'] = pd.to_datetime(display_users['birth_date'], errors='coerce').dt.strftime('%d/%m/%Y')
+        display_users.columns = ['ID', 'Usuário', 'Email', 'Nascimento', 'Cadastro']
+        
+        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key="admin_users_table")
+        is_trigger_delete = st.session_state.get('trigger_admin_delete_user') is not None
+        if st.session_state.admin_users_table.selection.rows and not st.session_state.get('show_add_user', False) and not is_trigger_delete:
+            row_idx = st.session_state.admin_users_table.selection.rows[0]
+            if row_idx < len(users_df):
+                user_data_row = users_df.iloc[row_idx]
+                
+                @st.dialog("Editar / Excluir Usuário")
+                def dialog_edit_user(u_data):
+                    st.write(f"**ID:** {u_data['id']} | **Data de Cadastro:** {u_data['created_at']}")
+                    edit_username = st.text_input("Usuário", value=u_data['username'])
+                    edit_email = st.text_input("Email", value=u_data['email'] if u_data['email'] else "")
+                    
+                    try:
+                        def_birth = pd.to_datetime(u_data['birth_date']).date() if u_data['birth_date'] else pd.to_datetime('2000-01-01').date()
+                    except:
+                        def_birth = pd.to_datetime('2000-01-01').date()
+                        
+                    edit_birth = st.date_input("Data de Nascimento", value=def_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
+                    edit_password = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", placeholder="*** (Criptografada)")
+                    
+                    colA, colB = st.columns(2)
+                    with colA:
+                        if st.button("Atualizar", type="primary", use_container_width=True):
+                            db.admin_update_user(int(u_data['id']), edit_username, edit_email, edit_birth.strftime("%Y-%m-%d"), edit_password if edit_password else None)
+                            st.success("Dados atualizados com sucesso")
+                            time.sleep(1)
+                            st.rerun()
+                    with colB:
+                        if st.button("Excluir", type="secondary", use_container_width=True):
+                            if u_data['username'] == 'admin':
+                                st.error("O administrador principal não pode ser excluído.")
+                            else:
+                                st.session_state['trigger_admin_delete_user'] = u_data
+                                st.rerun()
+                                
+                dialog_edit_user(user_data_row)
+            
+    # 4. Modal de Confirmação de Exclusão (Independente)
+    if 'trigger_admin_delete_user' in st.session_state and st.session_state['trigger_admin_delete_user'] is not None:
+        target_user = st.session_state['trigger_admin_delete_user']
+        
+        @st.dialog("⚠️ Confirmação de Exclusão")
+        def dialog_confirm_delete():
+            st.warning(f"Você está prestes a excluir permanentemente o usuário **{target_user['username']}**.")
+            st.error("Aviso: Esta ação irá remover COMPLETAMENTE todos os proventos, ativos, opções e configurações vinculadas a este usuário no banco de dados. Isso não pode ser desfeito.")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("Sim, Excluir Tudo", type="primary", use_container_width=True):
+                    db.admin_delete_user(int(target_user['id']))
+                    st.session_state['trigger_admin_delete_user'] = None
+                    st.success("Usuário e todos os dados relacionados foram excluídos!")
+                    time.sleep(1)
+                    st.rerun()
+            with c2:
+                if st.button("Cancelar", use_container_width=True):
+                    st.session_state['trigger_admin_delete_user'] = None
+                    st.rerun()
+                    
+        dialog_confirm_delete()
+
+    st.stop()

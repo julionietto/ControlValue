@@ -37,37 +37,45 @@ def get_base64_image(image_path):
 
 def render_profile_popover():
     username_display = st.session_state.get('username', 'Perfil')
-    st.markdown(f'<div style="text-align: right; color: #e4e4e7; font-size: 0.9rem; margin-bottom: 8px;">Logado como: <b>{username_display}</b></div>', unsafe_allow_html=True)
     
-    label_suffix = "\\u200b" * (st.session_state.get('pop_ctrl', 0) % 2)
-    with st.popover(f"👤 Menu de Perfil{label_suffix}", use_container_width=True):
-        if st.button("Visão Geral", use_container_width=True):
-            st.session_state.navigation_tab = "Visão Geral"
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Proventos Recebidos", use_container_width=True):
-            st.session_state.navigation_tab = "Proventos Recebidos"
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Derivativos", use_container_width=True):
-            st.session_state.navigation_tab = "Derivativos"
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Importar Ativos", use_container_width=True):
-            st.session_state.trigger_dialog_ativos = True
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Importar Proventos", use_container_width=True):
-            st.session_state.trigger_dialog_proventos = True
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Seu Perfil", use_container_width=True):
-            st.session_state.trigger_dialog_perfil = True
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Sair", type="primary", use_container_width=True):
-            st.session_state.clear()
-            st.rerun()
+    label_suffix = "\u200b" * (st.session_state.get('pop_ctrl', 0) % 2)
+    with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True):
+        if st.session_state.get('is_admin', False):
+            if st.button("Seu Perfil", use_container_width=True):
+                st.session_state.trigger_dialog_perfil = True
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Sair", type="primary", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
+        else:
+            if st.button("Visão Geral", use_container_width=True):
+                st.session_state.navigation_tab = "Visão Geral"
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Proventos Recebidos", use_container_width=True):
+                st.session_state.navigation_tab = "Proventos Recebidos"
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Derivativos", use_container_width=True):
+                st.session_state.navigation_tab = "Derivativos"
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Importar Ativos", use_container_width=True):
+                st.session_state.trigger_dialog_ativos = True
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Importar Proventos", use_container_width=True):
+                st.session_state.trigger_dialog_proventos = True
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Seu Perfil", use_container_width=True):
+                st.session_state.trigger_dialog_perfil = True
+                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                st.rerun()
+            if st.button("Sair", type="primary", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
 
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""

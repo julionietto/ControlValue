@@ -119,7 +119,7 @@ def dialog_adicionar_novo_ativo():
                     # Busca os dados carregados do BD para garantir consistência
                     with db.get_db_connection() as conn:
                         cursor = conn.cursor()
-                        cursor.execute("SELECT * FROM assets WHERE ticker = ? AND user_id = ?", (clean_name, st.session_state.user_id))
+                        cursor.execute("SELECT * FROM assets WHERE ticker = %s AND user_id = %s", (clean_name, st.session_state.user_id))
                         row = cursor.fetchone()
                         if row:
                             asset_data = {
@@ -514,107 +514,17 @@ if os.path.exists(style_path):
     with open(style_path, encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+from views.auth import render_auth_view
+from views.admin import render_admin_view
+
 # Lógica de Autenticação
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'table_key' not in st.session_state:
     st.session_state.table_key = 0
 
-@st.dialog("Criar Conta")
-def dialog_register_user():
-    st.markdown("### 📝 Cadastre-se")
-    reg_username = st.text_input("Nome de Usuário", placeholder="Como quer ser chamado")
-    reg_email = st.text_input("Email", placeholder="seu@email.com")
-    reg_birth = st.date_input("Data de Nascimento", min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
-    reg_pass = st.text_input("Senha", type="password", placeholder="Sua senha")
-    reg_confirm = st.text_input("Confirmar Senha", type="password", placeholder="Repita a senha")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Criar Conta", type="primary", use_container_width=True):
-            if reg_username and reg_email and reg_pass:
-                if reg_pass == reg_confirm:
-                    db.create_user(reg_username, reg_email, reg_birth.strftime("%Y-%m-%d"), reg_pass)
-                    st.success("Conta criada com sucesso! Faça login.")
-                    st.rerun()
-                else:
-                    st.error("As senhas não conferem.")
-            else:
-                st.error("Preencha todos os campos obrigatórios.")
-    close_login_dialog = False
-    with col2:
-        if st.button("Cancelar", use_container_width=True):
-            close_login_dialog = True
-            
-    if close_login_dialog:
-        st.rerun()
-
 if not st.session_state.authenticated:
-    # Centraliza o login usando colunas [15%, 70%, 15%]
-    _, login_col, _ = st.columns([0.15, 0.7, 0.15])
-    
-    with login_col:
-        # Usamos um container com borda para criar o efeito de card de forma nativa e limpa
-        with st.container(border=True):
-            col_logo, col_form = st.columns([0.6, 0.4], gap="medium", vertical_alignment="bottom")
-            
-            with col_logo:
-                st.image("images/logoInvestControl.png", use_container_width=True)
-                
-            with col_form:
-                st.markdown('<h1 style="text-align: left; margin-top: 0; margin-bottom: 24px; font-size: 2.25rem; font-weight: 700; color: #ffffff;">🔐 Acesso</h1>', unsafe_allow_html=True)
-                
-                user_count = db.get_user_count()
-                
-                if user_count == 0:
-                    st.info("Nenhum usuário cadastrado. Crie sua conta de administrador.")
-                    with st.form("register_form_admin"):
-                        new_user = st.text_input("Usuário", value="admin", disabled=True)
-                        new_email = st.text_input("Email", placeholder="seu@email.com")
-                        new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
-                        new_pass = st.text_input("Senha", type="password", placeholder="Sua senha")
-                        confirm_pass = st.text_input("Confirmar", type="password", placeholder="Repita a senha")
-                        submit_reg = st.form_submit_button("Criar Conta de Admin", use_container_width=True)
-                    
-                    if submit_reg:
-                        if new_user and new_email and new_pass:
-                            if new_pass == confirm_pass:
-                                db.create_user(new_user, new_email, new_birth.strftime("%Y-%m-%d"), new_pass)
-                                success, uid, uname = db.verify_user(new_user, new_pass)
-                                if success:
-                                    st.session_state.authenticated = True
-                                    st.session_state.user_id = uid
-                                    st.session_state.username = uname
-                                    st.session_state.is_admin = True
-                                    st.success("Administrador cadastrado!")
-                                    st.rerun()
-                            else:
-                                st.error("As senhas não conferem.")
-                        else:
-                            st.error("Preencha todos os campos.")
-                else:
-                    with st.form("login_form"):
-                        user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
-                        password = st.text_input("Senha", type="password", placeholder="Sua senha")
-                        submit_login = st.form_submit_button("Entrar", use_container_width=True)
-                    
-                    if submit_login:
-                        success, uid, uname = db.verify_user(user_input, password)
-                        if success:
-                            st.session_state.authenticated = True
-                            st.session_state.user_id = uid
-                            st.session_state.username = uname
-                            st.session_state.is_admin = (uname == 'admin')
-                            st.rerun()
-                        else:
-                            st.error("Usuário ou senha incorretos.")
-                
-            # Link para criar conta se não for admin: posicionado abaixo das colunas para manter o alinhamento do logo com o botão Entrar
-            if user_count > 0:
-                st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
-                if st.button("Não tem conta? Criar conta", use_container_width=True):
-                    dialog_register_user()
-    st.stop()
+    render_auth_view()
 
 
 # Inicializar variáveis de controle no session_state para limpar o form
@@ -661,97 +571,9 @@ if st.session_state.pop('trigger_dialog_perfil', False):
 # ADMIN DASHBOARD
 # ==============================
 if st.session_state.get('is_admin', False):
-    render_top_header("🛡️ Painel de Administração", "Gestão de usuários do sistema.")
-    
-    # 1. Metricas
-    users_df = db.get_all_users()
-    if 'created_at' in users_df.columns:
-        users_df['created_at_dt'] = pd.to_datetime(users_df['created_at'], errors='coerce')
-        users_df['created_at'] = users_df['created_at_dt'].dt.strftime('%d/%m/%Y')
-    total_users = len(users_df)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(f'''
-        <div class="metric-card">
-            <div class="metric-title">Total de Usuários</div>
-            <div class="metric-value">{total_users}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-    
-    st.markdown('<br>', unsafe_allow_html=True)
-    
-    # 2. Cadastro
-    if st.button("➕ Novo Usuário", type="primary"):
-        st.session_state.show_add_user = True
-        
-    @st.dialog("Criar Novo Usuário")
-    def dialog_add_user():
-        new_username = st.text_input("Usuário")
-        new_email = st.text_input("Email")
-        new_birth = st.date_input("Data de Nascimento", format="DD/MM/YYYY")
-        new_password = st.text_input("Senha", type="password")
-        if st.button("Salvar", use_container_width=True):
-            if new_username and new_email and new_password:
-                db.admin_create_user(new_username, new_email, new_birth.strftime("%Y-%m-%d"), new_password)
-                st.success("Criado com sucesso!")
-                st.session_state.show_add_user = False
-                st.rerun()
-            else:
-                st.error("Preencha todos os campos obrigatórios.")
-                
-    if st.session_state.get('show_add_user', False):
-        dialog_add_user()
-        
-    # 3. Tabela
-    if not users_df.empty:
-        # Reordena para mostrar Email e Nascimento
-        display_users = users_df[['id', 'username', 'email', 'birth_date', 'created_at']].copy()
-        # Formata a data de nascimento para dd/MM/yyyy
-        display_users['birth_date'] = pd.to_datetime(display_users['birth_date'], errors='coerce').dt.strftime('%d/%m/%Y')
-        display_users.columns = ['ID', 'Usuário', 'Email', 'Nascimento', 'Cadastro']
-        
-        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key="admin_users_table")
-        if st.session_state.admin_users_table.selection.rows and not st.session_state.get('show_add_user', False):
-            row_idx = st.session_state.admin_users_table.selection.rows[0]
-            if row_idx < len(users_df):
-                user_data_row = users_df.iloc[row_idx]
-                
-                @st.dialog("Editar / Excluir Usuário")
-                def dialog_edit_user(u_data):
-                    st.write(f"**ID:** {u_data['id']} | **Data de Cadastro:** {u_data['created_at']}")
-                    edit_username = st.text_input("Usuário", value=u_data['username'])
-                    edit_email = st.text_input("Email", value=u_data['email'] if u_data['email'] else "")
-                    
-                    try:
-                        def_birth = pd.to_datetime(u_data['birth_date']).date() if u_data['birth_date'] else pd.to_datetime('2000-01-01').date()
-                    except:
-                        def_birth = pd.to_datetime('2000-01-01').date()
-                        
-                    edit_birth = st.date_input("Data de Nascimento", value=def_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
-                    edit_password = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", placeholder="*** (Criptografada)")
-                    
-                    colA, colB = st.columns(2)
-                    with colA:
-                        if st.button("Atualizar", type="primary", use_container_width=True):
-                            db.admin_update_user(int(u_data['id']), edit_username, edit_email, edit_birth.strftime("%Y-%m-%d"), edit_password if edit_password else None)
-                            st.success("Dados atualizados com sucesso")
-                            time.sleep(1)
-                            st.rerun()
-                    with colB:
-                        if st.button("Excluir", type="secondary", use_container_width=True):
-                            if u_data['username'] == 'admin':
-                                st.error("O administrador principal não pode ser excluído.")
-                            else:
-                                db.admin_delete_user(int(u_data['id']))
-                                st.success("Excluido com sucesso!")
-                                time.sleep(1)
-                                st.rerun()
-                                
-                dialog_edit_user(user_data_row)
-            
+    render_admin_view()
     st.stop()
-# ==============================
+
 # Verifica e cria dashboard do próximo ano (Automated Task)
 if 'rollover_checked' not in st.session_state:
     if db.check_and_create_next_year_dashboard(st.session_state.user_id):
@@ -2389,7 +2211,8 @@ else:
                     2022: 1212.00,
                     2023: 1320.00,
                     2024: 1412.00,
-                    2025: 1518.00
+                    2025: 1518.00,
+                    2026: 1621.00
                 }
                 
                 index_rows = []
