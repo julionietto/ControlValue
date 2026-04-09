@@ -8,60 +8,12 @@ import plotly.express as px
 import numpy as np
 from streamlit_autorefresh import st_autorefresh
 from contextlib import contextmanager
+from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type, get_annual_proventos_summary
+from components.ui import create_card, render_top_header
+from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile
 
 
-def format_ticker_for_display(ticker_str):
-    if isinstance(ticker_str, str) and ticker_str.endswith(".SA"):
-        return ticker_str[:-3]
-    return ticker_str
 
-import html
-
-def escape_html(text):
-    """Sanitiza strings de entrada convertendo caracteres perigosos (XSS) em HTML entities."""
-    if text is None: return ""
-    return html.escape(str(text))
-
-
-def format_brl(value):
-    """Formata um float para o padrão de moeda brasileiro (R$ X.XXX,XX)"""
-    try:
-        # Formata com 2 casas decimais, usando vírgula no final e ponto como separador de milhar
-        return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except (ValueError, TypeError):
-        return value
-
-def create_card(label, value, delta=None):
-    """Cria um card premium usando HTML/CSS personalizado."""
-    safe_label = escape_html(label)
-    safe_value = escape_html(value)
-    
-    delta_html = ""
-    if delta:
-        safe_delta = escape_html(delta)
-        # Tenta identificar se é positivo ou negativo para cor
-        color_class = "delta-positive" if "+" in str(delta) or ("-" not in str(delta) and str(delta) != "0,00%") else "delta-negative"
-        if str(delta) == "0,00%": color_class = ""
-        delta_html = f'<div class="metric-delta {color_class}">{safe_delta}</div>'
-    
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">{safe_label}</div>
-        <div class="metric-value">{safe_value}</div>
-        {delta_html}
-    </div>
-    """, unsafe_allow_html=True)
-
-def infer_asset_type(ticker):
-    ticker = ticker.upper()
-    if ticker.endswith('.SA'):
-        if '11.SA' in ticker:
-            return 'Fiis'
-        return 'Ações'
-    elif '-' in ticker or ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
-        return 'Cripto'
-    else:
-        return 'Reits'
 
 @st.dialog("Confirmar Exclusão")
 def confirm_delete_dialog(asset_id, ticker):
@@ -194,39 +146,7 @@ def dialog_adicionar_novo_ativo():
                 st.rerun()
 
 
-def get_annual_proventos_summary(proventos_df, anos_disponiveis):
-    meses_ordem = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-    meses_abrev = {
-        'Janeiro': 'Jan', 'Fevereiro': 'Fev', 'Março': 'Mar', 'Abril': 'Abr',
-        'Maio': 'Mai', 'Junho': 'Jun', 'Julho': 'Jul', 'Agosto': 'Ago',
-        'Setembro': 'Set', 'Outubro': 'Out', 'Novembro': 'Nov', 'Dezembro': 'Dez'
-    }
 
-    resumo_rows = []
-    for ano in anos_disponiveis:
-        df_ano = proventos_df[proventos_df['ano'] == ano]
-        pivot_ano = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
-
-        for mes in meses_ordem:
-            if mes not in pivot_ano.columns:
-                pivot_ano[mes] = 0.0
-
-        totais_mes = pivot_ano[meses_ordem].sum(axis=0)
-        retorno_total = totais_mes.sum()
-        media_mensal = retorno_total / 12
-
-        row = {'Ano': str(ano), 'Ano_Int': int(ano)}
-        for mes_completo, abrev in meses_abrev.items():
-            row[abrev] = totais_mes[mes_completo]
-        row['Valor Mensal'] = media_mensal
-        row['Valor Anual'] = retorno_total
-        resumo_rows.append(row)
-
-    resumo_df = pd.DataFrame(resumo_rows)
-    if not resumo_df.empty:
-        resumo_df = resumo_df.sort_values('Ano_Int', ascending=True).drop(columns=['Ano_Int'])
-    return resumo_df
 
 def show_asset_details_screen(asset_data):
     asset_id = asset_data['id']
@@ -723,289 +643,19 @@ st_autorefresh(interval=300000, key="datarefresh")
 # ==============================
 # MENU DE PERFIL
 # ==============================
-@st.dialog("Seu Perfil")
-def dialog_user_profile():
-    u_details = db.get_user_details(st.session_state.user_id)
-    if u_details:
-        st.markdown(f"### 👤 Perfil: `{escape_html(u_details['username'])}`")
-        
-        edit_email = st.text_input("Email", value=u_details['email'] if u_details['email'] else "")
-        
-        try:
-            default_birth = pd.to_datetime(u_details['birth_date']).date() if u_details['birth_date'] else pd.to_datetime('2000-01-01').date()
-        except:
-            default_birth = pd.to_datetime('2000-01-01').date()
-            
-        edit_birth = st.date_input("Data de Nascimento", value=default_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
-        
-        st.markdown("---")
-        st.markdown("**🔐 Alterar Senha** (opcional)")
-        new_pwd = st.text_input("Nova Senha", type="password", placeholder="Deixe vazio para manter atual")
-        confirm_pwd = st.text_input("Confirmar Nova Senha", type="password")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Salvar Alterações", type="primary", use_container_width=True):
-                if edit_email:
-                    pwd_to_save = None
-                    if new_pwd:
-                        if new_pwd == confirm_pwd:
-                            pwd_to_save = new_pwd
-                        else:
-                            st.error("As senhas não conferem.")
-                            st.stop()
-                    
-                    db.update_user_profile(st.session_state.user_id, u_details['username'], edit_email, edit_birth.strftime("%Y-%m-%d"), pwd_to_save)
-                    st.success("Dados atualizados com sucesso")
-                    if pwd_to_save:
-                        st.session_state.clear()
-                        st.rerun()
-                    
-                    st.session_state.navigation_tab = "Visão Geral"
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("O Email é obrigatório.")
-        close_perfil_dialog = False
-        with col2:
-            if st.button("Fechar", use_container_width=True):
-                close_perfil_dialog = True
-                
-        if close_perfil_dialog:
-            st.rerun()
-            
-    else:
-        st.error("Erro ao carregar dados do perfil.")
-
-@st.dialog("Importar Proventos")
-def dialog_importar_proventos():
-    if st.session_state.get('confirm_imp_proventos', False):
-        st.warning("⚠️ **Atenção:** Todos os dados de Proventos atuais deste usuário serão **APAGADOS** e substituídos pelos dados do arquivo. Deseja continuar?")
-        col_c1, col_c2 = st.columns(2)
-        with col_c1:
-            if st.button("Sim, apagar e importar", type="primary", use_container_width=True):
-                arquivo = st.session_state.pop('arquivo_prov_pendente')
-                with st.spinner("Aguarde a importação dos dados ser finalizada..."):
-                    success, msg = db.import_proventos_csv(arquivo, st.session_state.user_id)
-                if success:
-                    st.success(msg)
-                    st.session_state.refresh_id += 1
-                    st.session_state.navigation_tab = "Proventos Recebidos"
-                    st.session_state.confirm_imp_proventos = False
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(msg)
-                    st.session_state.confirm_imp_proventos = False
-        with col_c2:
-            if st.button("Não, cancelar", use_container_width=True):
-                st.session_state.confirm_imp_proventos = False
-                st.rerun()
-    else:
-        st.markdown("""
-        A funcionalidade de importar dados de Proventos é bem simples. 
-        Gere um arquivo com extensão **CSV** com o seguinte layout:
-
-        1. **Ano** (4 caracteres no formato AAAA)
-        2. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
-        3. **Janeiro** a **Dezembro** (valor recebido por ativo em cada mês)
-
-        **Regras Importantes:**
-        - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
-        - Não use símbolos de moeda (R$, $).
-        - O separador de colunas deve ser `,` (vírgula).
-        """)
-        
-        arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed", key="uploader_proventos")
-        
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
-                st.session_state.confirm_imp_proventos = True
-                st.session_state.arquivo_prov_pendente = arquivo_upload
-                st.rerun()
-        close_prov_dialog = False
-        with col2:
-            if st.button("Cancelar", use_container_width=True):
-                close_prov_dialog = True
-                
-        if close_prov_dialog:
-            st.rerun()
-
-@st.dialog("Importar Ativos")
-def dialog_importar_ativos():
-
-    if st.session_state.get('confirm_imp_ativos', False):
-        st.warning("⚠️ **Atenção:** Todos os dados de Ativos e Histórico de Operações atuais deste usuário serão **APAGADOS** e substituídos pelos dados do arquivo. Deseja continuar?")
-        col_c1, col_c2 = st.columns(2)
-        with col_c1:
-            if st.button("Sim, apagar e importar", type="primary", use_container_width=True):
-                arquivo = st.session_state.pop('arquivo_ativos_pendente')
-                with st.spinner("Aguarde a importação dos dados ser finalizada..."):
-                    success, msg = db.import_assets_csv(arquivo, st.session_state.user_id)
-                if success:
-                    st.success(msg)
-                    st.session_state.refresh_id += 1
-                    st.session_state.navigation_tab = "Visão Geral"
-                    st.session_state.confirm_imp_ativos = False
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(msg)
-                    st.session_state.confirm_imp_ativos = False
-        with col_c2:
-            if st.button("Não, cancelar", use_container_width=True):
-                st.session_state.confirm_imp_ativos = False
-                st.rerun()
-    else:
-        st.markdown("""
-        A funcionalidade de importar dados de Ativos é bem simples. 
-        Gere um arquivo com extensão **CSV** com o seguinte layout:
-
-        1. **Ativo** (de 1 até 10 caracteres do tipo alfanumérico)
-        2. **DtOperação** (formato dd/MM/aaaa)
-        3. **Quantidade** (quantidade comprada ou vendida)
-        4. **Valor** (valor pago pelo ativo no momento da operação)
-
-        **Regras Importantes:**
-        - Os valores devem estar sem separadores de milhares e usar `.` (ponto) como separador decimal.
-        - O separador de colunas deve ser `,` (vírgula).
-        """)
-        
-        arquivo_upload = st.file_uploader("Selecione o arquivo CSV", type=["csv"], label_visibility="collapsed", key="uploader_ativos")
-        
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Importar Dados", type="primary", use_container_width=True, disabled=(arquivo_upload is None)):
-                st.session_state.confirm_imp_ativos = True
-                st.session_state.arquivo_ativos_pendente = arquivo_upload
-                st.rerun()
-        close_ativos_dialog = False
-        with col2:
-            if st.button("Cancelar", use_container_width=True):
-                st.session_state.navigation_tab = "Visão Geral"
-                close_ativos_dialog = True
-                
-        if close_ativos_dialog:
-            st.rerun()
-
-# dialog_change_password removido pois foi integrado no dialog_user_profile
-
-def render_profile_popover():
-    username_display = st.session_state.get('username', 'Perfil')
-    st.markdown(f'<div style="text-align: right; color: #e4e4e7; font-size: 0.9rem; margin-bottom: 8px;">Logado como: <b>{username_display}</b></div>', unsafe_allow_html=True)
-    
-    label_suffix = "\u200b" * (st.session_state.get('pop_ctrl', 0) % 2)
-    with st.popover(f"👤 Menu de Perfil{label_suffix}", use_container_width=True):
-        if st.button("Visão Geral", use_container_width=True):
-            st.session_state.navigation_tab = "Visão Geral"
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Proventos Recebidos", use_container_width=True):
-            st.session_state.navigation_tab = "Proventos Recebidos"
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Derivativos", use_container_width=True):
-            st.session_state.navigation_tab = "Derivativos"
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Importar Ativos", use_container_width=True):
-            st.session_state.trigger_dialog_ativos = True
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Importar Proventos", use_container_width=True):
-            st.session_state.trigger_dialog_proventos = True
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Seu Perfil", use_container_width=True):
-            st.session_state.trigger_dialog_perfil = True
-            st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-            st.rerun()
-        if st.button("Sair", type="primary", use_container_width=True):
-            st.session_state.clear()
-            st.rerun()
 
 
 
-    # Dispara os diálogos de forma segura por fora do popover para que funcionem bem após recriação
-    if st.session_state.pop('trigger_dialog_ativos', False):
-        dialog_importar_ativos()
-    if st.session_state.pop('trigger_dialog_proventos', False):
-        dialog_importar_proventos()
-    if st.session_state.pop('trigger_dialog_perfil', False):
-        dialog_user_profile()
 
-def get_base64_image(image_path):
-    """Lê uma imagem e retorna sua representação em base64."""
-    try:
-        import os
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as img_file:
-                return base64.b64encode(img_file.read()).decode()
-    except Exception:
-        pass
-    return ""
 
-def render_top_header(title, subtitle):
-    """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
-    
-    col_logo, col_title, col_logout = st.columns([0.15, 0.7, 0.15], gap="small", vertical_alignment="center")
-    with col_logo:
-        logo_b64 = get_base64_image("images/logoHome.png")
-        if logo_b64:
-            st.markdown(
-                f"""
-                <style>
-                .st-key-home_logo_btn button {{
-                    background-image: url('data:image/png;base64,{logo_b64}');
-                    background-size: contain;
-                    background-repeat: no-repeat;
-                    background-position: left center;
-                    background-color: transparent !important;
-                    border: none !important;
-                    width: 192px !important;
-                    height: 64px !important;
-                    box-shadow: none !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    transition: transform 0.2s ease, filter 0.2s ease;
-                }}
-                .st-key-home_logo_btn button:hover {{
-                    transform: scale(1.05);
-                    filter: brightness(1.2);
-                    background-color: transparent !important;
-                    border: none !important;
-                }}
-                .st-key-home_logo_btn button p {{
-                    display: none !important;
-                }}
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-            if st.button("home", key="home_logo_btn", help="Voltar para Visão Geral"):
-                st.session_state.navigation_tab = "Visão Geral"
-                st.rerun()
-        else:
-            # Fallback se a imagem não for encontrada
-            if st.button("🏠", key="home_fallback_btn", help="Voltar para Visão Geral"):
-                st.session_state.navigation_tab = "Visão Geral"
-                st.rerun()
-                
-    with col_title:
-        st.markdown(f'''
-            <div style="display: flex; flex-direction: column; justify-content: center;">
-                <h1 style="color: #ffffff; font-size: 2.25rem; margin: 0; padding: 0; line-height: 1.1;">{title}</h1>
-                <p style="color: #a1a1aa; font-size: 1rem; margin: 0; padding: 0; line-height: 1.2; margin-top: 4px;">{subtitle}</p>
-            </div>
-        ''', unsafe_allow_html=True)
-    
-    with col_logout:
-        st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
-        render_profile_popover()
-        st.markdown('</div>', unsafe_allow_html=True)
+# Dispara os diálogos de forma segura por fora do popover para que funcionem bem após recriação
+if st.session_state.pop('trigger_dialog_ativos', False):
+    dialog_importar_ativos()
+if st.session_state.pop('trigger_dialog_proventos', False):
+    dialog_importar_proventos()
+if st.session_state.pop('trigger_dialog_perfil', False):
+    dialog_user_profile()
+
 
 # ==============================
 # ADMIN DASHBOARD
@@ -2318,7 +1968,7 @@ else:
                 # 2. Calcular histórico do portfólio
                 hoje = pd.Timestamp.now().normalize()
                 meses_fechamento = []
-                for i in range(13, -1, -1):
+                for i in range(12, 0, -1):
                     d = hoje - pd.DateOffset(months=i)
                     last_day = d + pd.offsets.MonthEnd(0)
                     meses_fechamento.append(last_day.normalize())
@@ -2383,15 +2033,22 @@ else:
                 perf_df = pd.DataFrame({'Data': meses_fechamento, 'Portfolio': portfolio_values})
                 perf_df['Data'] = perf_df['Data'].dt.normalize()
                 
-                base_val = perf_df['Portfolio'].iloc[0]
-                if base_val > 0:
-                    perf_df['Portfolio %'] = (perf_df['Portfolio'] / base_val - 1) * 100
+                # Encontrar o primeiro mês com saldo no portfólio para ancorar a rentabilidade (baseline)
+                non_zero_mask = perf_df['Portfolio'] > 0
+                if non_zero_mask.any():
+                    first_idx = non_zero_mask.idxmax()
                 else:
-                    perf_df['Portfolio %'] = 0.0
+                    first_idx = 0
+                
+                base_val = perf_df['Portfolio'].iloc[first_idx]
+                perf_df['Portfolio %'] = 0.0
+                if base_val > 0:
+                    perf_df.loc[first_idx:, 'Portfolio %'] = (perf_df.loc[first_idx:, 'Portfolio'] / base_val - 1) * 100
                 
                 # 3. Processar Índices
                 # CDI Acumulado
                 cdi_vals = indices['cdi']
+                perf_df['CDI %'] = 0.0
                 if not cdi_vals.empty:
                     if cdi_vals.index.tz is not None: cdi_vals.index = cdi_vals.index.tz_localize(None)
                     # Acumular. CDI vem em % mensal.
@@ -2401,44 +2058,47 @@ else:
                     cdi_cum_daily = cdi_cum.reindex(full_range).ffill().bfill()
                     # Agora resample para as datas do gráfico
                     cdi_resampled = cdi_cum_daily.reindex(perf_df['Data']).ffill().bfill()
-                    if not cdi_resampled.empty and cdi_resampled.iloc[0] != 0:
-                        perf_df['CDI %'] = ((cdi_resampled / cdi_resampled.iloc[0] - 1) * 100).values
-                    else:
-                        perf_df['CDI %'] = 0.0
+                    if not cdi_resampled.empty and cdi_resampled.iloc[first_idx] != 0:
+                        cdi_base = cdi_resampled.iloc[first_idx]
+                        perf_df.loc[first_idx:, 'CDI %'] = ((cdi_resampled.iloc[first_idx:] / cdi_base - 1) * 100).values
                 
                 # IPCA Acumulado
                 ipca_vals = indices['ipca']
+                perf_df['IPCA %'] = 0.0
                 if not ipca_vals.empty:
                     if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
                     # IPCA agora vem como Número Índice (432). Basta dividir pelo valor base.
                     full_range = pd.date_range(start=ipca_vals.index.min(), end=perf_df['Data'].max(), freq='D')
                     ipca_daily = ipca_vals.reindex(full_range).ffill().bfill()
                     ipca_resampled = ipca_daily.reindex(perf_df['Data']).ffill().bfill()
-                    if not ipca_resampled.empty and ipca_resampled.iloc[0] != 0:
-                        perf_df['IPCA %'] = ((ipca_resampled / ipca_resampled.iloc[0] - 1) * 100).values
-                    else:
-                        perf_df['IPCA %'] = 0.0
+                    if not ipca_resampled.empty and ipca_resampled.iloc[first_idx] != 0:
+                        ipca_base = ipca_resampled.iloc[first_idx]
+                        perf_df.loc[first_idx:, 'IPCA %'] = ((ipca_resampled.iloc[first_idx:] / ipca_base - 1) * 100).values
                 
                 # IBOV %
                 ibov_h = indices['ibov']
+                perf_df['IBOV %'] = 0.0
                 if not ibov_h.empty:
                     if ibov_h.index.tz is not None: ibov_h.index = ibov_h.index.tz_localize(None)
                     full_range = pd.date_range(start=ibov_h.index.min(), end=perf_df['Data'].max(), freq='D')
                     ibov_daily = ibov_h.reindex(full_range).ffill().bfill()
                     ibov_m = ibov_daily.reindex(perf_df['Data']).ffill().bfill()
-                    if not ibov_m.empty and ibov_m.iloc[0] != 0:
-                        perf_df['IBOV %'] = ((ibov_m / ibov_m.iloc[0] - 1) * 100).values
+                    if not ibov_m.empty and ibov_m.iloc[first_idx] != 0:
+                        ibov_base = ibov_m.iloc[first_idx]
+                        perf_df.loc[first_idx:, 'IBOV %'] = ((ibov_m.iloc[first_idx:] / ibov_base - 1) * 100).values
                 
                 # IFIX %
                 # Se IFIX via YF falhar (poucos dados), tentamos manter se houver algo
                 ifix_h = indices['ifix']
+                perf_df['IFIX %'] = 0.0
                 if not ifix_h.empty and len(ifix_h) > 1:
                     if ifix_h.index.tz is not None: ifix_h.index = ifix_h.index.tz_localize(None)
                     full_range = pd.date_range(start=ifix_h.index.min(), end=perf_df['Data'].max(), freq='D')
                     ifix_daily = ifix_h.reindex(full_range).ffill().bfill()
                     ifix_m = ifix_daily.reindex(perf_df['Data']).ffill().bfill()
-                    if not ifix_m.empty and ifix_m.iloc[0] != 0:
-                        perf_df['IFIX %'] = ((ifix_m / ifix_m.iloc[0] - 1) * 100).values
+                    if not ifix_m.empty and ifix_m.iloc[first_idx] != 0:
+                        ifix_base = ifix_m.iloc[first_idx]
+                        perf_df.loc[first_idx:, 'IFIX %'] = ((ifix_m.iloc[first_idx:] / ifix_base - 1) * 100).values
                 
                 # 4. Plotar Gráfico
                 perf_df = perf_df.fillna(0.0)
