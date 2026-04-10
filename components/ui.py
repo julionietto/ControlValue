@@ -53,8 +53,8 @@ def render_profile_popover():
                 st.session_state.navigation_tab = "Visão Geral"
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
-            if st.button("Proventos Recebidos", use_container_width=True):
-                st.session_state.navigation_tab = "Proventos Recebidos"
+            if st.button("Proventos", use_container_width=True):
+                st.session_state.navigation_tab = "Proventos"
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
             if st.button("Derivativos", use_container_width=True):
