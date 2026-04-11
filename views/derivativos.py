@@ -266,6 +266,8 @@ def render_derivativos_view():
             display_df = display_df[display_df['Status'] == filt_status]
         # ---------------
         
+        total_vl_premio = display_df['Vl Prêmio'].sum()
+        
         display_df['diff_num'] = display_df['Diferença']
             
         display_df['Cotação Atual'] = display_df['Cotação Atual'].apply(format_brl)
@@ -320,6 +322,9 @@ def render_derivativos_view():
             },
             key=f"opcoes_table_{st.session_state.refresh_id}"
         )
+        
+        st.markdown(f"<div style='text-align: right; font-size: 1.25rem; font-weight: bold;'>Total Vl Prêmio: <span style='color: #00CC96;'>{format_brl(total_vl_premio)}</span></div>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         
         if selected_opcao.selection.rows:
             row_idx = selected_opcao.selection.rows[0]

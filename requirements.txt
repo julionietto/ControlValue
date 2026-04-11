@@ -7,3 +7,4 @@ bcrypt
 psycopg2-binary
 SQLAlchemy
 python-dotenv
+holidays

@@ -51,14 +51,17 @@ def render_profile_popover():
         else:
             if st.button("Visão Geral", use_container_width=True):
                 st.session_state.navigation_tab = "Visão Geral"
+                st.session_state.viewing_history = None
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
             if st.button("Proventos", use_container_width=True):
                 st.session_state.navigation_tab = "Proventos"
+                st.session_state.viewing_history = None
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
             if st.button("Derivativos", use_container_width=True):
                 st.session_state.navigation_tab = "Derivativos"
+                st.session_state.viewing_history = None
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
             if st.button("Importar Ativos", use_container_width=True):

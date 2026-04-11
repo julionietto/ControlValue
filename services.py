@@ -1,9 +1,10 @@
 import yfinance as yf
 import pandas as pd
 import streamlit as st
+from utils.refresh_manager import is_market_open
 
 @st.cache_data(ttl=300)
-def _fetch_single_price(ticker):
+def _fetch_single_price(ticker, refresh_id=0):
     try:
         ticker_obj = yf.Ticker(ticker)
         data = ticker_obj.history(period="1d")
@@ -29,24 +30,33 @@ def fetch_current_prices(tickers, refresh_id=0):
     
     prices = {}
     for ticker in tickers:
-        prices[ticker] = _fetch_single_price(ticker)
+        prices[ticker] = _fetch_single_price(ticker, refresh_id)
             
     return prices
 
 @st.cache_data(ttl=300)
-def get_usd_brl_rate(refresh_id=0):
+def get_usd_brl_rate(refresh_id=0, is_first_load=False):
     """
     Busca a cotação atual do Dólar em Reais usando o ticker BRL=X.
+    Respeita as regras de mercado BR, exceto na primeira carga após o login.
     """
+    if not is_market_open('BR') and not is_first_load:
+        # Retorna o último valor do cache sem incrementar a busca
+        return st.session_state.get('last_usd_rate', 5.0)
+
     try:
         data = yf.Ticker("BRL=X").history(period="1d")
+        val = 0.0
         if not data.empty:
-            return float(data['Close'].iloc[-1])
+            val = float(data['Close'].iloc[-1])
         else:
-            return float(yf.Ticker("BRL=X").fast_info['lastPrice'])
+            val = float(yf.Ticker("BRL=X").fast_info['lastPrice'])
+        
+        st.session_state.last_usd_rate = val
+        return val
     except Exception as e:
         print(f"Erro ao buscar cotação USD/BRL: {e}")
-        return 5.0 # Valor de fallback razoável em caso de erro da API
+        return st.session_state.get('last_usd_rate', 5.0)
 
 @st.cache_data(ttl=300)
 def get_btc_usd_rate(refresh_id=0):
@@ -64,19 +74,27 @@ def get_btc_usd_rate(refresh_id=0):
         return 0.0
 
 @st.cache_data(ttl=300)
-def get_ibov(refresh_id=0):
+def get_ibov(refresh_id=0, is_first_load=False):
     """
     Busca a pontuação atual do IBOVESPA usando o ticker ^BVSP.
+    Respeita as regras de mercado BR, exceto na primeira carga após o login.
     """
+    if not is_market_open('BR') and not is_first_load:
+        return st.session_state.get('last_ibov_points', 0.0)
+
     try:
         data = yf.Ticker("^BVSP").history(period="1d")
+        val = 0.0
         if not data.empty:
-            return float(data['Close'].iloc[-1])
+            val = float(data['Close'].iloc[-1])
         else:
-            return float(yf.Ticker("^BVSP").fast_info['lastPrice'])
+            val = float(yf.Ticker("^BVSP").fast_info['lastPrice'])
+        
+        st.session_state.last_ibov_points = val
+        return val
     except Exception as e:
         print(f"Erro ao buscar pontuação do IBOV: {e}")
-        return 0.0
+        return st.session_state.get('last_ibov_points', 0.0)
 
 SECTOR_TRANSLATION = {
     "Basic Materials": "Materiais Básicos",

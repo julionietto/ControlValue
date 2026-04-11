@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type, get_annual_proventos_summary
 from components.ui import create_card, render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile
+from utils.refresh_manager import is_market_open, get_market_status
 
 
 
@@ -62,6 +63,7 @@ def dialog_adicionar_novo_ativo():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
+                breakpoint()
                 if nome:
                     db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
                     st.success(f"Ativo {nome} adicionado!")
@@ -70,6 +72,7 @@ def dialog_adicionar_novo_ativo():
                     st.error("Informe o nome do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
+                breakpoint()
                 st.rerun()
     else:
         st.info("Ativos brasileiros (Ações/Fiis) recebem o sufixo .SA automaticamente. Para Stocks/Reits/Cripto, digite o ticker completo.")
@@ -77,6 +80,7 @@ def dialog_adicionar_novo_ativo():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
+                breakpoint()
                 if nome:
                     clean_name = nome.strip().upper()
                     # Lógica de sufixo .SA (Ações e Fiis)
@@ -139,6 +143,7 @@ def dialog_adicionar_novo_ativo():
                     st.error("Informe o nome do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
+                breakpoint()
                 st.rerun()
 
 
@@ -515,23 +520,51 @@ def render_visao_geral_view():
         # Para Renda Fixa, MVP: usamos o preço médio como valor atual (sem flutuação de mercado via YF)
         tickers_to_fetch = assets_df[assets_df['asset_type'] != 'Renda Fixa']['ticker'].unique().tolist()
         
-        # Mapeamento de tickers para busca no Yahoo Finance (especialmente para Cripto)
+        # Mapeamento de tickers para busca no Yahoo Finance
         ticker_fetch_map = {}
-        modified_tickers_to_fetch = []
+        tickers_br = []
+        tickers_us = []
+        tickers_crypto = []
+
         for t in tickers_to_fetch:
             asset_r = assets_df[assets_df['ticker'] == t].iloc[0]
-            if asset_r['asset_type'] == 'Cripto' and '-' not in t:
-                yf_ticker = f"{t}-USD"
-                ticker_fetch_map[t] = yf_ticker
-                modified_tickers_to_fetch.append(yf_ticker)
-            else:
-                ticker_fetch_map[t] = t
-                modified_tickers_to_fetch.append(t)
-    
-        with st.spinner("Buscando preços atualizados e cotações de mercado..."):
-            refresh_id = st.session_state.refresh_id
-            current_prices = svc.fetch_current_prices(modified_tickers_to_fetch, refresh_id)
+            a_type = asset_r['asset_type']
             
+            if a_type == 'Cripto':
+                yf_t = f"{t}-USD" if '-' not in t else t
+                ticker_fetch_map[t] = yf_t
+                tickers_crypto.append(yf_t)
+            elif a_type in ['Stocks', 'Reits']:
+                ticker_fetch_map[t] = t
+                tickers_us.append(t)
+            else: # Ações e Fiis
+                ticker_fetch_map[t] = t
+                tickers_br.append(t)
+    
+        # Determina quais tickers realmente buscar com base nas regras de mercado
+        m_status = get_market_status()
+        is_first_load = st.session_state.get('is_first_load', True)
+        
+        final_tickers_to_fetch = []
+        if m_status['BR'] or is_first_load: final_tickers_to_fetch.extend(tickers_br)
+        if m_status['US'] or is_first_load: final_tickers_to_fetch.extend(tickers_us)
+        if m_status['CRYPTO']: final_tickers_to_fetch.extend(tickers_crypto) # Bitcoin sempre entra aqui
+
+        # Inicializa cache de preços no session_state se não existir
+        if 'price_cache' not in st.session_state:
+            st.session_state.price_cache = {}
+
+        with st.spinner("Buscando preços atualizados..."):
+            refresh_id = st.session_state.refresh_id
+            
+            # Só chama a API para o que o mercado permitir (ou se for a primeira carga)
+            if final_tickers_to_fetch:
+                new_prices = svc.fetch_current_prices(final_tickers_to_fetch, refresh_id)
+                st.session_state.price_cache.update(new_prices)
+            
+            # O current_prices final é a união do que acabamos de buscar com o que já tínhamos no cache
+            current_prices = st.session_state.price_cache
+
             # Prepara dados e verifica se é Auto-Refresh
             current_datarefresh = st.session_state.get('datarefresh', 0)
             is_auto_refresh = False
@@ -545,10 +578,23 @@ def render_visao_geral_view():
             assets_tuple = (tuple(assets_df['ticker'].tolist()), tuple(assets_df['asset_type'].tolist()))
             sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_auto_refresh)
             
-            usd_to_brl_rate = svc.get_usd_brl_rate(refresh_id)
+            usd_to_brl_rate = svc.get_usd_brl_rate(refresh_id, is_first_load)
             btc_to_usd_rate = svc.get_btc_usd_rate(refresh_id)
-            ibov_points = svc.get_ibov(refresh_id)
+            ibov_points = svc.get_ibov(refresh_id, is_first_load)
             
+            # Após a carga inicial de todos os dados e indicadores, desmarca a flag
+            st.session_state.is_first_load = False
+            
+        # Alerta de Mercados Fechados
+        closed_markets = []
+        if not m_status['BR'] and (tickers_br or assets_df[assets_df['asset_type'] == 'Renda Fixa'].empty == False):
+            closed_markets.append("Brasil (B3)")
+        if not m_status['US'] and tickers_us:
+            closed_markets.append("EUA (NYSE/NASDAQ)")
+            
+        if closed_markets:
+            st.info(f"ℹ️ **Auto-refresh pausado:** {', '.join(closed_markets)} - Mercado Fechado no momento.", icon="🕒")
+
         st.markdown("### 🏛️ Indicadores de Mercado")
         col_ind1, col_ind2, col_ind3 = st.columns(3)
         with col_ind1: create_card("Dólar (USD/BRL)", format_brl(usd_to_brl_rate))
@@ -764,6 +810,8 @@ def render_visao_geral_view():
             })
         
         unified_df = pd.DataFrame(all_rows)
+        if not unified_df.empty:
+            unified_df = unified_df.sort_values(by='ticker', ascending=True).reset_index(drop=True)
         
         # Formatação para exibição
         display_unified = unified_df.copy()

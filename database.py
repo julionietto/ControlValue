@@ -306,7 +306,7 @@ def get_asset_history(asset_id, user_id):
             SELECT h.* FROM asset_history h 
             JOIN assets a ON h.asset_id = a.id 
             WHERE a.id = %s AND a.user_id = %s 
-            ORDER BY h.date DESC
+            ORDER BY CAST(h.date AS DATE) ASC
         '''
         df = _query_to_df(query, conn, params=(asset_id, user_id))
     return df

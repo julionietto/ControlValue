@@ -39,6 +39,8 @@ if 'delete_asset_info' not in st.session_state:
     st.session_state.delete_asset_info = None
 if 'viewing_history' not in st.session_state:
     st.session_state.viewing_history = None # Armazena os dados do ativo sendo visualizado
+if 'is_first_load' not in st.session_state:
+    st.session_state.is_first_load = True
 
 # Atualização automática a cada 5 minutos (300.000 ms)
 st_autorefresh(interval=300000, key="datarefresh")
