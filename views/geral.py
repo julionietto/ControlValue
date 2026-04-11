@@ -24,7 +24,6 @@ def confirm_delete_dialog(asset_id, ticker):
     with col_yes:
         if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
             db.delete_asset(asset_id, st.session_state.user_id)
-            st.session_state.refresh_id += 1
             st.session_state.viewing_history = None
             st.session_state.table_key += 1
             st.success("Ativo removido!")
@@ -43,7 +42,6 @@ def confirm_delete_operation_dialog(op_data, asset_id):
     with col_yes:
         if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
             db.delete_asset_operation(op_data['id'], asset_id, st.session_state.user_id)
-            st.session_state.refresh_id += 1
             st.session_state.viewing_history = db.get_asset_by_id(asset_id, st.session_state.user_id) # Atualiza dados do ativo no estado
             st.session_state.show_confirm_delete_op = False
             st.success("Operação excluída!")
@@ -66,7 +64,6 @@ def dialog_adicionar_novo_ativo():
             if st.button("Confirmar", type="primary", use_container_width=True):
                 if nome:
                     db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
-                    st.session_state.refresh_id += 1
                     st.success(f"Ativo {nome} adicionado!")
                     st.rerun()
                 else:
@@ -137,7 +134,6 @@ def dialog_adicionar_novo_ativo():
                                 asset_data['current_price'] = live_brl
 
                             st.session_state.viewing_history = asset_data
-                            st.session_state.refresh_id += 1
                             st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
@@ -175,7 +171,6 @@ def show_asset_details_screen(asset_data):
             if st.button("Confirmar", type="primary", use_container_width=True, key="confirm_add"):
                 final_qty = -abs(op_qty_input) if op_type == "Venda" else abs(op_qty_input)
                 db.add_asset_operation(asset_id, st.session_state.user_id, op_date.strftime("%Y-%m-%d"), final_qty, op_price)
-                st.session_state.refresh_id += 1
                 st.success(f"Operação de {'Compra' if op_type == 'Compra' else 'Venda'} adicionada!")
                 st.rerun()
         with col_c2:
@@ -211,7 +206,6 @@ def show_asset_details_screen(asset_data):
                 # Usa asset_id do op_data ou do escopo, mas op_data é mais seguro
                 target_asset_id = op_data['asset_id'] if 'asset_id' in op_data else asset_id
                 db.update_asset_operation(op_data['id'], target_asset_id, st.session_state.user_id, op_date.strftime("%Y-%m-%d"), final_qty, op_price)
-                st.session_state.refresh_id += 1
                 st.session_state.viewing_history = db.get_asset_by_id(target_asset_id, st.session_state.user_id) # Atualiza dados do ativo no estado
                 st.success("Operação atualizada!")
                 st.rerun()
@@ -219,11 +213,9 @@ def show_asset_details_screen(asset_data):
             if st.button("Excluir", type="secondary", use_container_width=True, key=f"delete_op_{op_data['id']}"):
                 st.session_state.show_confirm_delete_op = True
                 st.session_state.op_to_delete = op_data.to_dict() # Converte para dict para garantir persistência
-                st.session_state.refresh_id += 1 # Reset selection do dataframe
                 st.rerun()
         with col_c3:
             if st.button("Cancelar", use_container_width=True, key=f"cancel_edit_{op_data['id']}"):
-                st.session_state.refresh_id += 1 # Reset selection do dataframe
                 st.rerun()
 
     asset_id = asset_data['id']
@@ -425,7 +417,6 @@ def show_asset_details_screen(asset_data):
             )
             st.session_state.viewing_history = None
             st.session_state.table_key += 1
-            st.session_state.refresh_id += 1
             st.success("Alterações salvas com sucesso!")
             st.rerun()
             
@@ -541,9 +532,18 @@ def render_visao_geral_view():
             refresh_id = st.session_state.refresh_id
             current_prices = svc.fetch_current_prices(modified_tickers_to_fetch, refresh_id)
             
-            # Prepara dados para fetch_asset_sectors (tupla para ser hashable no cache)
+            # Prepara dados e verifica se é Auto-Refresh
+            current_datarefresh = st.session_state.get('datarefresh', 0)
+            is_auto_refresh = False
+            if 'last_datarefresh' not in st.session_state:
+                st.session_state.last_datarefresh = current_datarefresh
+                is_auto_refresh = True
+            elif current_datarefresh != st.session_state.last_datarefresh:
+                st.session_state.last_datarefresh = current_datarefresh
+                is_auto_refresh = True
+                
             assets_tuple = (tuple(assets_df['ticker'].tolist()), tuple(assets_df['asset_type'].tolist()))
-            sectors_dict = svc.fetch_asset_sectors(assets_tuple, refresh_id)
+            sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_auto_refresh)
             
             usd_to_brl_rate = svc.get_usd_brl_rate(refresh_id)
             btc_to_usd_rate = svc.get_btc_usd_rate(refresh_id)
@@ -596,6 +596,9 @@ def render_visao_geral_view():
         assets_df['total_invested'] = assets_df['quantity'] * assets_df['average_price_brl']
         assets_df['current_value'] = assets_df['quantity'] * assets_df['current_price']
         
+        # Otimização: Busca TODOS os históricos de ações em um ÚNICO Round-Trip para combater o N+1
+        all_histories_df = db.get_all_asset_histories(st.session_state.user_id)
+        
         def calculate_asset_totals(row):
             base_invested = row['quantity'] * row['average_price_brl']
             base_profit = row['current_value'] - base_invested
@@ -603,7 +606,11 @@ def render_visao_geral_view():
             if row['asset_type'] == 'Renda Fixa':
                 return pd.Series({'profit_loss': 0.0, 'total_invested': base_invested})
                 
-            history_df = db.get_asset_history(row['id'], st.session_state.user_id)
+            if not all_histories_df.empty:
+                history_df = all_histories_df[all_histories_df['asset_id'] == row['id']].copy()
+            else:
+                history_df = pd.DataFrame()
+            
             if history_df.empty:
                 return pd.Series({'profit_loss': base_profit, 'total_invested': base_invested})
                 

@@ -311,6 +311,18 @@ def get_asset_history(asset_id, user_id):
         df = _query_to_df(query, conn, params=(asset_id, user_id))
     return df
 
+def get_all_asset_histories(user_id):
+    """Busca o histórico de operações de TODOS os ativos do usuário em um único Round-Trip para evitar Overhead N+1"""
+    with get_db_connection() as conn:
+        query = '''
+            SELECT h.* FROM asset_history h 
+            JOIN assets a ON h.asset_id = a.id 
+            WHERE a.user_id = %s 
+            ORDER BY h.date ASC
+        '''
+        df = _query_to_df(query, conn, params=(user_id,))
+    return df
+
 def get_proventos(user_id):
     import struct
     with get_db_connection() as conn:
@@ -345,10 +357,13 @@ def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price,
 def delete_asset(asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
-        if cursor.fetchone():
+        cursor.execute("SELECT id, ticker FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
+        row = cursor.fetchone()
+        if row:
+            ticker = row[1]
             cursor.execute("DELETE FROM asset_history WHERE asset_id = %s", (asset_id,))
             cursor.execute("DELETE FROM assets WHERE id = %s", (asset_id,))
+            cursor.execute("DELETE FROM proventos WHERE ticker = %s AND user_id = %s", (ticker, user_id))
             conn.commit()
 
 def import_from_csv(file_path, user_id):

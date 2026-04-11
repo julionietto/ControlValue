@@ -3,6 +3,22 @@ import pandas as pd
 import streamlit as st
 
 @st.cache_data(ttl=300)
+def _fetch_single_price(ticker):
+    try:
+        ticker_obj = yf.Ticker(ticker)
+        data = ticker_obj.history(period="1d")
+        if not data.empty:
+            return float(data['Close'].iloc[-1])
+        else:
+            try:
+                return float(ticker_obj.fast_info['lastPrice'])
+            except Exception:
+                print(f"Não foi possível obter preço para {ticker}")
+                return 0.0
+    except Exception as e:
+        print(f"Erro ao buscar o preço de {ticker}: {e}")
+        return 0.0
+
 def fetch_current_prices(tickers, refresh_id=0):
     """
     Busca os preços atuais para uma lista de tickers usando yfinance.
@@ -13,24 +29,7 @@ def fetch_current_prices(tickers, refresh_id=0):
     
     prices = {}
     for ticker in tickers:
-        try:
-            ticker_obj = yf.Ticker(ticker)
-            # Tenta pegar o preço mais recente
-            data = ticker_obj.history(period="1d")
-            if not data.empty:
-                current_price = data['Close'].iloc[-1]
-                prices[ticker] = float(current_price)
-            else:
-                # Fallback para info fast se o history falhar
-                try:
-                    current_price = ticker_obj.fast_info['lastPrice']
-                    prices[ticker] = float(current_price)
-                except Exception:
-                    prices[ticker] = 0.0
-                    print(f"Não foi possível obter preço para {ticker}")
-        except Exception as e:
-            print(f"Erro ao buscar o preço de {ticker}: {e}")
-            prices[ticker] = 0.0 # Define 0 se houver erro
+        prices[ticker] = _fetch_single_price(ticker)
             
     return prices
 
@@ -115,65 +114,74 @@ FII_TICKER_OVERRIDE = {
 }
 
 @st.cache_data(ttl=300)
-def fetch_asset_sectors(df_assets_tuple, refresh_id=0):
+def _fetch_single_sector(ticker, a_type):
+    if a_type == 'Cripto':
+        return 'Criptomoedas'
+    elif a_type == 'Renda Fixa':
+        return 'Renda Fixa'
+    else:
+        try:
+            info = yf.Ticker(ticker).info
+            raw_sector = info.get('sector', 'Outros')
+            raw_industry = info.get('industry', 'N/A')
+            
+            if a_type == 'Fiis':
+                if ticker in FII_TICKER_OVERRIDE:
+                    return FII_TICKER_OVERRIDE[ticker]
+                else:
+                    return FII_SECTOR_MAP.get(raw_industry, 'Fiis - Outros')
+
+            raw_industry_lower = raw_industry.lower()
+            
+            if raw_sector == 'Utilities':
+                if any(term in raw_industry for term in ['power', 'electric', 'renewable', 'utility']):
+                    return "Elétricas"
+                else:
+                    return "Saneamento / Outras Utilidades"
+                    
+            elif raw_sector == 'Energy':
+                if any(term in raw_industry for term in ['oil', 'gas', 'exploration', 'drilling', 'petroleum']):
+                    return "Óleo e Gás"
+                else:
+                    return "Energia (Outros)"
+                    
+            elif raw_sector in ['Industrials', 'Financial Services']:
+                if any(term in raw_industry for term in ['conglomerate', 'holding']):
+                    return "Holdings"
+                else:
+                    return SECTOR_TRANSLATION.get(raw_sector, raw_sector)
+            else:
+                return SECTOR_TRANSLATION.get(raw_sector, raw_sector)
+        except Exception:
+            return 'Outros'
+
+def fetch_asset_sectors(df_assets_tuple, is_auto_refresh=False):
     """
     Recebe uma tupla de (tickers, asset_types) e retorna um dicionário mapeando ticker -> setor.
-    Usamos tupla para ser hashable pelo st.cache_data.
     """
+    if 'sector_cache_dict' not in st.session_state:
+        st.session_state.sector_cache_dict = {}
+        
     tickers, asset_types = df_assets_tuple
     sectors = {}
     for ticker, a_type in zip(tickers, asset_types):
-        
         if ticker in sectors:
             continue
             
-        if a_type == 'Cripto':
-            sectors[ticker] = 'Criptomoedas'
-        elif a_type == 'Renda Fixa':
-            sectors[ticker] = 'Renda Fixa'
+        if a_type in ['Cripto', 'Renda Fixa']:
+            sectors[ticker] = _fetch_single_sector(ticker, a_type)
+            st.session_state.sector_cache_dict[ticker] = sectors[ticker]
         else:
-            try:
-                info = yf.Ticker(ticker).info
-                raw_sector = info.get('sector', 'Outros')
-                raw_industry = info.get('industry', 'N/A')
-                
-                # Se for FII, tentamos uma classificação mais granular via Ticker ou Industry
-                if a_type == 'Fiis':
-                    if ticker in FII_TICKER_OVERRIDE:
-                        sectors[ticker] = FII_TICKER_OVERRIDE[ticker]
-                    else:
-                        sectors[ticker] = FII_SECTOR_MAP.get(raw_industry, 'Fiis - Outros')
-                    continue
-
-                raw_industry_lower = raw_industry.lower()
-                
-                # Regras refinadas via Industry
-                if raw_sector == 'Utilities':
-                    # Verifica se atua com eletricidade/energia renovável (geração, transmissão, etc)
-                    if any(term in raw_industry for term in ['power', 'electric', 'renewable', 'utility']):
-                        sectors[ticker] = "Elétricas"
-                    else:
-                        # Para água/saneamento que também entram em Utilities no YF
-                        sectors[ticker] = "Saneamento / Outras Utilidades"
-                        
-                elif raw_sector == 'Energy':
-                    # Petróleo e Gás
-                    if any(term in raw_industry for term in ['oil', 'gas', 'exploration', 'drilling', 'petroleum']):
-                        sectors[ticker] = "Óleo e Gás"
-                    else:
-                        sectors[ticker] = "Energia (Outros)" # Ex: Carvão/Mineração não petroleira
-                        
-                elif raw_sector in ['Industrials', 'Financial Services']:
-                    # Captura Holdings como a Itaúsa que caem no setor Industrial ou Financeiro 
-                    if any(term in raw_industry for term in ['conglomerate', 'holding']):
-                        sectors[ticker] = "Holdings"
-                    else:
-                        sectors[ticker] = SECTOR_TRANSLATION.get(raw_sector, raw_sector)
+            if ticker in st.session_state.sector_cache_dict:
+                sectors[ticker] = st.session_state.sector_cache_dict[ticker]
+            else:
+                if is_auto_refresh:
+                    fetched = _fetch_single_sector(ticker, a_type)
+                    sectors[ticker] = fetched
+                    st.session_state.sector_cache_dict[ticker] = fetched
                 else:
-                    # Mapeamento padrão pelo macro-setor
-                    sectors[ticker] = SECTOR_TRANSLATION.get(raw_sector, raw_sector)
-            except Exception:
-                sectors[ticker] = 'Outros'
+                    sectors[ticker] = "Pendente (Auto-update)"
+                    
     return sectors
 
 @st.cache_data(ttl=3600)

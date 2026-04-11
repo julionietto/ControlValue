@@ -4,8 +4,6 @@ from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile
 
-
-
 db.init_db()
 
 st.set_page_config(page_title="Ativos Financeiros", page_icon="📈", layout="wide")
@@ -32,7 +30,6 @@ if 'table_key' not in st.session_state:
 if not st.session_state.authenticated:
     render_auth_view()
 
-
 # Inicializar variáveis de controle no session_state
 if 'refresh_id' not in st.session_state:
     st.session_state.refresh_id = 0
@@ -46,15 +43,9 @@ if 'viewing_history' not in st.session_state:
 # Atualização automática a cada 5 minutos (300.000 ms)
 st_autorefresh(interval=300000, key="datarefresh")
 
-
-
 # ==============================
 # MENU DE PERFIL
 # ==============================
-
-
-
-
 
 # Dispara os diálogos de forma segura por fora do popover para que funcionem bem após recriação
 if st.session_state.pop('trigger_dialog_ativos', False):
@@ -63,7 +54,6 @@ if st.session_state.pop('trigger_dialog_proventos', False):
     dialog_importar_proventos()
 if st.session_state.pop('trigger_dialog_perfil', False):
     dialog_user_profile()
-
 
 # ==============================
 # ADMIN DASHBOARD
@@ -89,7 +79,6 @@ if current_view == "Proventos" or current_view == "Proventos Recebidos":
 
 if current_view == "Derivativos":
     render_derivativos_view()
-
 
 if current_view == "Visão Geral":
     render_visao_geral_view()
