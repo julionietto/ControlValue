@@ -4,35 +4,74 @@ import streamlit as st
 from utils.refresh_manager import is_market_open
 
 @st.cache_data(ttl=300)
-def _fetch_single_price(ticker, refresh_id=0):
+def _fetch_prices_batch(tickers_tuple, refresh_id=0):
+    prices = {}
+    if not tickers_tuple:
+        return prices
+        
+    tickers_list = list(set(tickers_tuple))
+    tickers_str = " ".join(tickers_list)
+    
     try:
-        ticker_obj = yf.Ticker(ticker)
-        data = ticker_obj.history(period="1d")
+        # yf.download agrupa todas as requisições, evitando bloqueios na AWS/Streamlit Cloud
+        data = yf.download(tickers_str, period="1d", threads=True, progress=False)
+        
         if not data.empty:
-            return float(data['Close'].iloc[-1])
-        else:
-            try:
-                return float(ticker_obj.fast_info['lastPrice'])
-            except Exception:
-                print(f"Não foi possível obter preço para {ticker}")
-                return 0.0
+            if 'Close' in data:
+                close_df = data['Close']
+            else:
+                close_df = data
+                
+            for ticker in tickers_list:
+                val = 0.0
+                try:
+                    if len(tickers_list) == 1:
+                        import numbers
+                        val_raw = close_df.iloc[-1]
+                        if isinstance(val_raw, numbers.Number):
+                            val = float(val_raw)
+                        else:
+                            val = float(val_raw.iloc[0] if hasattr(val_raw, 'iloc') else 0.0)
+                    else:
+                        if ticker in close_df:
+                            val = float(close_df[ticker].iloc[-1])
+                except Exception:
+                    pass
+                
+                # Resgate individual usando a API leve (Quote) se faltar algum dado
+                if pd.isna(val) or val <= 0.0:
+                    try:
+                        val = float(yf.Ticker(ticker).fast_info.get('lastPrice', 0.0))
+                    except:
+                        val = 0.0
+                        
+                prices[ticker] = val
     except Exception as e:
-        print(f"Erro ao buscar o preço de {ticker}: {e}")
-        return 0.0
+        print(f"Falha YF Download: {e}")
+        # Resgate caso a API de download sofra instabilidades
+        for ticker in tickers_list:
+            try:
+                prices[ticker] = float(yf.Ticker(ticker).fast_info.get('lastPrice', 0.0))
+            except:
+                prices[ticker] = 0.0
+                
+    # Assegura que sempre retornamos aquilo que foi pedido
+    for t in tickers_tuple:
+        if t not in prices:
+            prices[t] = 0.0
+            
+    return prices
 
 def fetch_current_prices(tickers, refresh_id=0):
     """
-    Busca os preços atuais para uma lista de tickers usando yfinance.
+    Busca os preços atuais para uma lista de tickers usando yfinance em Lote (Batch).
     Retorna um dicionário mapeando o ticker para seu preço atual.
     """
     if not tickers:
         return {}
     
-    prices = {}
-    for ticker in tickers:
-        prices[ticker] = _fetch_single_price(ticker, refresh_id)
-            
-    return prices
+    # Tupla é hashable permitindo que o Streamlit faça cache de chamadas semelhantes
+    return _fetch_prices_batch(tuple(tickers), refresh_id)
 
 @st.cache_data(ttl=300)
 def get_usd_brl_rate(refresh_id=0, is_first_load=False):
