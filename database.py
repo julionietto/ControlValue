@@ -4,11 +4,35 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 import pandas as pd
+import numpy as np
+from psycopg2.extensions import register_adapter, AsIs
+
+# Adaptadores para resolver incompatibilidade entre Numpy/Pandas e Psycopg2
+register_adapter(np.int64, lambda val: AsIs(int(val)))
+register_adapter(np.float64, lambda val: AsIs(float(val)))
+
 import hashlib
 import bcrypt
 from contextlib import contextmanager
+import streamlit as st
+from psycopg2 import pool
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/investcontrol")
+def get_database_url():
+    """Busca a URL no secrets (Streamlit Cloud) ou no .env (Local)."""
+    try:
+        if "DATABASE_URL" in st.secrets:
+            return st.secrets["DATABASE_URL"]
+    except Exception:
+        pass
+    return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/investcontrol")
+
+@st.cache_resource(ttl=3600)
+def init_connection_pool():
+    """Inicializa um Connection Pool com suporte a SSL para Cloud."""
+    db_url = get_database_url()
+    if "127.0.0.1" not in db_url and "localhost" not in db_url and "sslmode=" not in db_url:
+        db_url += "?sslmode=require" if "?" not in db_url else "&sslmode=require"
+    return pool.ThreadedConnectionPool(1, 20, db_url)
 
 def hash_password(password):
     """Gera um hash bcrypt para a senha."""
@@ -47,7 +71,8 @@ def infer_asset_type(ticker):
         return 'Reits'
 
 def init_db():
-    conn = psycopg2.connect(DATABASE_URL)
+    db_pool = init_connection_pool()
+    conn = db_pool.getconn()
     cursor = conn.cursor()
     # Tabela de Ativos (consolidado)
     cursor.execute('''
@@ -113,7 +138,8 @@ def init_db():
         )
     ''')
     conn.commit()
-    conn.close()
+    db_pool = init_connection_pool()
+    db_pool.putconn(conn)
 
 def get_user_count():
     with get_db_connection() as conn:
@@ -163,11 +189,20 @@ def verify_user(login_identifier, password):
 
 @contextmanager
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
+    db_pool = init_connection_pool()
+    conn = db_pool.getconn()
     try:
         yield conn
+        if not conn.closed and not conn.autocommit:
+            conn.commit()
+    except Exception:
+        if not conn.closed and not conn.autocommit:
+            conn.rollback()
+        raise
     finally:
-        conn.close()
+        if not conn.closed and conn.autocommit:
+            conn.autocommit = False
+        db_pool.putconn(conn)
 
 def recalculate_asset_balance(asset_id, conn):
     """Recalcula a quantidade e o preço médio de um ativo com base no histórico."""

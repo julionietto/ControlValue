@@ -63,7 +63,6 @@ def dialog_adicionar_novo_ativo():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
-                breakpoint()
                 if nome:
                     db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
                     st.success(f"Ativo {nome} adicionado!")
@@ -72,7 +71,6 @@ def dialog_adicionar_novo_ativo():
                     st.error("Informe o nome do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
-                breakpoint()
                 st.rerun()
     else:
         st.info("Ativos brasileiros (Ações/Fiis) recebem o sufixo .SA automaticamente. Para Stocks/Reits/Cripto, digite o ticker completo.")
@@ -80,7 +78,6 @@ def dialog_adicionar_novo_ativo():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
-                breakpoint()
                 if nome:
                     clean_name = nome.strip().upper()
                     # Lógica de sufixo .SA (Ações e Fiis)
@@ -143,7 +140,6 @@ def dialog_adicionar_novo_ativo():
                     st.error("Informe o nome do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
-                breakpoint()
                 st.rerun()
 
 
@@ -469,8 +465,9 @@ def show_asset_details_screen(asset_data):
 
         if selected_op.selection.rows:
             row_idx = selected_op.selection.rows[0]
-            op_to_edit = history_df.iloc[row_idx]
-            dialog_edit_operation(op_to_edit)
+            if row_idx < len(history_df):
+                op_to_edit = history_df.iloc[row_idx]
+                dialog_edit_operation(op_to_edit)
 
     st.markdown("---")
     
