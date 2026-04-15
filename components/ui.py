@@ -80,6 +80,15 @@ def render_profile_popover():
                 st.session_state.clear()
                 st.rerun()
 
+        try:
+            version = "Versão 1.0.0"
+            if os.path.exists(".version"):
+                with open(".version", "r", encoding="utf-8") as f:
+                    version = f.read().strip()
+            st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #a1a1aa; padding-top: 8px; margin-top: 8px; border-top: 1px solid #27272a;'>{version}</div>", unsafe_allow_html=True)
+        except Exception:
+            pass
+
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
     

@@ -1,15 +1,4 @@
 import streamlit as st
-
-# Esconde menus e footer
-st.markdown("""
-<style>
-    [data-testid="stToolbar"] {display: none !important;}
-    [data-testid="stDecoration"] {display: none !important;}
-    footer {display: none !important;}
-    header {display: none !important;}
-</style>
-""", unsafe_allow_html=True)
-
 import database as db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
