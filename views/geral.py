@@ -64,8 +64,9 @@ def dialog_adicionar_novo_ativo():
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
                 if nome:
-                    db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
-                    st.success(f"Ativo {nome} adicionado!")
+                    with st.spinner("⏳ Aguarde... adicionando o novo ativo em seu portfólio"):
+                        db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
+                        st.success(f"Ativo {nome} adicionado!")
                     st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
@@ -79,63 +80,64 @@ def dialog_adicionar_novo_ativo():
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
                 if nome:
-                    clean_name = nome.strip().upper()
-                    # Lógica de sufixo .SA (Ações e Fiis)
-                    if len(clean_name) >= 4 and "." not in clean_name:
-                        # Se não for Cripto conhecido sem hífen
-                        if clean_name not in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
-                            clean_name += ".SA"
-                    
-                    tipo_inicial = infer_asset_type(clean_name)
-                    # Se for renda variável, valida a cotação ANTES de inserir no BD
-                    live_native = 0.0
-                    live_brl = 0.0
-                    if tipo_inicial != 'Renda Fixa':
-                        ticker_to_fetch = clean_name
-                        if tipo_inicial == 'Cripto' and '-' not in clean_name:
-                            ticker_to_fetch = f"{clean_name}-USD"
-                            
-                        try:
-                            prices = svc.fetch_current_prices([ticker_to_fetch], st.session_state.refresh_id)
-                            live_native = prices.get(ticker_to_fetch, 0.0)
-                            
-                            if tipo_inicial in ['Cripto', 'Stocks', 'Reits']:
-                                cot = svc.get_usd_brl_rate(st.session_state.refresh_id)
-                                live_brl = live_native * cot if cot > 0 else 0.0
-                            else:
-                                live_brl = live_native
-                        except Exception:
-                            pass
+                    with st.spinner("⏳ Aguarde... adicionando o novo ativo em seu portfólio"):
+                        clean_name = nome.strip().upper()
+                        # Lógica de sufixo .SA (Ações e Fiis)
+                        if len(clean_name) >= 4 and "." not in clean_name:
+                            # Se não for Cripto conhecido sem hífen
+                            if clean_name not in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+                                clean_name += ".SA"
                         
-                        if live_native <= 0.0:
-                            st.error(f"É possível que o ativo informado ('{clean_name}') não exista. Por favor, digite o código do ativo novamente.")
-                            st.stop()
+                        tipo_inicial = infer_asset_type(clean_name)
+                        # Se for renda variável, valida a cotação ANTES de inserir no BD
+                        live_native = 0.0
+                        live_brl = 0.0
+                        if tipo_inicial != 'Renda Fixa':
+                            ticker_to_fetch = clean_name
+                            if tipo_inicial == 'Cripto' and '-' not in clean_name:
+                                ticker_to_fetch = f"{clean_name}-USD"
+                                
+                            try:
+                                prices = svc.fetch_current_prices([ticker_to_fetch], st.session_state.refresh_id)
+                                live_native = prices.get(ticker_to_fetch, 0.0)
+                                
+                                if tipo_inicial in ['Cripto', 'Stocks', 'Reits']:
+                                    cot = svc.get_usd_brl_rate(st.session_state.refresh_id)
+                                    live_brl = live_native * cot if cot > 0 else 0.0
+                                else:
+                                    live_brl = live_native
+                            except Exception:
+                                pass
                             
-                    # Adiciona ou recupera o ativo
-                    db.add_empty_asset(clean_name, tipo_inicial, st.session_state.user_id)
-                    
-                    # Busca os dados carregados do BD para garantir consistência
-                    with db.get_db_connection() as conn:
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT * FROM assets WHERE ticker = %s AND user_id = %s", (clean_name, st.session_state.user_id))
-                        row = cursor.fetchone()
-                        if row:
-                            asset_data = {
-                                'id': row[0],
-                                'ticker': row[1],
-                                'asset_type': row[2],
-                                'quantity': row[3],
-                                'average_price': row[4],
-                                'price_ceiling': row[5],
-                                'fair_value': row[6]
-                            }
-                            
-                            if tipo_inicial != 'Renda Fixa':
-                                asset_data['original_current_price'] = live_native
-                                asset_data['current_price'] = live_brl
+                            if live_native <= 0.0:
+                                st.error(f"É possível que o ativo informado ('{clean_name}') não exista. Por favor, digite o código do ativo novamente.")
+                                st.stop()
+                                
+                        # Adiciona ou recupera o ativo
+                        db.add_empty_asset(clean_name, tipo_inicial, st.session_state.user_id)
+                        
+                        # Busca os dados carregados do BD para garantir consistência
+                        with db.get_db_connection() as conn:
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT * FROM assets WHERE ticker = %s AND user_id = %s", (clean_name, st.session_state.user_id))
+                            row = cursor.fetchone()
+                            if row:
+                                asset_data = {
+                                    'id': row[0],
+                                    'ticker': row[1],
+                                    'asset_type': row[2],
+                                    'quantity': row[3],
+                                    'average_price': row[4],
+                                    'price_ceiling': row[5],
+                                    'fair_value': row[6]
+                                }
+                                
+                                if tipo_inicial != 'Renda Fixa':
+                                    asset_data['original_current_price'] = live_native
+                                    asset_data['current_price'] = live_brl
 
-                            st.session_state.viewing_history = asset_data
-                            st.rerun()
+                                st.session_state.viewing_history = asset_data
+                                st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
         with col2:
