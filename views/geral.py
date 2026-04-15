@@ -542,14 +542,22 @@ def render_visao_geral_view():
         m_status = get_market_status()
         is_first_load = st.session_state.get('is_first_load', True)
         
-        final_tickers_to_fetch = []
-        if m_status['BR'] or is_first_load: final_tickers_to_fetch.extend(tickers_br)
-        if m_status['US'] or is_first_load: final_tickers_to_fetch.extend(tickers_us)
-        if m_status['CRYPTO']: final_tickers_to_fetch.extend(tickers_crypto) # Bitcoin sempre entra aqui
-
         # Inicializa cache de preços no session_state se não existir
         if 'price_cache' not in st.session_state:
             st.session_state.price_cache = {}
+
+        final_tickers_to_fetch = []
+        for t in tickers_br:
+            if m_status['BR'] or is_first_load or t not in st.session_state.price_cache:
+                final_tickers_to_fetch.append(t)
+        
+        for t in tickers_us:
+            if m_status['US'] or is_first_load or t not in st.session_state.price_cache:
+                final_tickers_to_fetch.append(t)
+                
+        for t in tickers_crypto:
+            if m_status['CRYPTO'] or t not in st.session_state.price_cache: # Bitcoin sempre entra
+                final_tickers_to_fetch.append(t)
 
         with st.spinner("Buscando preços atualizados..."):
             refresh_id = st.session_state.refresh_id
