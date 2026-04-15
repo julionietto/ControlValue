@@ -29,7 +29,7 @@ def render_admin_view():
     if st.button("➕ Novo Usuário", type="primary"):
         st.session_state.show_add_user = True
         
-    @st.dialog("Criar Novo Usuário")
+    @st.dialog("Criar Novo Usuário", dismissible=False)
     def dialog_add_user():
         new_username = st.text_input("Usuário")
         new_email = st.text_input("Email")
@@ -62,7 +62,7 @@ def render_admin_view():
             if row_idx < len(users_df):
                 user_data_row = users_df.iloc[row_idx]
                 
-                @st.dialog("Editar / Excluir Usuário")
+                @st.dialog("Editar / Excluir Usuário", dismissible=False)
                 def dialog_edit_user(u_data):
                     st.write(f"**ID:** {u_data['id']} | **Data de Cadastro:** {u_data['created_at']}")
                     edit_username = st.text_input("Usuário", value=u_data['username'])
@@ -97,7 +97,7 @@ def render_admin_view():
     if 'trigger_admin_delete_user' in st.session_state and st.session_state['trigger_admin_delete_user'] is not None:
         target_user = st.session_state['trigger_admin_delete_user']
         
-        @st.dialog("⚠️ Confirmação de Exclusão")
+        @st.dialog("⚠️ Confirmação de Exclusão", dismissible=False)
         def dialog_confirm_delete():
             st.warning(f"Você está prestes a excluir permanentemente o usuário **{target_user['username']}**.")
             st.error("Aviso: Esta ação irá remover COMPLETAMENTE todos os proventos, ativos, opções e configurações vinculadas a este usuário no banco de dados. Isso não pode ser desfeito.")

@@ -4,7 +4,7 @@ import time
 import database as db
 from utils.formatters import escape_html
 
-@st.dialog("Seu Perfil")
+@st.dialog("Seu Perfil", dismissible=False)
 def dialog_user_profile():
     u_details = db.get_user_details(st.session_state.user_id)
     if u_details:
@@ -58,7 +58,7 @@ def dialog_user_profile():
     else:
         st.error("Erro ao carregar dados do perfil.")
 
-@st.dialog("Importar Proventos")
+@st.dialog("Importar Proventos", dismissible=False)
 def dialog_importar_proventos():
     if st.session_state.get('confirm_imp_proventos', False):
         st.warning("⚠️ **Atenção:** Todos os dados de Proventos atuais deste usuário serão **APAGADOS** e substituídos pelos dados do arquivo. Deseja continuar?")
@@ -114,7 +114,7 @@ def dialog_importar_proventos():
         if close_prov_dialog:
             st.rerun()
 
-@st.dialog("Importar Ativos")
+@st.dialog("Importar Ativos", dismissible=False)
 def dialog_importar_ativos():
 
     if st.session_state.get('confirm_imp_ativos', False):

@@ -12,7 +12,7 @@ def render_proventos_view():
     meses_ordem = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
     
     # ---- Popup: Editar Provento ----
-    @st.dialog("✏️ Editar Provento")
+    @st.dialog("✏️ Editar Provento", dismissible=False)
     def dialog_editar_provento(ano, ticker, df_prov):
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
         st.markdown("---")
@@ -37,7 +37,7 @@ def render_proventos_view():
                 st.rerun()
 
     # ---- Popup: Confirmar Exclusão Provento ----
-    @st.dialog("⚠️ Confirmar Exclusão")
+    @st.dialog("⚠️ Confirmar Exclusão", dismissible=False)
     def dialog_confirmar_exclusao_provento(ano, ticker):
         st.warning("Tem certeza que deseja excluir este ativo da tabela dos proventos deste ano?")
         c_yes, c_no = st.columns(2)
@@ -51,7 +51,7 @@ def render_proventos_view():
                 st.rerun()
     
     # ---- Popup: Adicionar Ativo ----
-    @st.dialog("➕ Adicionar Ativo")
+    @st.dialog("➕ Adicionar Ativo", dismissible=False)
     def dialog_adicionar_ativo(ano):
         st.markdown(f"**Ano de referência:** `{ano}`")
         st.markdown("---")

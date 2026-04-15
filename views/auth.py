@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import database as db
 
-@st.dialog("Criar Conta")
+@st.dialog("Criar Conta", dismissible=False)
 def dialog_register_user():
     st.markdown("### 📝 Cadastre-se")
     reg_username = st.text_input("Nome de Usuário", placeholder="Como quer ser chamado")

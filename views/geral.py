@@ -16,7 +16,7 @@ from utils.refresh_manager import is_market_open, get_market_status
 
 
 import datetime
-@st.dialog("Confirmar Exclusão")
+@st.dialog("Confirmar Exclusão", dismissible=False)
 def confirm_delete_dialog(asset_id, ticker):
     st.warning(f"Tem certeza que deseja excluir o ativo **{format_ticker_for_display(ticker)}**?")
     st.write("Esta ação não poderá ser desfeita.")
@@ -34,7 +34,7 @@ def confirm_delete_dialog(asset_id, ticker):
             st.session_state.show_confirm_delete = False
             st.rerun()
 
-@st.dialog("Confirmar Exclusão de Operação")
+@st.dialog("Confirmar Exclusão de Operação", dismissible=False)
 def confirm_delete_operation_dialog(op_data, asset_id):
     st.warning("Tem certeza que deseja excluir esta operação?")
     st.write(f"Data: {op_data['date']} | Quantidade: {op_data['quantity']} | Preço: {op_data['unit_price']}")
@@ -52,7 +52,7 @@ def confirm_delete_operation_dialog(op_data, asset_id):
             st.session_state.show_confirm_delete_op = False
             st.rerun()
 
-@st.dialog("Adicionar novo ativo")
+@st.dialog("Adicionar novo ativo", dismissible=False)
 def dialog_adicionar_novo_ativo():
     categoria = st.radio("Selecione a Categoria", ["Renda Variável", "Renda Fixa"], horizontal=True)
     nome = st.text_input("Nome do Ativo")
@@ -151,7 +151,7 @@ def show_asset_details_screen(asset_data):
     display_ticker = format_ticker_for_display(ticker)
     current_type = asset_data['asset_type']
 
-    @st.dialog("Adicionar Operação")
+    @st.dialog("Adicionar Operação", dismissible=False)
     def dialog_add_operation():
         st.markdown(f"**Ativo:** `{display_ticker}`")
         st.markdown("---")
@@ -178,7 +178,7 @@ def show_asset_details_screen(asset_data):
             if st.button("Cancelar", use_container_width=True, key="cancel_add"):
                 st.rerun()
 
-    @st.dialog("Editar Operação")
+    @st.dialog("Editar Operação", dismissible=False)
     def dialog_edit_operation(op_data):
         st.markdown(f"**Editando Operação - Ativo:** `{display_ticker}`")
         st.markdown("---")

@@ -7,7 +7,7 @@ from utils.formatters import format_ticker_for_display, format_brl
 def render_derivativos_view():
     st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Derivativos</h2>', unsafe_allow_html=True)
     
-    @st.dialog("Editar Opção", width="large")
+    @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
         st.markdown(f"### 📝 Editando Opção: `{format_ticker_for_display(op_data['ativo'])}`")
         
@@ -92,7 +92,7 @@ def render_derivativos_view():
                     st.session_state.refresh_id += 1
                     st.rerun()
 
-    @st.dialog("Confirmar Exclusão de Opção")
+    @st.dialog("Confirmar Exclusão de Opção", dismissible=False)
     def confirm_delete_opcao_dialog(opcao_id):
         st.warning("Tem certeza que deseja excluir esta opção?")
         col_yes, col_no = st.columns(2)
@@ -108,7 +108,7 @@ def render_derivativos_view():
                 st.session_state.show_confirm_delete_opcao = False
                 st.rerun()
 
-    @st.dialog("Adicionar Opção", width="large")
+    @st.dialog("Adicionar Opção", width="large", dismissible=False)
     def dialog_add_opcao():
         st.markdown("### 🆕 Adicionar Nova Opção")
         
