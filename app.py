@@ -2,11 +2,12 @@ import streamlit as st
 
 # Esconde menus e footer
 st.markdown("""
-    <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-    </style>
+<style>
+    [data-testid="stToolbar"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    footer {display: none !important;}
+    header {display: none !important;}
+</style>
 """, unsafe_allow_html=True)
 
 import database as db
