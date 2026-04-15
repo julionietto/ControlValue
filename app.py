@@ -6,7 +6,6 @@ from components.global_dialogs import dialog_importar_ativos, dialog_importar_pr
 
 db.init_db()
 
-st.set_option("client.toolbarMode", "viewer")
 st.set_page_config(page_title="Ativos Financeiros", page_icon="📈", layout="wide")
 
 # Injeção de CSS personalizado
