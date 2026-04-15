@@ -1,4 +1,14 @@
 import streamlit as st
+
+# Esconde menus e footer
+st.markdown("""
+    <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
 import database as db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
