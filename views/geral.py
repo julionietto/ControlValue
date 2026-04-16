@@ -1176,10 +1176,13 @@ def render_visao_geral_view():
                         perf_df['IPCA %'] = 0.0
                         if not ipca_vals.empty:
                             if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
-                            # IPCA agora vem como Número Índice (432). Basta dividir pelo valor base.
-                            full_range = pd.date_range(start=ipca_vals.index.min(), end=perf_df['Data'].max(), freq='D')
-                            ipca_daily = ipca_vals.reindex(full_range).ffill().bfill()
-                            ipca_resampled = ipca_daily.reindex(perf_df['Data']).ffill().bfill()
+                            # Acumular. IPCA vem em % mensal (SGS 433).
+                            ipca_cum = (1 + ipca_vals / 100).cumprod()
+                            
+                            full_range = pd.date_range(start=ipca_cum.index.min(), end=perf_df['Data'].max(), freq='D')
+                            ipca_cum_daily = ipca_cum.reindex(full_range).ffill().bfill()
+                            # Agora resample para as datas do gráfico
+                            ipca_resampled = ipca_cum_daily.reindex(perf_df['Data']).ffill().bfill()
                             if not ipca_resampled.empty and ipca_resampled.iloc[first_idx] != 0:
                                 ipca_base = ipca_resampled.iloc[first_idx]
                                 perf_df.loc[first_idx:, 'IPCA %'] = ((ipca_resampled.iloc[first_idx:] / ipca_base - 1) * 100).values

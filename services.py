@@ -268,19 +268,34 @@ def get_bcb_history(code, start_date):
     import requests
     from datetime import datetime
     
-    url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json"
+    # Converte start_date (YYYY-MM-DD) para formato BCB (DD/MM/YYYY)
     try:
-        response = requests.get(url, timeout=10)
+        dt_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        bcb_date = dt_obj.strftime('%d/%m/%Y')
+    except:
+        bcb_date = datetime.now().strftime('01/01/%Y') # fallback
+
+    url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json&dataInicial={bcb_date}"
+    
+    try:
+        # Adiciona User-Agent para evitar bloqueios triviais
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, timeout=15, headers=headers)
         if response.status_code == 200:
             data = response.json()
+            if not data:
+                return pd.Series()
+                
             df = pd.DataFrame(data)
             df['data'] = pd.to_datetime(df['data'], dayfirst=True)
             df['valor'] = df['valor'].astype(float)
             
-            # Filtra pela data de início
+            # Filtra novamente em memória apenas por segurança (dataInicial garante a janela do servidor)
             start_dt = pd.to_datetime(start_date)
             df = df[df['data'] >= start_dt]
             return df.set_index('data')['valor']
+        else:
+            print(f"Erro BCB {code}: Status {response.status_code}")
     except Exception as e:
         print(f"Erro ao buscar BCB {code}: {e}")
     return pd.Series()
@@ -297,9 +312,9 @@ def get_major_indices_history(months=18):
     # Usamos o XFIX11.SA (Trend ETF IFIX) como proxy altamente fidedigna pois IFIX.SA quebrou no YahooFinance
     ifix = get_index_history("XFIX11.SA", period="2y")
     
-    # 3. CDI (4391) e 4. IPCA (432 - Número Índice)
+    # 3. CDI (4391) e 4. IPCA (433 - Variação Mensal %)
     cdi_mensal = get_bcb_history(4391, start_date)
-    ipca_mensal = get_bcb_history(432, start_date)
+    ipca_mensal = get_bcb_history(433, start_date)
     
     return {
         'ibov': ibov,
