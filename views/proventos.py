@@ -188,6 +188,7 @@ def render_proventos_view():
                     if col == 'Valor Mensal': color_total = 'color: #00CC96;'
                     elif col == 'Valor Anual': color_total = 'color: #3d9df3;'
                     
+                    val_fmt = format_provento(totais_row[col])
                     tm_row[col] = f'<div style="{style_val} {color_total}">{val_fmt}</div>'
                 footer_rows.append(tm_row)
                 
