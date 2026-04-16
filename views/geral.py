@@ -1082,15 +1082,11 @@ def render_visao_geral_view():
                                 close_df = hist_data['Close']
                                 if len(tickers_for_yf) == 1:
                                     t = tickers_for_yf[0]
-                                    hist = close_df.to_frame()
-                                    hist.columns = ['Close']
-                                    price_history[t] = hist.dropna()
+                                    price_history[t] = close_df.dropna()
                                 else:
                                     for t in tickers_for_yf:
                                         if t in close_df.columns:
-                                            hist = close_df[[t]].copy()
-                                            hist.columns = ['Close']
-                                            price_history[t] = hist.dropna()
+                                            price_history[t] = close_df[t].dropna()
 
                         for key, hist in price_history.items():
                             if not hist.empty:
@@ -1099,7 +1095,7 @@ def render_visao_geral_view():
                                 hist.index = hist.index.normalize()
                                 price_history[key] = hist
 
-                        usd_rate_hist = price_history.get("BRL=X", pd.DataFrame())
+                        usd_rate_hist = price_history.get("BRL=X", pd.Series())
 
                         # Calcular valor do portfólio em cada fechamento de mês
                         portfolio_values = []
