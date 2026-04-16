@@ -2,6 +2,10 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 from utils.refresh_manager import is_market_open
+import socket
+
+# Força timeout agressivo a nível de socket para evitar travamentos de 60 segundos em firewalls / IP blocking do Yahoo
+socket.setdefaulttimeout(3.0)
 
 @st.cache_data(ttl=300)
 def _fetch_prices_batch(tickers_tuple, refresh_id=0):
