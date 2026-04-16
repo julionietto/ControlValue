@@ -1121,16 +1121,20 @@ def render_visao_geral_view():
                                             available_dates = p_hist.index[p_hist.index <= dt]
                                             if not available_dates.empty:
                                                 p = p_hist.loc[available_dates[-1]]
+                                                if isinstance(p, pd.Series): p = p.iloc[0]
+                                                p = float(p)
 
                                                 # Conversão se necessário
                                                 if asset['asset_type'] in ['Stocks', 'Reits', 'Cripto']:
                                                     u_dates = usd_rate_hist.index[usd_rate_hist.index <= dt]
                                                     rate = usd_rate_hist.loc[u_dates[-1]] if not u_dates.empty else usd_to_brl_rate
+                                                    if isinstance(rate, pd.Series): rate = rate.iloc[0]
+                                                    rate = float(rate)
                                                     p = p * rate
 
                                                 total_dt += qty_at_dt * p
                                 elif asset['asset_type'] == 'Renda Fixa':
-                                    total_dt += asset['average_price']
+                                    total_dt += float(asset['average_price'])
 
                             portfolio_values.append(total_dt)
 
