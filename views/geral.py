@@ -1034,193 +1034,205 @@ def render_visao_geral_view():
             # --- NOVO GRÁFICO: Performance do Portfólio ---
             st.markdown("---")
             st.subheader("📊 Rentabilidade do Portfólio vs Índices (Últimos 12 Meses)")
-            
-            with st.spinner("Calculando rentabilidade histórica..."):
-                # 1. Buscar Histórico de Índices
-                indices = svc.get_major_indices_history(months=12)
-                
-                # 2. Reconstruir Histórico do Portfólio
-                # Precisamos dos tickers que compuseram o portfólio nos últimos 12 meses
-                all_assets_user = db.get_all_assets(st.session_state.user_id)
-                if not all_assets_user.empty:
-                    # Obter datas dos últimos 12 meses (fim de cada mês)
-                    # 2. Calcular histórico do portfólio
-                    hoje = pd.Timestamp.now().normalize()
-                    meses_fechamento = []
-                    for i in range(12, 0, -1):
-                        d = hoje - pd.DateOffset(months=i)
-                        last_day = d + pd.offsets.MonthEnd(0)
-                        meses_fechamento.append(last_day.normalize())
-                    
-                    # Buscar histórico de preços para todos os tickers
-                    tickers_port = all_assets_user['ticker'].unique().tolist()
-                    
-                    # Fetch historical prices in BULK
-                    price_history = {}
-                    tickers_for_yf = []
-                    for t in tickers_port:
-                        asset_row = all_assets_user[all_assets_user['ticker']==t]
-                        if not asset_row.empty:
-                            if asset_row['asset_type'].iloc[0] == 'Renda Fixa':
-                                continue
-                            tyf = f"{t}-USD" if (asset_row['asset_type'].iloc[0]=='Cripto' and '-' not in t) else t
-                            if tyf not in tickers_for_yf:
-                                tickers_for_yf.append(tyf)
-                    
-                    if "BRL=X" not in tickers_for_yf:
-                        tickers_for_yf.append("BRL=X")
-                    
-                    if tickers_for_yf:
-                        hist_data = yf.download(tickers_for_yf, period="2y", threads=True, progress=False, ignore_tz=True)
-                        if not hist_data.empty and 'Close' in hist_data.columns:
-                            close_df = hist_data['Close']
-                            if len(tickers_for_yf) == 1:
-                                t = tickers_for_yf[0]
-                                hist = close_df.to_frame()
-                                hist.columns = ['Close']
-                                price_history[t] = hist.dropna()
-                            else:
-                                for t in tickers_for_yf:
-                                    if t in close_df.columns:
-                                        hist = close_df[[t]].copy()
-                                        hist.columns = ['Close']
-                                        price_history[t] = hist.dropna()
-                    
-                    for key, hist in price_history.items():
-                        if not hist.empty:
-                            if hist.index.tz is not None:
-                                hist.index = hist.index.tz_localize(None)
-                            hist.index = hist.index.normalize()
-                            price_history[key] = hist
-                    
-                    usd_rate_hist = price_history.get("BRL=X", pd.DataFrame())
-                    
-                    # Calcular valor do portfólio em cada fechamento de mês
-                    portfolio_values = []
-                    for dt in meses_fechamento:
-                        total_dt = 0.0
-                        for _, asset in all_assets_user.iterrows():
-                            # Uso direto da DF all_histories_df para eliminar consultas SQL no banco
-                            if not all_histories_df.empty:
-                                history_asset = all_histories_df[all_histories_df['asset_id'] == asset['id']].copy()
-                            else:
-                                history_asset = pd.DataFrame()
-                                
-                            if not history_asset.empty:
-                                history_asset['date'] = pd.to_datetime(history_asset['date'], format='mixed', dayfirst=False).dt.normalize()
-                                qty_at_dt = history_asset[history_asset['date'] <= dt]['quantity'].sum()
-                                
-                                if qty_at_dt > 0:
-                                    # Preço na data dt (ou o mais próximo anterior)
-                                    t = asset['ticker']
-                                    tyf = t + "-USD" if (asset['asset_type']=='Cripto' and '-' not in t) else t
-                                    if tyf in price_history:
-                                        p_hist = price_history[tyf]
-                                        available_dates = p_hist.index[p_hist.index <= dt]
-                                        if not available_dates.empty:
-                                            p = p_hist.loc[available_dates[-1]]
-                                            
-                                            # Conversão se necessário
-                                            if asset['asset_type'] in ['Stocks', 'Reits', 'Cripto']:
-                                                u_dates = usd_rate_hist.index[usd_rate_hist.index <= dt]
-                                                rate = usd_rate_hist.loc[u_dates[-1]] if not u_dates.empty else usd_to_brl_rate
-                                                p = p * rate
-                                            
-                                            total_dt += qty_at_dt * p
-                            elif asset['asset_type'] == 'Renda Fixa':
-                                total_dt += asset['average_price']
-                        
-                        portfolio_values.append(total_dt)
-                    
-                    # Preparar DataFrame de Performance
-                    perf_df = pd.DataFrame({'Data': meses_fechamento, 'Portfolio': portfolio_values})
-                    perf_df['Data'] = perf_df['Data'].dt.normalize()
-                    
-                    # Encontrar o primeiro mês com saldo no portfólio para ancorar a rentabilidade (baseline)
-                    non_zero_mask = perf_df['Portfolio'] > 0
-                    if non_zero_mask.any():
-                        first_idx = non_zero_mask.idxmax()
+            use_cached_perf = ('perf_cache' in st.session_state and st.session_state.perf_cache.get('user_id') == st.session_state.user_id)
+            if use_cached_perf:
+                perf_df = st.session_state.perf_cache['perf_df']
+                all_assets_user_empty = perf_df.empty
+            else:
+
+                with st.spinner("Calculando rentabilidade histórica..."):
+                    # 1. Buscar Histórico de Índices
+                    indices = svc.get_major_indices_history(months=12)
+
+                    # 2. Reconstruir Histórico do Portfólio
+                    # Precisamos dos tickers que compuseram o portfólio nos últimos 12 meses
+                    all_assets_user = db.get_all_assets(st.session_state.user_id)
+                    if not all_assets_user.empty:
+                        # Obter datas dos últimos 12 meses (fim de cada mês)
+                        # 2. Calcular histórico do portfólio
+                        hoje = pd.Timestamp.now().normalize()
+                        meses_fechamento = []
+                        for i in range(12, 0, -1):
+                            d = hoje - pd.DateOffset(months=i)
+                            last_day = d + pd.offsets.MonthEnd(0)
+                            meses_fechamento.append(last_day.normalize())
+
+                        # Buscar histórico de preços para todos os tickers
+                        tickers_port = all_assets_user['ticker'].unique().tolist()
+
+                        # Fetch historical prices in BULK
+                        price_history = {}
+                        tickers_for_yf = []
+                        for t in tickers_port:
+                            asset_row = all_assets_user[all_assets_user['ticker']==t]
+                            if not asset_row.empty:
+                                if asset_row['asset_type'].iloc[0] == 'Renda Fixa':
+                                    continue
+                                tyf = f"{t}-USD" if (asset_row['asset_type'].iloc[0]=='Cripto' and '-' not in t) else t
+                                if tyf not in tickers_for_yf:
+                                    tickers_for_yf.append(tyf)
+
+                        if "BRL=X" not in tickers_for_yf:
+                            tickers_for_yf.append("BRL=X")
+
+                        if tickers_for_yf:
+                            hist_data = yf.download(tickers_for_yf, period="2y", threads=True, progress=False, ignore_tz=True)
+                            if not hist_data.empty and 'Close' in hist_data.columns:
+                                close_df = hist_data['Close']
+                                if len(tickers_for_yf) == 1:
+                                    t = tickers_for_yf[0]
+                                    hist = close_df.to_frame()
+                                    hist.columns = ['Close']
+                                    price_history[t] = hist.dropna()
+                                else:
+                                    for t in tickers_for_yf:
+                                        if t in close_df.columns:
+                                            hist = close_df[[t]].copy()
+                                            hist.columns = ['Close']
+                                            price_history[t] = hist.dropna()
+
+                        for key, hist in price_history.items():
+                            if not hist.empty:
+                                if hist.index.tz is not None:
+                                    hist.index = hist.index.tz_localize(None)
+                                hist.index = hist.index.normalize()
+                                price_history[key] = hist
+
+                        usd_rate_hist = price_history.get("BRL=X", pd.DataFrame())
+
+                        # Calcular valor do portfólio em cada fechamento de mês
+                        portfolio_values = []
+                        for dt in meses_fechamento:
+                            total_dt = 0.0
+                            for _, asset in all_assets_user.iterrows():
+                                # Uso direto da DF all_histories_df para eliminar consultas SQL no banco
+                                if not all_histories_df.empty:
+                                    history_asset = all_histories_df[all_histories_df['asset_id'] == asset['id']].copy()
+                                else:
+                                    history_asset = pd.DataFrame()
+
+                                if not history_asset.empty:
+                                    history_asset['date'] = pd.to_datetime(history_asset['date'], format='mixed', dayfirst=False).dt.normalize()
+                                    qty_at_dt = history_asset[history_asset['date'] <= dt]['quantity'].sum()
+
+                                    if qty_at_dt > 0:
+                                        # Preço na data dt (ou o mais próximo anterior)
+                                        t = asset['ticker']
+                                        tyf = t + "-USD" if (asset['asset_type']=='Cripto' and '-' not in t) else t
+                                        if tyf in price_history:
+                                            p_hist = price_history[tyf]
+                                            available_dates = p_hist.index[p_hist.index <= dt]
+                                            if not available_dates.empty:
+                                                p = p_hist.loc[available_dates[-1]]
+
+                                                # Conversão se necessário
+                                                if asset['asset_type'] in ['Stocks', 'Reits', 'Cripto']:
+                                                    u_dates = usd_rate_hist.index[usd_rate_hist.index <= dt]
+                                                    rate = usd_rate_hist.loc[u_dates[-1]] if not u_dates.empty else usd_to_brl_rate
+                                                    p = p * rate
+
+                                                total_dt += qty_at_dt * p
+                                elif asset['asset_type'] == 'Renda Fixa':
+                                    total_dt += asset['average_price']
+
+                            portfolio_values.append(total_dt)
+
+                        # Preparar DataFrame de Performance
+                        perf_df = pd.DataFrame({'Data': meses_fechamento, 'Portfolio': portfolio_values})
+                        perf_df['Data'] = perf_df['Data'].dt.normalize()
+
+                        # Encontrar o primeiro mês com saldo no portfólio para ancorar a rentabilidade (baseline)
+                        non_zero_mask = perf_df['Portfolio'] > 0
+                        if non_zero_mask.any():
+                            first_idx = non_zero_mask.idxmax()
+                        else:
+                            first_idx = 0
+
+                        base_val = perf_df['Portfolio'].iloc[first_idx]
+                        perf_df['Portfolio %'] = 0.0
+                        if base_val > 0:
+                            perf_df.loc[first_idx:, 'Portfolio %'] = (perf_df.loc[first_idx:, 'Portfolio'] / base_val - 1) * 100
+
+                        # 3. Processar Índices
+                        # CDI Acumulado
+                        cdi_vals = indices['cdi']
+                        perf_df['CDI %'] = 0.0
+                        if not cdi_vals.empty:
+                            if cdi_vals.index.tz is not None: cdi_vals.index = cdi_vals.index.tz_localize(None)
+                            # Acumular. CDI vem em % mensal.
+                            cdi_cum = (1 + cdi_vals / 100).cumprod()
+                            # Reindexar para todas as datas do intervalo para preencher lacunas
+                            full_range = pd.date_range(start=cdi_cum.index.min(), end=perf_df['Data'].max(), freq='D')
+                            cdi_cum_daily = cdi_cum.reindex(full_range).ffill().bfill()
+                            # Agora resample para as datas do gráfico
+                            cdi_resampled = cdi_cum_daily.reindex(perf_df['Data']).ffill().bfill()
+                            if not cdi_resampled.empty and cdi_resampled.iloc[first_idx] != 0:
+                                cdi_base = cdi_resampled.iloc[first_idx]
+                                perf_df.loc[first_idx:, 'CDI %'] = ((cdi_resampled.iloc[first_idx:] / cdi_base - 1) * 100).values
+
+                        # IPCA Acumulado
+                        ipca_vals = indices['ipca']
+                        perf_df['IPCA %'] = 0.0
+                        if not ipca_vals.empty:
+                            if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
+                            # IPCA agora vem como Número Índice (432). Basta dividir pelo valor base.
+                            full_range = pd.date_range(start=ipca_vals.index.min(), end=perf_df['Data'].max(), freq='D')
+                            ipca_daily = ipca_vals.reindex(full_range).ffill().bfill()
+                            ipca_resampled = ipca_daily.reindex(perf_df['Data']).ffill().bfill()
+                            if not ipca_resampled.empty and ipca_resampled.iloc[first_idx] != 0:
+                                ipca_base = ipca_resampled.iloc[first_idx]
+                                perf_df.loc[first_idx:, 'IPCA %'] = ((ipca_resampled.iloc[first_idx:] / ipca_base - 1) * 100).values
+
+                        # IBOV %
+                        ibov_h = indices['ibov']
+                        perf_df['IBOV %'] = 0.0
+                        if not ibov_h.empty:
+                            if ibov_h.index.tz is not None: ibov_h.index = ibov_h.index.tz_localize(None)
+                            full_range = pd.date_range(start=ibov_h.index.min(), end=perf_df['Data'].max(), freq='D')
+                            ibov_daily = ibov_h.reindex(full_range).ffill().bfill()
+                            ibov_m = ibov_daily.reindex(perf_df['Data']).ffill().bfill()
+                            if not ibov_m.empty and ibov_m.iloc[first_idx] != 0:
+                                ibov_base = ibov_m.iloc[first_idx]
+                                perf_df.loc[first_idx:, 'IBOV %'] = ((ibov_m.iloc[first_idx:] / ibov_base - 1) * 100).values
+
+                        # IFIX %
+                        # Se IFIX via YF falhar (poucos dados), tentamos manter se houver algo
+                        ifix_h = indices['ifix']
+                        perf_df['IFIX %'] = 0.0
+                        if not ifix_h.empty and len(ifix_h) > 1:
+                            if ifix_h.index.tz is not None: ifix_h.index = ifix_h.index.tz_localize(None)
+                            full_range = pd.date_range(start=ifix_h.index.min(), end=perf_df['Data'].max(), freq='D')
+                            ifix_daily = ifix_h.reindex(full_range).ffill().bfill()
+                            ifix_m = ifix_daily.reindex(perf_df['Data']).ffill().bfill()
+                            if not ifix_m.empty and ifix_m.iloc[first_idx] != 0:
+                                ifix_base = ifix_m.iloc[first_idx]
+                                perf_df.loc[first_idx:, 'IFIX %'] = ((ifix_m.iloc[first_idx:] / ifix_base - 1) * 100).values
+
+                    if 'perf_df' in locals():
+                        st.session_state.perf_cache = {'user_id': st.session_state.user_id, 'perf_df': perf_df}
+                        all_assets_user_empty = perf_df.empty
                     else:
-                        first_idx = 0
-                    
-                    base_val = perf_df['Portfolio'].iloc[first_idx]
-                    perf_df['Portfolio %'] = 0.0
-                    if base_val > 0:
-                        perf_df.loc[first_idx:, 'Portfolio %'] = (perf_df.loc[first_idx:, 'Portfolio'] / base_val - 1) * 100
-                    
-                    # 3. Processar Índices
-                    # CDI Acumulado
-                    cdi_vals = indices['cdi']
-                    perf_df['CDI %'] = 0.0
-                    if not cdi_vals.empty:
-                        if cdi_vals.index.tz is not None: cdi_vals.index = cdi_vals.index.tz_localize(None)
-                        # Acumular. CDI vem em % mensal.
-                        cdi_cum = (1 + cdi_vals / 100).cumprod()
-                        # Reindexar para todas as datas do intervalo para preencher lacunas
-                        full_range = pd.date_range(start=cdi_cum.index.min(), end=perf_df['Data'].max(), freq='D')
-                        cdi_cum_daily = cdi_cum.reindex(full_range).ffill().bfill()
-                        # Agora resample para as datas do gráfico
-                        cdi_resampled = cdi_cum_daily.reindex(perf_df['Data']).ffill().bfill()
-                        if not cdi_resampled.empty and cdi_resampled.iloc[first_idx] != 0:
-                            cdi_base = cdi_resampled.iloc[first_idx]
-                            perf_df.loc[first_idx:, 'CDI %'] = ((cdi_resampled.iloc[first_idx:] / cdi_base - 1) * 100).values
-                    
-                    # IPCA Acumulado
-                    ipca_vals = indices['ipca']
-                    perf_df['IPCA %'] = 0.0
-                    if not ipca_vals.empty:
-                        if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
-                        # IPCA agora vem como Número Índice (432). Basta dividir pelo valor base.
-                        full_range = pd.date_range(start=ipca_vals.index.min(), end=perf_df['Data'].max(), freq='D')
-                        ipca_daily = ipca_vals.reindex(full_range).ffill().bfill()
-                        ipca_resampled = ipca_daily.reindex(perf_df['Data']).ffill().bfill()
-                        if not ipca_resampled.empty and ipca_resampled.iloc[first_idx] != 0:
-                            ipca_base = ipca_resampled.iloc[first_idx]
-                            perf_df.loc[first_idx:, 'IPCA %'] = ((ipca_resampled.iloc[first_idx:] / ipca_base - 1) * 100).values
-                    
-                    # IBOV %
-                    ibov_h = indices['ibov']
-                    perf_df['IBOV %'] = 0.0
-                    if not ibov_h.empty:
-                        if ibov_h.index.tz is not None: ibov_h.index = ibov_h.index.tz_localize(None)
-                        full_range = pd.date_range(start=ibov_h.index.min(), end=perf_df['Data'].max(), freq='D')
-                        ibov_daily = ibov_h.reindex(full_range).ffill().bfill()
-                        ibov_m = ibov_daily.reindex(perf_df['Data']).ffill().bfill()
-                        if not ibov_m.empty and ibov_m.iloc[first_idx] != 0:
-                            ibov_base = ibov_m.iloc[first_idx]
-                            perf_df.loc[first_idx:, 'IBOV %'] = ((ibov_m.iloc[first_idx:] / ibov_base - 1) * 100).values
-                    
-                    # IFIX %
-                    # Se IFIX via YF falhar (poucos dados), tentamos manter se houver algo
-                    ifix_h = indices['ifix']
-                    perf_df['IFIX %'] = 0.0
-                    if not ifix_h.empty and len(ifix_h) > 1:
-                        if ifix_h.index.tz is not None: ifix_h.index = ifix_h.index.tz_localize(None)
-                        full_range = pd.date_range(start=ifix_h.index.min(), end=perf_df['Data'].max(), freq='D')
-                        ifix_daily = ifix_h.reindex(full_range).ffill().bfill()
-                        ifix_m = ifix_daily.reindex(perf_df['Data']).ffill().bfill()
-                        if not ifix_m.empty and ifix_m.iloc[first_idx] != 0:
-                            ifix_base = ifix_m.iloc[first_idx]
-                            perf_df.loc[first_idx:, 'IFIX %'] = ((ifix_m.iloc[first_idx:] / ifix_base - 1) * 100).values
-                    
-                    # 4. Plotar Gráfico
-                    perf_df = perf_df.fillna(0.0)
-                    y_cols = [c for c in ['Portfolio %', 'CDI %', 'IBOV %', 'IFIX %', 'IPCA %'] if c in perf_df.columns]
-                    fig_perf = px.line(
-                        perf_df, x='Data', 
-                        y=y_cols,
-                        title='Rentabilidade Acumulada (%) - Últimos 12 Meses',
-                        labels={'value': 'Rentabilidade (%)', 'variable': 'Indicador'},
-                        markers=True
-                    )
-                    fig_perf.update_layout(
-                        hovermode="x unified", 
-                        yaxis=dict(ticksuffix="%", hoverformat=".2f"),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
-                    st.plotly_chart(fig_perf, use_container_width=True)
-                else:
-                    st.info("Adicione ativos para visualizar o gráfico de performance.")
+                        all_assets_user_empty = True
+
+            if not all_assets_user_empty:
+                # 4. Plotar Gráfico
+                perf_df = perf_df.fillna(0.0)
+                y_cols = [c for c in ['Portfolio %', 'CDI %', 'IBOV %', 'IFIX %', 'IPCA %'] if c in perf_df.columns]
+                fig_perf = px.line(
+                    perf_df, x='Data', 
+                    y=y_cols,
+                    title='Rentabilidade Acumulada (%) - Últimos 12 Meses',
+                    labels={'value': 'Rentabilidade (%)', 'variable': 'Indicador'},
+                    markers=True
+                )
+                fig_perf.update_layout(
+                    hovermode="x unified", 
+                    yaxis=dict(ticksuffix="%", hoverformat=".2f"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_perf, use_container_width=True)
+            else:
+                st.info("Adicione ativos para visualizar o gráfico de performance.")
                     
         with tab_setores:
             rv_assets = assets_df[assets_df['asset_type'] != 'Renda Fixa']
