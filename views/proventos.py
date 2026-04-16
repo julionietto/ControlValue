@@ -151,7 +151,9 @@ def render_proventos_view():
                 
                 cols_right = [col for col in col_order]
                 styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
-                                           .set_properties(**{'text-align': 'right'}, subset=cols_right)
+                                           .set_properties(**{'text-align': 'right'}, subset=cols_right) \
+                                           .set_properties(**{'color': '#00CC96'}, subset=['Valor Mensal']) \
+                                           .set_properties(**{'color': '#3d9df3'}, subset=['Valor Anual'])
 
                 selected = st.dataframe(
                     styled_df,
@@ -182,8 +184,11 @@ def render_proventos_view():
                 tm_row = {'Mês': 'TOTAL'}
                 style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
                 for col in col_order:
-                    val_fmt = format_provento(totais_row[col])
-                    tm_row[col] = f'<div style="{style_val}">{val_fmt}</div>'
+                    color_total = ''
+                    if col == 'Valor Mensal': color_total = 'color: #00CC96;'
+                    elif col == 'Valor Anual': color_total = 'color: #3d9df3;'
+                    
+                    tm_row[col] = f'<div style="{style_val} {color_total}">{val_fmt}</div>'
                 footer_rows.append(tm_row)
                 
                 ano_mais_antigo = min(anos_disponiveis)
@@ -284,7 +289,9 @@ def render_proventos_view():
 
                 styled_resumo = display_resumo.style.apply(highlight_absolute_max, axis=0) \
                                               .set_properties(**{'text-align': 'center'}, subset=['Ano']) \
-                                              .set_properties(**{'text-align': 'right'}, subset=meses_cols + ['Valor Mensal', 'Valor Anual '])
+                                              .set_properties(**{'text-align': 'right'}, subset=meses_cols + ['Valor Mensal', 'Valor Anual ']) \
+                                              .set_properties(**{'color': '#00CC96'}, subset=['Valor Mensal']) \
+                                              .set_properties(**{'color': '#3d9df3'}, subset=['Valor Anual '])
 
                 st.dataframe(styled_resumo, hide_index=True, use_container_width=True)
 
