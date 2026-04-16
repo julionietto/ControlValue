@@ -1,6 +1,7 @@
 import streamlit as st
 import base64
 import pandas as pd
+import yfinance as yf
 import database as db
 import time
 import services as svc
