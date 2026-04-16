@@ -1055,33 +1055,57 @@ def render_visao_geral_view():
                     # Buscar histórico de preços para todos os tickers
                     tickers_port = all_assets_user['ticker'].unique().tolist()
                     
-                    # Fetch historical prices
+                    # Fetch historical prices in BULK
                     price_history = {}
+                    tickers_for_yf = []
                     for t in tickers_port:
                         asset_row = all_assets_user[all_assets_user['ticker']==t]
                         if not asset_row.empty:
+                            if asset_row['asset_type'].iloc[0] == 'Renda Fixa':
+                                continue
                             tyf = f"{t}-USD" if (asset_row['asset_type'].iloc[0]=='Cripto' and '-' not in t) else t
-                            hist = svc.get_index_history(tyf, period="2y")
-                            if not hist.empty:
-                                # Normaliza timezone e hora
-                                if hist.index.tz is not None:
-                                    hist.index = hist.index.tz_localize(None)
-                                hist.index = hist.index.normalize()
-                                price_history[tyf] = hist
+                            if tyf not in tickers_for_yf:
+                                tickers_for_yf.append(tyf)
                     
-                    usd_rate_hist = svc.get_index_history("BRL=X", period="2y")
-                    if not usd_rate_hist.empty:
-                        if usd_rate_hist.index.tz is not None:
-                            usd_rate_hist.index = usd_rate_hist.index.tz_localize(None)
-                        usd_rate_hist.index = usd_rate_hist.index.normalize()
+                    if "BRL=X" not in tickers_for_yf:
+                        tickers_for_yf.append("BRL=X")
+                    
+                    if tickers_for_yf:
+                        hist_data = yf.download(tickers_for_yf, period="2y", threads=True, progress=False, ignore_tz=True)
+                        if not hist_data.empty and 'Close' in hist_data.columns:
+                            close_df = hist_data['Close']
+                            if len(tickers_for_yf) == 1:
+                                t = tickers_for_yf[0]
+                                hist = close_df.to_frame()
+                                hist.columns = ['Close']
+                                price_history[t] = hist.dropna()
+                            else:
+                                for t in tickers_for_yf:
+                                    if t in close_df.columns:
+                                        hist = close_df[[t]].copy()
+                                        hist.columns = ['Close']
+                                        price_history[t] = hist.dropna()
+                    
+                    for key, hist in price_history.items():
+                        if not hist.empty:
+                            if hist.index.tz is not None:
+                                hist.index = hist.index.tz_localize(None)
+                            hist.index = hist.index.normalize()
+                            price_history[key] = hist
+                    
+                    usd_rate_hist = price_history.get("BRL=X", pd.DataFrame())
                     
                     # Calcular valor do portfólio em cada fechamento de mês
                     portfolio_values = []
                     for dt in meses_fechamento:
                         total_dt = 0.0
                         for _, asset in all_assets_user.iterrows():
-                            # Quantidade na data dt
-                            history_asset = db.get_asset_history(asset['id'], st.session_state.user_id)
+                            # Uso direto da DF all_histories_df para eliminar consultas SQL no banco
+                            if not all_histories_df.empty:
+                                history_asset = all_histories_df[all_histories_df['asset_id'] == asset['id']].copy()
+                            else:
+                                history_asset = pd.DataFrame()
+                                
                             if not history_asset.empty:
                                 history_asset['date'] = pd.to_datetime(history_asset['date'], format='mixed', dayfirst=False).dt.normalize()
                                 qty_at_dt = history_asset[history_asset['date'] <= dt]['quantity'].sum()
