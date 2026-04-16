@@ -38,6 +38,7 @@ def confirm_delete_dialog(asset_id, ticker):
             </style>
             """
             msg_container.markdown(loading_html, unsafe_allow_html=True)
+            time.sleep(1.5)
             db.delete_asset(asset_id, st.session_state.user_id)
             st.session_state.viewing_history = None
             st.session_state.table_key += 1
@@ -90,6 +91,7 @@ def dialog_adicionar_novo_ativo():
                     </style>
                     """
                     msg_container.markdown(loading_html, unsafe_allow_html=True)
+                    time.sleep(1.5)
                     db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
                     st.success(f"Ativo {nome} adicionado!")
                     st.rerun()
@@ -117,6 +119,7 @@ def dialog_adicionar_novo_ativo():
                     </style>
                     """
                     msg_container.markdown(loading_html, unsafe_allow_html=True)
+                    time.sleep(1.5)
                     clean_name = nome.strip().upper()
                     # Lógica de sufixo .SA (Ações e Fiis)
                     if len(clean_name) >= 4 and "." not in clean_name:
