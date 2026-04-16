@@ -588,39 +588,39 @@ def render_visao_geral_view():
         if 'price_cache' not in st.session_state:
             st.session_state.price_cache = {}
 
+        # Prepara dados e verifica se é Auto-Refresh
+        current_datarefresh = st.session_state.get('datarefresh', 0)
+        is_auto_refresh = False
+        if 'last_datarefresh' not in st.session_state:
+            st.session_state.last_datarefresh = current_datarefresh
+            is_auto_refresh = True
+        elif current_datarefresh != st.session_state.last_datarefresh:
+            st.session_state.last_datarefresh = current_datarefresh
+            is_auto_refresh = True
+
         final_tickers_to_fetch = []
         for t in tickers_br:
-            if m_status['BR'] or is_first_load or t not in st.session_state.price_cache:
+            if (m_status['BR'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache:
                 final_tickers_to_fetch.append(t)
         
         for t in tickers_us:
-            if m_status['US'] or is_first_load or t not in st.session_state.price_cache:
+            if (m_status['US'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache:
                 final_tickers_to_fetch.append(t)
                 
         for t in tickers_crypto:
-            if m_status['CRYPTO'] or t not in st.session_state.price_cache: # Bitcoin sempre entra
+            if (m_status['CRYPTO'] and is_auto_refresh) or t not in st.session_state.price_cache: # Bitcoin sempre entra
                 final_tickers_to_fetch.append(t)
 
         with st.spinner("Buscando preços atualizados..."):
             refresh_id = st.session_state.refresh_id
             
-            # Só chama a API para o que o mercado permitir (ou se for a primeira carga)
+            # Só chama a API para o que o mercado permitir (ou se for a primeira carga ou ativo novo)
             if final_tickers_to_fetch:
                 new_prices = svc.fetch_current_prices(final_tickers_to_fetch, refresh_id)
                 st.session_state.price_cache.update(new_prices)
             
             # O current_prices final é a união do que acabamos de buscar com o que já tínhamos no cache
             current_prices = st.session_state.price_cache
-
-            # Prepara dados e verifica se é Auto-Refresh
-            current_datarefresh = st.session_state.get('datarefresh', 0)
-            is_auto_refresh = False
-            if 'last_datarefresh' not in st.session_state:
-                st.session_state.last_datarefresh = current_datarefresh
-                is_auto_refresh = True
-            elif current_datarefresh != st.session_state.last_datarefresh:
-                st.session_state.last_datarefresh = current_datarefresh
-                is_auto_refresh = True
                 
             assets_tuple = (tuple(assets_df['ticker'].tolist()), tuple(assets_df['asset_type'].tolist()))
             sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_auto_refresh)

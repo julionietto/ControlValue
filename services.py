@@ -14,7 +14,7 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
     
     try:
         # yf.download agrupa todas as requisições, evitando bloqueios na AWS/Streamlit Cloud
-        data = yf.download(tickers_str, period="1d", threads=True, progress=False)
+        data = yf.download(tickers_str, period="1d", threads=True, progress=False, ignore_tz=True)
         
         if not data.empty:
             if 'Close' in data:
@@ -38,22 +38,28 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
                 except Exception:
                     pass
                 
-                # Resgate individual usando a API leve (Quote) se faltar algum dado
-                if pd.isna(val) or val <= 0.0:
-                    try:
-                        val = float(yf.Ticker(ticker).fast_info.get('lastPrice', 0.0))
-                    except:
-                        val = 0.0
-                        
                 prices[ticker] = val
+                
     except Exception as e:
         print(f"Falha YF Download: {e}")
-        # Resgate caso a API de download sofra instabilidades
-        for ticker in tickers_list:
+        
+    # Identificar quais falharam no download em batch ou retornaram <= 0
+    missing_tickers = [t for t in tickers_list if pd.isna(prices.get(t, 0.0)) or prices.get(t, 0.0) <= 0.0]
+    
+    # Resgate paralelo incrivelmente mais rápido para ativos que o yf.download não capturou
+    if missing_tickers:
+        import concurrent.futures
+        
+        def fetch_fast_info(t):
             try:
-                prices[ticker] = float(yf.Ticker(ticker).fast_info.get('lastPrice', 0.0))
-            except:
-                prices[ticker] = 0.0
+                return t, float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
+            except Exception:
+                return t, 0.0
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            results = executor.map(fetch_fast_info, missing_tickers)
+            for t, val in results:
+                prices[t] = val
                 
     # Assegura que sempre retornamos aquilo que foi pedido
     for t in tickers_tuple:
