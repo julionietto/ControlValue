@@ -26,11 +26,21 @@ def confirm_delete_dialog(asset_id, ticker):
     col_yes, col_no = st.columns(2)
     with col_yes:
         if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
-            msg_container.info("⏳ Aguarde... excluindo o ativo do portfólio", icon="⏳")
+            loading_html = """
+            <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #60a5fa; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; animation: pulse 1.5s infinite;">
+                <span style="font-size: 1.2rem;">⏳</span> Aguarde... excluindo o ativo do portfólio
+            </div>
+            <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+            </style>
+            """
+            msg_container.markdown(loading_html, unsafe_allow_html=True)
             db.delete_asset(asset_id, st.session_state.user_id)
             st.session_state.viewing_history = None
             st.session_state.table_key += 1
-            st.success("Ativo removido!")
             st.rerun()
     with col_no:
         if st.button("Cancelar", use_container_width=True):
@@ -68,7 +78,18 @@ def dialog_adicionar_novo_ativo():
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
                 if nome:
-                    msg_container.info("⏳ Aguarde... adicionando o novo ativo em seu portfólio", icon="⏳")
+                    loading_html = """
+                    <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #60a5fa; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; animation: pulse 1.5s infinite;">
+                        <span style="font-size: 1.2rem;">⏳</span> Aguarde... adicionando o novo ativo em seu portfólio
+                    </div>
+                    <style>
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                    }
+                    </style>
+                    """
+                    msg_container.markdown(loading_html, unsafe_allow_html=True)
                     db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
                     st.success(f"Ativo {nome} adicionado!")
                     st.rerun()
@@ -84,7 +105,18 @@ def dialog_adicionar_novo_ativo():
         with col1:
             if st.button("Confirmar", type="primary", use_container_width=True):
                 if nome:
-                    msg_container.info("⏳ Aguarde... adicionando o novo ativo em seu portfólio", icon="⏳")
+                    loading_html = """
+                    <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #60a5fa; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; animation: pulse 1.5s infinite;">
+                        <span style="font-size: 1.2rem;">⏳</span> Aguarde... adicionando o novo ativo em seu portfólio
+                    </div>
+                    <style>
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                    }
+                    </style>
+                    """
+                    msg_container.markdown(loading_html, unsafe_allow_html=True)
                     clean_name = nome.strip().upper()
                     # Lógica de sufixo .SA (Ações e Fiis)
                     if len(clean_name) >= 4 and "." not in clean_name:
