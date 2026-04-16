@@ -1035,9 +1035,9 @@ def render_visao_geral_view():
             # --- NOVO GRÁFICO: Performance do Portfólio ---
             st.markdown("---")
             st.subheader("📊 Rentabilidade do Portfólio vs Índices (Últimos 12 Meses)")
-            use_cached_perf = ('perf_cache' in st.session_state and st.session_state.perf_cache.get('user_id') == st.session_state.user_id)
+            use_cached_perf = ('perf_v5' in st.session_state and st.session_state.perf_v5.get('user_id') == st.session_state.user_id)
             if use_cached_perf:
-                perf_df = st.session_state.perf_cache['perf_df']
+                perf_df = st.session_state.perf_v5['perf_df']
                 all_assets_user_empty = perf_df.empty
             else:
 
@@ -1160,6 +1160,7 @@ def render_visao_geral_view():
                         perf_df['CDI %'] = 0.0
                         if not cdi_vals.empty:
                             if cdi_vals.index.tz is not None: cdi_vals.index = cdi_vals.index.tz_localize(None)
+                            cdi_vals.index = pd.to_datetime(cdi_vals.index).normalize()
                             # Acumular. CDI vem em % mensal.
                             cdi_cum = (1 + cdi_vals / 100).cumprod()
                             # Reindexar para todas as datas do intervalo para preencher lacunas
@@ -1176,6 +1177,7 @@ def render_visao_geral_view():
                         perf_df['IPCA %'] = 0.0
                         if not ipca_vals.empty:
                             if ipca_vals.index.tz is not None: ipca_vals.index = ipca_vals.index.tz_localize(None)
+                            ipca_vals.index = pd.to_datetime(ipca_vals.index).normalize()
                             # Acumular. IPCA vem em % mensal (SGS 433).
                             ipca_cum = (1 + ipca_vals / 100).cumprod()
                             
@@ -1213,8 +1215,17 @@ def render_visao_geral_view():
                                 perf_df.loc[first_idx:, 'IFIX %'] = ((ifix_m.iloc[first_idx:] / ifix_base - 1) * 100).values
 
                     if 'perf_df' in locals():
-                        st.session_state.perf_cache = {'user_id': st.session_state.user_id, 'perf_df': perf_df}
+                        st.session_state.perf_v5 = {'user_id': st.session_state.user_id, 'perf_df': perf_df}
                         all_assets_user_empty = perf_df.empty
+                        
+                        # Alerta visual se algum índice falhou na busca (ajuda a diagnosticar bloqueios de API)
+                        if not all_assets_user_empty:
+                            failed_indices = []
+                            if indices['ipca'].empty: failed_indices.append("IPCA")
+                            if indices['cdi'].empty: failed_indices.append("CDI")
+                            if indices['ibov'].empty: failed_indices.append("IBOV")
+                            if failed_indices:
+                                st.warning(f"⚠️ Alguns índices ({', '.join(failed_indices)}) não puderam ser atualizados e podem aparecer zerados.")
                     else:
                         all_assets_user_empty = True
 
