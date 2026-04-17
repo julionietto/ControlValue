@@ -15,7 +15,9 @@ def dialog_register_user():
     with col1:
         if st.button("Criar Conta", type="primary", use_container_width=True):
             if reg_username and reg_email and reg_pass:
-                if reg_pass == reg_confirm:
+                if reg_username.lower().strip() == 'admin':
+                    st.error("O nome de usuário 'admin' é reservado.")
+                elif reg_pass == reg_confirm:
                     db.create_user(reg_username, reg_email, reg_birth.strftime("%Y-%m-%d"), reg_pass)
                     st.success("Conta criada com sucesso! Faça login.")
                     st.rerun()
@@ -61,13 +63,13 @@ def render_auth_view():
                     if submit_reg:
                         if new_user and new_email and new_pass:
                             if new_pass == confirm_pass:
-                                db.create_user(new_user, new_email, new_birth.strftime("%Y-%m-%d"), new_pass)
-                                success, uid, uname = db.verify_user(new_user, new_pass)
+                                db.create_user(new_user, "admin@system", "1900-01-01", new_pass) # Placeholder for first-time admin setup if needed
+                                success, uid, uname, is_admin = db.verify_user(new_user, new_pass)
                                 if success:
                                     st.session_state.authenticated = True
                                     st.session_state.user_id = uid
                                     st.session_state.username = uname
-                                    st.session_state.is_admin = True
+                                    st.session_state.is_admin = is_admin
                                     st.success("Administrador cadastrado!")
                                     st.rerun()
                             else:
@@ -81,12 +83,12 @@ def render_auth_view():
                         submit_login = st.form_submit_button("Entrar", use_container_width=True)
                     
                     if submit_login:
-                        success, uid, uname = db.verify_user(user_input, password)
+                        success, uid, uname, is_admin = db.verify_user(user_input, password)
                         if success:
                             st.session_state.authenticated = True
                             st.session_state.user_id = uid
                             st.session_state.username = uname
-                            st.session_state.is_admin = (uname == 'admin')
+                            st.session_state.is_admin = is_admin
                             st.rerun()
                         else:
                             st.error("Usuário ou senha incorretos.")

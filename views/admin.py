@@ -65,31 +65,41 @@ def render_admin_view():
                 @st.dialog("Editar / Excluir Usuário", dismissible=False)
                 def dialog_edit_user(u_data):
                     st.write(f"**ID:** {u_data['id']} | **Data de Cadastro:** {u_data['created_at']}")
-                    edit_username = st.text_input("Usuário", value=u_data['username'])
-                    edit_email = st.text_input("Email", value=u_data['email'] if u_data['email'] else "")
+                    # Verifica se o usuário é o admin protegido
+                    is_real_admin = (u_data['username'] == 'admin')
                     
                     try:
-                        def_birth = pd.to_datetime(u_data['birth_date']).date() if u_data['birth_date'] else pd.to_datetime('2000-01-01').date()
-                    except:
+                        raw_date = u_data.get('birth_date')
+                        if pd.isna(raw_date) or not raw_date:
+                            def_birth = pd.to_datetime('2000-01-01').date()
+                        else:
+                            def_birth = pd.to_datetime(raw_date).date()
+                    except Exception:
                         def_birth = pd.to_datetime('2000-01-01').date()
                         
-                    edit_birth = st.date_input("Data de Nascimento", value=def_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
+                    edit_username = st.text_input("Usuário", value=u_data['username'], disabled=is_real_admin)
+                    edit_email = st.text_input("Email", value=u_data['email'] if u_data['email'] and not pd.isna(u_data['email']) else "", disabled=is_real_admin)
+                    edit_birth = st.date_input("Data de Nascimento", value=def_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY", disabled=is_real_admin)
                     edit_password = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", placeholder="*** (Criptografada)")
                     
-                    colA, colB = st.columns(2)
-                    with colA:
+                    st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
                         if st.button("Atualizar", type="primary", use_container_width=True):
                             db.admin_update_user(int(u_data['id']), edit_username, edit_email, edit_birth.strftime("%Y-%m-%d"), edit_password if edit_password else None)
                             st.success("Dados atualizados com sucesso")
                             time.sleep(1)
                             st.rerun()
-                    with colB:
+                    with c2:
                         if st.button("Excluir", type="secondary", use_container_width=True):
                             if u_data['username'] == 'admin':
                                 st.error("O administrador principal não pode ser excluído.")
                             else:
                                 st.session_state['trigger_admin_delete_user'] = u_data
                                 st.rerun()
+                    with c3:
+                        if st.button("Cancelar", use_container_width=True):
+                            st.rerun()
                                 
                 dialog_edit_user(user_data_row)
             

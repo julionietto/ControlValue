@@ -148,6 +148,10 @@ def get_user_count():
         return cursor.fetchone()[0]
 
 def create_user(username, email, birth_date, password):
+    if username.lower().strip() == 'admin':
+        if get_user_count() > 0:
+            raise ValueError("O nome de usuário 'admin' é reservado.")
+        
     hashed = hash_password(password)
     from datetime import datetime
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -160,21 +164,21 @@ def verify_user(login_identifier, password):
     """
     Verifica o usuário pelo email ou pelo nome 'admin' (se for o caso).
     Realiza a migração automática de senhas antigas para o padrão bcrypt.
-    Retorna (sucesso, id, username).
+    Retorna (sucesso, id, username, is_admin).
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if login_identifier == 'admin':
-            cursor.execute("SELECT id, username, password FROM users WHERE username = %s", (login_identifier,))
+            cursor.execute("SELECT id, username, password, email, birth_date FROM users WHERE username = %s", (login_identifier,))
         else:
-            cursor.execute("SELECT id, username, password FROM users WHERE email = %s", (login_identifier,))
+            cursor.execute("SELECT id, username, password, email, birth_date FROM users WHERE email = %s", (login_identifier,))
         
         row = cursor.fetchone()
         
         if not row:
-            return (False, None, None)
+            return (False, None, None, False)
             
-        user_id, username, hashed_password = row
+        user_id, username, hashed_password, email, birth_date = row
         is_valid, needs_rehash = verify_password(password, hashed_password)
         
         if is_valid:
@@ -183,9 +187,12 @@ def verify_user(login_identifier, password):
                 new_hash = hash_password(password)
                 cursor.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, user_id))
                 conn.commit()
-            return True, user_id, username
             
-        return False, None, None
+            # O admin real não tem email e nascimento definidos
+            is_admin_flag = (username == 'admin' and (not email or email.strip() == "") and (not birth_date or birth_date.strip() == ""))
+            return True, user_id, username, is_admin_flag
+            
+        return False, None, None, False
 
 @contextmanager
 def get_db_connection():
@@ -825,6 +832,11 @@ def admin_create_user(username, email, birth_date, password):
         conn.commit()
 
 def admin_update_user(user_id, username, email, birth_date, new_password=None):
+    # Regra de Ouro: Admin real nunca tem e-mail ou nascimento
+    if username.lower().strip() == 'admin':
+        email = None
+        birth_date = None
+        
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if new_password:
@@ -853,6 +865,11 @@ def get_user_details(user_id):
         return dict(row) if row else None
 
 def update_user_profile(user_id, username, email, birth_date, password=None):
+    # Regra de Ouro: Admin real nunca tem e-mail ou nascimento
+    if username.lower().strip() == 'admin':
+        email = None
+        birth_date = None
+        
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if password:

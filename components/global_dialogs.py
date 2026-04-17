@@ -10,14 +10,20 @@ def dialog_user_profile():
     if u_details:
         st.markdown(f"### 👤 Perfil: `{escape_html(u_details['username'])}`")
         
-        edit_email = st.text_input("Email", value=u_details['email'] if u_details['email'] else "")
+        is_admin = u_details['username'] == 'admin'
+        
+        edit_email = st.text_input("Email", value=u_details['email'] if u_details['email'] and not pd.isna(u_details['email']) else "", disabled=is_admin)
         
         try:
-            default_birth = pd.to_datetime(u_details['birth_date']).date() if u_details['birth_date'] else pd.to_datetime('2000-01-01').date()
-        except:
+            raw_birth = u_details['birth_date']
+            if pd.isna(raw_birth) or not raw_birth:
+                default_birth = pd.to_datetime('2000-01-01').date()
+            else:
+                default_birth = pd.to_datetime(raw_birth).date()
+        except Exception:
             default_birth = pd.to_datetime('2000-01-01').date()
             
-        edit_birth = st.date_input("Data de Nascimento", value=default_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY")
+        edit_birth = st.date_input("Data de Nascimento", value=default_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY", disabled=is_admin)
         
         st.markdown("---")
         st.markdown("**🔐 Alterar Senha** (opcional)")
