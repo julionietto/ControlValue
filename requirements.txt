@@ -11,5 +11,3 @@ holidays==0.67
 # Bibliotecas de Auditoria e Utilitários
 numpy==2.4.3
 requests==2.32.5
-safety==3.10.1
-bandit==1.10.1
