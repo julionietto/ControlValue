@@ -49,11 +49,22 @@ def render_admin_view():
         
     # 3. Tabela
     if not users_df.empty:
-        # Reordena para mostrar Email e Nascimento
-        display_users = users_df[['id', 'username', 'email', 'birth_date', 'created_at']].copy()
+        # Reordena e formata dados para exibição
+        display_users = users_df.copy()
+        from datetime import datetime
+        
+        # Calcula o status baseado no tempo atual
+        now = datetime.now()
+        display_users['Status'] = display_users.apply(
+            lambda r: "⚠️ Bloqueado" if not pd.isna(r['locked_until']) and pd.to_datetime(r['locked_until']) > now else "✔️ Ativo", 
+            axis=1
+        )
+        
+        display_users = display_users[['id', 'username', 'email', 'birth_date', 'created_at', 'Status']]
+        
         # Formata a data de nascimento para dd/MM/yyyy
         display_users['birth_date'] = pd.to_datetime(display_users['birth_date'], errors='coerce').dt.strftime('%d/%m/%Y')
-        display_users.columns = ['ID', 'Usuário', 'Email', 'Nascimento', 'Cadastro']
+        display_users.columns = ['ID', 'Usuário', 'Email', 'Nascimento', 'Cadastro', 'Status']
         
         # Usamos uma chave dinâmica baseada no table_key para forçar a limpeza da seleção quando necessário
         table_key_str = f"admin_users_table_{st.session_state.get('table_key', 0)}"
@@ -89,6 +100,17 @@ def render_admin_view():
                     edit_password = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", placeholder="*** (Criptografada)")
                     edit_password_confirm = st.text_input("Confirmar Nova Senha", type="password", placeholder="Repita a nova senha")
                     
+                    # Verificação de bloqueio para exibir botão de desbloqueio
+                    is_locked = not pd.isna(u_data['locked_until']) and pd.to_datetime(u_data['locked_until']) > datetime.now()
+                    if is_locked:
+                        st.info(f"🚨 Este usuário está bloqueado até: {pd.to_datetime(u_data['locked_until']).strftime('%H:%M:%S de %d/%m/%Y')}")
+                        if st.button("🔓 Desbloquear Usuário Manualmente", type="secondary", use_container_width=True):
+                            db.admin_unlock_user(int(u_data['id']))
+                            st.session_state.table_key += 1 # Limpa a seleção
+                            st.success("Usuário desbloqueado com sucesso!")
+                            time.sleep(1)
+                            st.rerun()
+
                     # Validação de senhas
                     passwords_match = True
                     if edit_password:

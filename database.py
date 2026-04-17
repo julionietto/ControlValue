@@ -891,7 +891,7 @@ def delete_opcao(opcao_id, user_id):
 
 def get_all_users():
     with get_db_connection() as conn:
-        df = _query_to_df("SELECT id, username, email, birth_date, created_at FROM users", conn)
+        df = _query_to_df("SELECT id, username, email, birth_date, created_at, failed_attempts, locked_until FROM users", conn)
     return df
 
 def admin_create_user(username, email, birth_date, password):
@@ -926,6 +926,13 @@ def admin_delete_user(user_id):
         cursor.execute("DELETE FROM proventos WHERE user_id = %s", (user_id,))
         cursor.execute("DELETE FROM opcoes WHERE user_id = %s", (user_id,))
         cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+
+def admin_unlock_user(user_id):
+    """Reseta as tentativas de falha e remove o bloqueio de um usuário."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user_id,))
         conn.commit()
 
 def get_user_details(user_id):
