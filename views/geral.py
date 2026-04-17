@@ -179,6 +179,7 @@ def dialog_adicionar_novo_ativo():
 
                             st.session_state.viewing_history = asset_data
                             st.session_state.navigation_tab = "Detalhe do Ativo"
+                            st.session_state.scroll_to_top = True
                             st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
@@ -190,6 +191,9 @@ def dialog_adicionar_novo_ativo():
 
 
 def show_asset_details_screen(asset_data):
+    # Âncora invisível para o scroll-to-top
+    st.markdown('<div id="detalhe-ativo-topo"></div>', unsafe_allow_html=True)
+
     # Forçar scroll para o topo ao abrir os detalhes do ativo
     if st.session_state.pop('scroll_to_top', False):
         st.components.v1.html(
@@ -205,17 +209,20 @@ def show_asset_details_screen(asset_data):
                         window.parent.document.querySelector(".main"),
                         window.parent.document.querySelector('[data-testid="stMainView"]'),
                         window.parent.document.querySelector('[data-testid="stAppViewMain"]'),
+                        window.parent.document.querySelector(".stApp"),
                         window.parent
                     ];
                     containers.forEach(el => {
                         if (el) {
-                            el.scrollTo(0, 0);
-                            el.scrollTop = 0;
+                            try { el.scrollTo(0, 0); } catch(e) {}
+                            try { el.scrollTop = 0; } catch(e) {}
                         }
                     });
+                    try { window.parent.window.scrollTo(0,0); } catch(e) {}
                 }
                 doScroll();
-                [100, 300, 500, 1000].forEach(delay => setTimeout(doScroll, delay));
+                // Executa em múltiplos intervalos para garantir que o scroll ocorra após a renderização dos charts
+                [50, 100, 250, 500, 750, 1000, 2000].forEach(delay => setTimeout(doScroll, delay));
             </script>
             """,
             height=0
@@ -957,6 +964,7 @@ def render_visao_geral_view():
             asset_data = assets_df[assets_df['id'] == asset_id].iloc[0]
             st.session_state.viewing_history = asset_data.to_dict()
             st.session_state.navigation_tab = "Detalhe do Ativo"
+            st.session_state.scroll_to_top = True
             st.rerun()
     
         # Botão Adicionar novo ativo
