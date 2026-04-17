@@ -87,15 +87,29 @@ def render_admin_view():
                     edit_email = st.text_input("Email", value=u_data['email'] if u_data['email'] and not pd.isna(u_data['email']) else "", disabled=is_real_admin)
                     edit_birth = st.date_input("Data de Nascimento", value=def_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY", disabled=is_real_admin)
                     edit_password = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", placeholder="*** (Criptografada)")
+                    edit_password_confirm = st.text_input("Confirmar Nova Senha", type="password", placeholder="Repita a nova senha")
+                    
+                    # Validação de senhas
+                    passwords_match = True
+                    if edit_password:
+                        if edit_password != edit_password_confirm:
+                            passwords_match = False
+                            st.warning("⚠️ As senhas digitadas não são iguais.")
                     
                     st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        if st.button("Atualizar", type="primary", use_container_width=True):
-                            db.admin_update_user(int(u_data['id']), edit_username, edit_email, edit_birth.strftime("%Y-%m-%d"), edit_password if edit_password else None)
-                            st.session_state.table_key += 1 # Limpa a seleção
-                            st.success("Dados atualizados com sucesso")
-                            time.sleep(1)
+                        if st.button("Atualizar", type="primary", use_container_width=True, disabled=not passwords_match):
+                            # Prepara dados para a confirmação final
+                            st.session_state['admin_update_data'] = {
+                                'id': u_data['id'],
+                                'username': edit_username,
+                                'email': edit_email,
+                                'birth_date': edit_birth.strftime("%Y-%m-%d"),
+                                'password': edit_password if edit_password else None
+                            }
+                            st.session_state['trigger_admin_update_user'] = True
+                            st.session_state.table_key += 1 # Limpa a seleção e fecha o diálogo atual
                             st.rerun()
                     with c2:
                         if st.button("Excluir", type="secondary", use_container_width=True):
@@ -112,7 +126,45 @@ def render_admin_view():
                                 
                 dialog_edit_user(user_data_row)
             
-    # 4. Modal de Confirmação de Exclusão (Independente)
+    # 4. Modal de Confirmação de Alteração (Independente)
+    if st.session_state.get('trigger_admin_update_user'):
+        update_data = st.session_state.get('admin_update_data')
+        
+        @st.dialog("🛡️ Confirmação de Alteração", dismissible=False)
+        def dialog_confirm_update():
+            st.warning(f"Você está prestes a alterar os dados do usuário **{update_data['username']}**.")
+            st.markdown(f"""
+            **Resumo das alterações:**
+            - **Usuário:** `{update_data['username']}`
+            - **Email:** `{update_data['email'] if update_data['email'] else '(Vazio)'}`
+            - **Nascimento:** `{pd.to_datetime(update_data['birth_date']).strftime('%d/%m/%Y')}`
+            - **Senha:** `{'Alterada (🔒)' if update_data['password'] else 'Mantida (Unchanged)'}`
+            """)
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("Sim, Confirmar Alteração", type="primary", use_container_width=True):
+                    db.admin_update_user(
+                        update_data['id'], 
+                        update_data['username'], 
+                        update_data['email'], 
+                        update_data['birth_date'], 
+                        update_data['password']
+                    )
+                    st.session_state['trigger_admin_update_user'] = False
+                    st.session_state['admin_update_data'] = None
+                    st.success("Dados atualizados com sucesso!")
+                    time.sleep(1)
+                    st.rerun()
+            with c2:
+                if st.button("Cancelar", use_container_width=True):
+                    st.session_state['trigger_admin_update_user'] = False
+                    st.session_state['admin_update_data'] = None
+                    st.rerun()
+        
+        dialog_confirm_update()
+
+    # 5. Modal de Confirmação de Exclusão (Independente)
     if 'trigger_admin_delete_user' in st.session_state and st.session_state['trigger_admin_delete_user'] is not None:
         target_user = st.session_state['trigger_admin_delete_user']
         
