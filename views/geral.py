@@ -190,43 +190,9 @@ def dialog_adicionar_novo_ativo():
 
 
 
-def show_asset_details_screen(asset_data):
-    # Âncora invisível para o scroll-to-top
-    st.markdown('<div id="detalhe-ativo-topo"></div>', unsafe_allow_html=True)
 
-    # Forçar scroll para o topo ao abrir os detalhes do ativo
-    if st.session_state.pop('scroll_to_top', False):
-        st.components.v1.html(
-            """
-            <script>
-                function doScroll() {
-                    const topEl = window.parent.document.getElementById("detalhe-ativo-topo");
-                    if (topEl) {
-                        topEl.scrollIntoView({ behavior: 'auto', block: 'start' });
-                    }
-                    const containers = [
-                        window.parent.document.querySelector("section.main"),
-                        window.parent.document.querySelector(".main"),
-                        window.parent.document.querySelector('[data-testid="stMainView"]'),
-                        window.parent.document.querySelector('[data-testid="stAppViewMain"]'),
-                        window.parent.document.querySelector(".stApp"),
-                        window.parent
-                    ];
-                    containers.forEach(el => {
-                        if (el) {
-                            try { el.scrollTo(0, 0); } catch(e) {}
-                            try { el.scrollTop = 0; } catch(e) {}
-                        }
-                    });
-                    try { window.parent.window.scrollTo(0,0); } catch(e) {}
-                }
-                doScroll();
-                // Executa em múltiplos intervalos para garantir que o scroll ocorra após a renderização dos charts
-                [50, 100, 250, 500, 750, 1000, 2000].forEach(delay => setTimeout(doScroll, delay));
-            </script>
-            """,
-            height=0
-        )
+def show_asset_details_screen_MIGRATED(asset_data):
+    pass
     
     asset_id = asset_data['id']
     ticker = asset_data['ticker']
@@ -582,8 +548,10 @@ def show_asset_details_screen(asset_data):
 # Inicializa o banco de dados
 
 def render_visao_geral_view():
+    # HEADER INTERNALIZED - This forces a native scroll reset on navigation
+    render_top_header("Ativos Financeiros", "Controle de investimentos e análise de performance em tempo real.")
+
     # Renderiza Visão Geral
-    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Visão Geral</h2>', unsafe_allow_html=True)
 
     assets_df = db.get_all_assets(st.session_state.user_id)
     if assets_df.empty:

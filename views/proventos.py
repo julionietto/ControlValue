@@ -3,9 +3,10 @@ import pandas as pd
 import database as db
 import plotly.express as px
 from utils.formatters import format_ticker_for_display, get_annual_proventos_summary, infer_asset_type
+from components.ui import render_top_header
 
 def render_proventos_view():
-    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Proventos Recebidos</h2>', unsafe_allow_html=True)
+    render_top_header("Proventos Recebidos", "Histórico de dividendos, juros sobre capital próprio e rendimentos.")
     
     proventos_df = db.get_proventos(st.session_state.user_id)
     

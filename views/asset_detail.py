@@ -1,0 +1,361 @@
+import streamlit as st
+import pandas as pd
+import database as db
+import services as svc
+import plotly.express as px
+import numpy as np
+import time
+from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type
+from components.ui import create_card, render_top_header
+
+@st.dialog("Confirmar Exclusão", dismissible=False)
+def confirm_delete_dialog(asset_id, ticker):
+    st.warning(f"Tem certeza que deseja excluir o ativo **{format_ticker_for_display(ticker)}**?")
+    st.write("Esta ação não poderá ser desfeita.")
+    
+    msg_container = st.empty()
+    
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
+            loading_html = """
+            <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #60a5fa; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; animation: pulse 1.5s infinite;">
+                <span style="font-size: 1.2rem;">⏳</span> Aguarde... excluindo o ativo do portfólio
+            </div>
+            <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+            </style>
+            """
+            msg_container.markdown(loading_html, unsafe_allow_html=True)
+            time.sleep(1.5)
+            db.delete_asset(asset_id, st.session_state.user_id)
+            st.session_state.viewing_history = None
+            st.session_state.navigation_tab = "Visão Geral"
+            st.session_state.table_key += 1
+            st.rerun()
+    with col_no:
+        if st.button("Cancelar", use_container_width=True):
+            st.session_state.show_confirm_delete = False
+            st.rerun()
+
+@st.dialog("Confirmar Exclusão de Operação", dismissible=False)
+def confirm_delete_operation_dialog(op_data, asset_id):
+    st.warning("Tem certeza que deseja excluir esta operação?")
+    st.write(f"Data: {op_data['date']} | Quantidade: {op_data['quantity']} | Preço: {op_data['unit_price']}")
+    
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
+            db.delete_asset_operation(op_data['id'], asset_id, st.session_state.user_id)
+            st.session_state.show_confirm_delete_op = False
+            st.session_state.viewing_history = db.get_asset_by_id(asset_id, st.session_state.user_id)
+            st.success("Operação excluída com sucesso!")
+            st.rerun()
+    with col_no:
+        if st.button("Cancelar", use_container_width=True):
+            st.session_state.show_confirm_delete_op = False
+            st.rerun()
+
+def render_asset_detail_view(asset_data):
+    if not asset_data:
+        st.session_state.navigation_tab = "Visão Geral"
+        st.rerun()
+
+    ticker = asset_data['ticker']
+    display_ticker = format_ticker_for_display(ticker)
+    
+    # HEADER INTERNALIZED - This forces a native scroll reset on navigation
+    render_top_header(f"Detalhe do Ativo: {display_ticker}", "Análise detalhada e gerenciamento de operações.")
+
+    # Âncora invisível para o scroll-to-top (Backup JS)
+    st.markdown('<div id="detalhe-ativo-topo"></div>', unsafe_allow_html=True)
+
+    # Forçar scroll para o topo (JavaScript de redundância)
+    if st.session_state.pop('scroll_to_top', False):
+        st.components.v1.html(
+            """
+            <script>
+                function doScroll() {
+                    const containers = [
+                        window.parent.document.querySelector("section.main"),
+                        window.parent.document.querySelector(".main"),
+                        window.parent.document.querySelector('[data-testid="stMainView"]'),
+                        window.parent.document.querySelector('[data-testid="stAppViewMain"]'),
+                        window.parent.document.querySelector(".stApp"),
+                        window.parent
+                    ];
+                    containers.forEach(el => {
+                        if (el) {
+                            try { el.scrollTo(0, 0); } catch(e) {}
+                            try { el.scrollTop = 0; } catch(e) {}
+                        }
+                    });
+                    try { window.parent.window.scrollTo(0,0); } catch(e) {}
+                }
+                doScroll();
+                [50, 100, 250, 500, 1000].forEach(delay => setTimeout(doScroll, delay));
+            </script>
+            """,
+            height=0
+        )
+    
+    asset_id = asset_data['id']
+    current_type = asset_data['asset_type']
+
+    @st.dialog("Adicionar Operação", dismissible=False)
+    def dialog_add_operation():
+        st.markdown(f"**Ativo:** `{display_ticker}`")
+        st.markdown("---")
+        op_type = st.radio("Tipo de Operação", ["Compra", "Venda"], horizontal=True, key="add_op_type")
+        op_date = st.date_input("Data", value=pd.Timestamp.now().date(), max_value=pd.Timestamp.now().date(), format="DD/MM/YYYY", key="add_op_date")
+        
+        if current_type in ['Ações', 'Fiis', 'Stocks', 'Reits']:
+            op_qty_input = st.number_input("Quantidade", min_value=1, step=1, format="%d", key="add_op_qty")
+            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", key="add_op_price")
+        else:
+            op_qty_input = st.number_input("Quantidade", min_value=0.00000001, step=0.00001, format="%.8f", key="add_op_qty")
+            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", key="add_op_price")
+            
+        st.markdown("")
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Confirmar", type="primary", use_container_width=True, key="confirm_add"):
+                final_qty = -abs(op_qty_input) if op_type == "Venda" else abs(op_qty_input)
+                db.add_asset_operation(asset_id, st.session_state.user_id, op_date.strftime("%Y-%m-%d"), final_qty, op_price)
+                st.success(f"Operação de {'Compra' if op_type == 'Compra' else 'Venda'} adicionada!")
+                st.rerun()
+        with col_c2:
+            if st.button("Cancelar", use_container_width=True, key="cancel_add"):
+                st.rerun()
+
+    @st.dialog("Editar Operação", dismissible=False)
+    def dialog_edit_operation(op_data):
+        st.markdown(f"**Editando Operação - Ativo:** `{display_ticker}`")
+        st.markdown("---")
+        try:
+            current_date_obj = pd.to_datetime(op_data['date']).date()
+        except:
+            current_date_obj = pd.Timestamp.now().date()
+            
+        op_type = st.radio("Tipo de Operação", ["Compra", "Venda"], index=0 if op_data['quantity'] >= 0 else 1, horizontal=True, key=f"edit_op_type_{op_data['id']}")
+        op_date = st.date_input("Data", value=current_date_obj, max_value=pd.Timestamp.now().date(), format="DD/MM/YYYY", key=f"edit_op_date_{op_data['id']}")
+        
+        initial_qty = abs(op_data['quantity'])
+        if current_type in ['Ações', 'Fiis', 'Stocks', 'Reits']:
+            op_qty_input = st.number_input("Quantidade", min_value=1, step=1, format="%d", value=int(initial_qty), key=f"edit_op_qty_{op_data['id']}")
+            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", value=float(op_data['unit_price']), key=f"edit_op_price_{op_data['id']}")
+        else:
+            op_qty_input = st.number_input("Quantidade", min_value=0.00000001, step=0.00001, format="%.8f", value=float(initial_qty), key=f"edit_op_qty_{op_data['id']}")
+            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", value=float(op_data['unit_price']), key=f"edit_op_price_{op_data['id']}")
+            
+        st.markdown("")
+        col_c1, col_c2, col_c3 = st.columns(3)
+        with col_c1:
+            if st.button("Salvar", type="primary", use_container_width=True, key=f"save_edit_{op_data['id']}"):
+                final_qty = -abs(op_qty_input) if op_type == "Venda" else abs(op_qty_input)
+                target_asset_id = op_data['asset_id'] if 'asset_id' in op_data else asset_id
+                db.update_asset_operation(op_data['id'], target_asset_id, st.session_state.user_id, op_date.strftime("%Y-%m-%d"), final_qty, op_price)
+                st.session_state.viewing_history = db.get_asset_by_id(target_asset_id, st.session_state.user_id)
+                st.success("Operação atualizada!")
+                st.rerun()
+        with col_c2:
+            if st.button("Excluir", type="secondary", use_container_width=True, key=f"delete_op_{op_data['id']}"):
+                st.session_state.show_confirm_delete_op = True
+                st.session_state.op_to_delete = op_data.to_dict()
+                st.rerun()
+        with col_c3:
+            if st.button("Cancelar", use_container_width=True, key=f"cancel_edit_{op_data['id']}"):
+                st.rerun()
+
+    # Verifica se deve abrir os diálogos de confirmação
+    if st.session_state.get('show_confirm_delete', False):
+        asset_id_del = st.session_state.get('delete_asset_id')
+        ticker_del = st.session_state.get('delete_asset_ticker')
+        st.session_state.show_confirm_delete = False
+        confirm_delete_dialog(asset_id_del, ticker_del)
+
+    if st.session_state.get('show_confirm_delete_op', False):
+        op_data_del = st.session_state.get('op_to_delete')
+        st.session_state.show_confirm_delete_op = False
+        confirm_delete_operation_dialog(op_data_del, asset_id)
+
+    price_now_native = asset_data.get('original_current_price', 0.0)
+    price_now_brl = asset_data.get('current_price', 0.0)
+    price_ceiling = asset_data.get('price_ceiling', 0.0)
+    fair_value = asset_data.get('fair_value', 0.0)
+    avg_price_native = asset_data.get('average_price', 0.0)
+    
+    compare_init = price_now_brl if current_type == 'Cripto' else price_now_native
+    init_guidance = "COMPRA" if (current_type == 'Renda Fixa' or compare_init <= price_ceiling) else "AGUARDE"
+    
+    col_h1, col_h2 = st.columns([3, 1])
+    with col_h1:
+        st.markdown(f'<h2 style="color: #ffffff; margin-top: 0;">Detalhes do Ativo</h2>', unsafe_allow_html=True)
+
+    with col_h2:
+        color = "#00CC96" if init_guidance == "COMPRA" else "#EF553B"
+        st.markdown(f'<div style="background-color: {color}; color: white; padding: 6px 12px; border-radius: 4px; text-align: center; font-weight: bold; font-size: 1.2rem;">{init_guidance}</div>', unsafe_allow_html=True)
+        if current_type in ['Stocks', 'Reits']:
+            st.markdown('<div style="color: #ffffff; font-size: 1rem; text-align: center; margin-top: 8px; font-weight: bold;">Valores em US$</div>', unsafe_allow_html=True)
+
+    history_df = db.get_asset_history(asset_id, st.session_state.user_id)
+    usd_to_brl_rate = svc.get_usd_brl_rate(st.session_state.refresh_id)
+    
+    total_investido = 0.0
+    total_ativo = 0.0
+    retorno_total = 0.0
+    total_qtd = 0.0
+    
+    if not history_df.empty:
+        foreign_types = ['Stocks', 'Reits']
+        def convert_to_brl(val):
+            return val * usd_to_brl_rate if current_type in foreign_types else val
+
+        history_df['unit_price_brl'] = history_df['unit_price'].apply(convert_to_brl)
+        history_df['valor_operacao'] = history_df['quantity'] * history_df['unit_price_brl']
+        history_df['valor_atualizado'] = history_df['quantity'] * price_now_brl
+        history_df['lucro_prejuizo'] = history_df['valor_atualizado'] - history_df['valor_operacao']
+        history_df['ganho_pct'] = ((price_now_brl / history_df['unit_price_brl']) - 1) * 100
+        
+        total_investido = history_df['valor_operacao'].sum()
+        total_ativo = history_df['valor_atualizado'].sum()
+        retorno_total = history_df['lucro_prejuizo'].sum()
+        total_qtd = history_df['quantity'].sum()
+    elif current_type == 'Renda Fixa':
+        total_investido = asset_data.get('total_invested', 0.0)
+        total_ativo = asset_data.get('current_value', 0.0)
+        retorno_total = asset_data.get('profit_loss', 0.0)
+        total_qtd = asset_data.get('quantity', 0.0)
+        
+    total_proventos = db.get_total_proventos_by_ticker(ticker, st.session_state.user_id)
+    is_us_asset = current_type in ['Stocks', 'Reits']
+    display_symbol = "$" if is_us_asset else "R$"
+    
+    def format_qty_hist(qty, asset_type):
+        if asset_type == 'Cripto':
+            formatted = f"{qty:,.8f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            if "," in formatted: formatted = formatted.rstrip('0').rstrip(',')
+            return formatted
+        return f"{qty:,.0f}".replace(",", ".")
+
+    def format_details_val(val, show_symbol=True):
+        fmt = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"{display_symbol} {fmt}" if show_symbol else fmt
+
+    if is_us_asset:
+        total_investido_native = (history_df['quantity'] * history_df['unit_price']).sum() if not history_df.empty else 0.0
+        total_ativo_native = (history_df['quantity'] * price_now_native).sum() if not history_df.empty else (total_qtd * price_now_native)
+        retorno_total_native = total_ativo_native - total_investido_native
+        total_proventos_usd = total_proventos / usd_to_brl_rate if usd_to_brl_rate > 0 else 0.0
+        retorno_total_com_prov_native = retorno_total_native + total_proventos_usd
+        retorno_total_pct = (retorno_total_com_prov_native / total_investido_native * 100) if total_investido_native > 0 else 0.0
+        yield_on_cost = (total_proventos_usd / total_investido_native * 100) if total_investido_native > 0 else 0.0
+        
+        card_investido = format_details_val(total_investido_native)
+        card_ativo = format_details_val(total_ativo_native)
+        card_proventos = format_details_val(total_proventos_usd)
+        card_retorno = format_details_val(retorno_total_com_prov_native)
+    else:
+        retorno_total_com_prov = retorno_total + total_proventos
+        retorno_total_pct = (retorno_total_com_prov / total_investido * 100) if total_investido > 0 else 0.0
+        yield_on_cost = (total_proventos / total_investido * 100) if total_investido > 0 else 0.0
+        card_investido = format_brl(total_investido)
+        card_ativo = format_brl(total_ativo)
+        card_proventos = format_brl(total_proventos)
+        card_retorno = format_brl(retorno_total_com_prov)
+
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    with col1: create_card("Total Investido", card_investido)
+    with col2: create_card("Total do Ativo", card_ativo)
+    with col3: create_card("Total de Proventos", card_proventos)
+    ret_delta = f"{retorno_total_pct:,.2f}%".replace('.', ',')
+    with col4: create_card("Retorno Total", card_retorno, ret_delta)
+    yoc_formatted = f"{yield_on_cost:,.2f}%".replace('.', ',')
+    with col5: create_card("Yeld On Cost", yoc_formatted)
+    with col6: create_card("Quantidade Total", format_qty_hist(total_qtd, current_type))
+    
+    st.markdown("---")
+    col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
+    currency_symbol = "$" if current_type in ['Stocks', 'Reits'] else "R$"
+    
+    with col_p1:
+        asset_types = ["Ações", "Fiis", "Cripto", "Reits", "Stocks", "Renda Fixa"]
+        try: type_idx = asset_types.index(current_type)
+        except ValueError: type_idx = 0
+        new_asset_type = st.selectbox("Tipo de Ativo", asset_types, index=type_idx, disabled=(current_type == 'Renda Fixa'))
+
+    display_val, display_sym = (price_now_brl, "R$") if current_type == 'Cripto' else (price_now_native, currency_symbol)
+    
+    with col_p2:
+        if current_type == 'Renda Fixa':
+            new_avg_price = st.number_input("Saldo Acumulado (R$)", min_value=0.0, format="%.2f", value=float(avg_price_native))
+        else:
+            st.text_input("Preço Médio", value=f"{currency_symbol} {avg_price_native:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
+            new_avg_price = asset_data.get('average_price', 0.0)
+            
+    with col_p3: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type == 'Renda Fixa'))
+    with col_p4: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type == 'Renda Fixa'))
+    with col_p5: st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
+        
+    if current_type != 'Renda Fixa':
+        new_guidance = "COMPRA" if compare_init <= new_price_ceiling else "AGUARDE"
+        if new_guidance != init_guidance:
+            st.info(f"Nova Orientação baseado no Preço Teto: **{new_guidance}**")
+            
+    if st.button("Salvar", type="primary", use_container_width=False):
+        if current_type != 'Renda Fixa' and history_df.empty:
+            st.error("É necessário adicionar pelo menos uma operação antes de salvar o ativo.")
+        else:
+            db.update_asset(asset_id, st.session_state.user_id, ticker, new_asset_type, asset_data.get('quantity', 0.0), new_avg_price, new_price_ceiling, new_fair_value)
+            st.session_state.viewing_history = None
+            st.session_state.navigation_tab = "Visão Geral"
+            st.session_state.table_key += 1
+            st.success("Alterações salvas com sucesso!")
+            st.rerun()
+            
+    st.markdown("---")
+    if history_df.empty:
+        st.warning("Nenhum registro de operação encontrado para este ativo.")
+    else:
+        display_hist = pd.DataFrame()
+        display_hist['Data'] = pd.to_datetime(history_df['date']).dt.strftime('%d/%m/%Y')
+        display_hist['Qtd'] = history_df.apply(lambda x: format_qty_hist(x['quantity'], current_type), axis=1)
+        
+        if is_us_asset:
+            display_hist['Preço'] = history_df['unit_price'].apply(lambda x: format_details_val(x))
+            display_hist['Valor Operação'] = (history_df['quantity'] * history_df['unit_price']).apply(lambda x: format_details_val(x))
+            display_hist['% Ganho'] = (((price_now_native / history_df['unit_price']) - 1) * 100).apply(lambda x: f"{x:,.2f}%".replace('.', ','))
+            display_hist['Vlr Atualizado'] = (history_df['quantity'] * price_now_native).apply(lambda x: format_details_val(x))
+            display_hist['Lucro/Prej'] = ((history_df['quantity'] * price_now_native) - (history_df['quantity'] * history_df['unit_price'])).apply(lambda x: format_details_val(x))
+        else:
+            display_hist['Preço'] = history_df['unit_price_brl'].apply(format_brl)
+            display_hist['Valor Operação'] = history_df['valor_operacao'].apply(format_brl)
+            display_hist['% Ganho'] = history_df['ganho_pct'].apply(lambda x: f"{x:,.2f}%".replace('.', ','))
+            display_hist['Vlr Atualizado'] = history_df['valor_atualizado'].apply(format_brl)
+            display_hist['Lucro/Prej'] = history_df['lucro_prejuizo'].apply(format_brl)
+        
+        display_hist = display_hist.reset_index().rename(columns={'index': 'op_idx'})
+        styled_hist = display_hist.style.set_properties(**{'text-align': 'center'}, subset=['Data', 'Qtd']) \
+                                       .set_properties(**{'text-align': 'right'}, subset=['Preço', 'Valor Operação', '% Ganho', 'Vlr Atualizado', 'Lucro/Prej'])
+        selected_op = st.dataframe(styled_hist, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", column_config={"op_idx": None}, key=f"history_df_{asset_id}_{st.session_state.refresh_id}")
+        if selected_op.selection.rows:
+            row_idx = selected_op.selection.rows[0]
+            if row_idx < len(history_df): dialog_edit_operation(history_df.iloc[row_idx])
+
+    st.markdown("---")
+    col_add, col_del, col_voltar = st.columns(3)
+    with col_add:
+        if current_type != 'Renda Fixa' and st.button("Adicionar Operação", type="primary", use_container_width=True): dialog_add_operation()
+    with col_del:
+        if st.button("Excluir Ativo", type="secondary", use_container_width=True):
+            st.session_state.show_confirm_delete, st.session_state.delete_asset_id, st.session_state.delete_asset_ticker = True, asset_id, ticker
+            st.rerun()
+    with col_voltar:
+        if st.button("Voltar", use_container_width=True):
+            if current_type != 'Renda Fixa' and history_df.empty: db.delete_asset(asset_id, st.session_state.user_id)
+            st.session_state.viewing_history, st.session_state.navigation_tab = None, "Visão Geral"
+            st.session_state.table_key += 1
+            st.rerun()

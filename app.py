@@ -108,9 +108,7 @@ if 'rollover_checked' not in st.session_state:
         st.session_state.refresh_id += 1
     st.session_state.rollover_checked = True
 
-# Top Header com Título e Logout
-render_top_header("Ativos Financeiros", "Controle de investimentos e análise de performance em tempo real.")
-# Pega a navegação inicial do estado (que é inicializada posteriormente, mas tratamos aqui)
+# Pega a navegação inicial do estado
 current_view = st.session_state.get('navigation_tab', 'Visão Geral')
 
 # Área Principal - Divisão de Telas Baseada na Seleção
@@ -121,8 +119,8 @@ if current_view == "Derivativos":
     render_derivativos_view()
 
 if current_view == "Detalhe do Ativo":
-    from views.geral import show_asset_details_screen
-    show_asset_details_screen(st.session_state.viewing_history)
+    from views.asset_detail import render_asset_detail_view
+    render_asset_detail_view(st.session_state.viewing_history)
 
 if current_view == "Visão Geral":
     render_visao_geral_view()

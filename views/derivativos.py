@@ -3,9 +3,10 @@ import pandas as pd
 import database as db
 import services as svc
 from utils.formatters import format_ticker_for_display, format_brl
+from components.ui import render_top_header
 
 def render_derivativos_view():
-    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Derivativos</h2>', unsafe_allow_html=True)
+    render_top_header("Derivativos", "Controle de opções, travas e lançamentos cobertos.")
     
     @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
