@@ -78,25 +78,37 @@ def render_asset_detail_view(asset_data):
         st.components.v1.html(
             """
             <script>
-                function doScroll() {
-                    const containers = [
-                        window.parent.document.querySelector("section.main"),
-                        window.parent.document.querySelector(".main"),
-                        window.parent.document.querySelector('[data-testid="stMainView"]'),
-                        window.parent.document.querySelector('[data-testid="stAppViewMain"]'),
-                        window.parent.document.querySelector(".stApp"),
-                        window.parent
+                function forceScroll() {
+                    // Seletores para os containers de scroll do Streamlit (podem mudar entre versões)
+                    const selectors = [
+                        "section.stMain", 
+                        ".stAppViewMain .stMain", 
+                        "section.main", 
+                        ".main", 
+                        "[data-testid='stMainView']",
+                        "[data-testid='stAppViewMain']"
                     ];
-                    containers.forEach(el => {
+                    
+                    const parentDoc = window.parent.document;
+                    
+                    selectors.forEach(sel => {
+                        const el = parentDoc.querySelector(sel);
                         if (el) {
-                            try { el.scrollTo(0, 0); } catch(e) {}
-                            try { el.scrollTop = 0; } catch(e) {}
+                            el.scrollTo({ top: 0, behavior: 'instant' });
+                            el.scrollTop = 0;
                         }
                     });
-                    try { window.parent.window.scrollTo(0,0); } catch(e) {}
+                    
+                    // Fallback para a janela principal
+                    window.parent.scrollTo(0, 0);
                 }
-                doScroll();
-                [50, 100, 250, 500, 1000].forEach(delay => setTimeout(doScroll, delay));
+                
+                // Executa em sequência para garantir que pegue após o re-render
+                forceScroll();
+                setTimeout(forceScroll, 50);
+                setTimeout(forceScroll, 150);
+                setTimeout(forceScroll, 300);
+                setTimeout(forceScroll, 600);
             </script>
             """,
             height=0
