@@ -195,7 +195,11 @@ def show_asset_details_screen(asset_data):
         st.components.v1.html(
             """
             <script>
-                function forceScroll() {
+                function doScroll() {
+                    const topEl = window.parent.document.getElementById("detalhe-ativo-topo");
+                    if (topEl) {
+                        topEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
                     const containers = [
                         window.parent.document.querySelector("section.main"),
                         window.parent.document.querySelector(".main"),
@@ -210,8 +214,8 @@ def show_asset_details_screen(asset_data):
                         }
                     });
                 }
-                forceScroll();
-                setTimeout(forceScroll, 100);
+                doScroll();
+                [100, 300, 500, 1000].forEach(delay => setTimeout(doScroll, delay));
             </script>
             """,
             height=0
@@ -321,7 +325,7 @@ def show_asset_details_screen(asset_data):
     
     col_h1, col_h2 = st.columns([3, 1])
     with col_h1:
-        st.markdown(f'<h2 style="color: #ffffff; margin-top: 0;">Detalhe do Ativo: {escape_html(display_ticker)}</h2>', unsafe_allow_html=True)
+        st.markdown(f'<h2 id="detalhe-ativo-topo" style="color: #ffffff; margin-top: 0;">Detalhe do Ativo: {escape_html(display_ticker)}</h2>', unsafe_allow_html=True)
 
     with col_h2:
         color = "#00CC96" if init_guidance == "COMPRA" else "#EF553B"
