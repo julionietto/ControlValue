@@ -55,10 +55,16 @@ def render_admin_view():
         display_users['birth_date'] = pd.to_datetime(display_users['birth_date'], errors='coerce').dt.strftime('%d/%m/%Y')
         display_users.columns = ['ID', 'Usuário', 'Email', 'Nascimento', 'Cadastro']
         
-        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key="admin_users_table")
+        # Usamos uma chave dinâmica baseada no table_key para forçar a limpeza da seleção quando necessário
+        table_key_str = f"admin_users_table_{st.session_state.get('table_key', 0)}"
+        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key=table_key_str)
+        
         is_trigger_delete = st.session_state.get('trigger_admin_delete_user') is not None
-        if st.session_state.admin_users_table.selection.rows and not st.session_state.get('show_add_user', False) and not is_trigger_delete:
-            row_idx = st.session_state.admin_users_table.selection.rows[0]
+        
+        # Acessa o estado da tabela usando a chave dinâmica
+        table_state = st.session_state.get(table_key_str)
+        if table_state and table_state.selection.rows and not st.session_state.get('show_add_user', False) and not is_trigger_delete:
+            row_idx = table_state.selection.rows[0]
             if row_idx < len(users_df):
                 user_data_row = users_df.iloc[row_idx]
                 
@@ -87,6 +93,7 @@ def render_admin_view():
                     with c1:
                         if st.button("Atualizar", type="primary", use_container_width=True):
                             db.admin_update_user(int(u_data['id']), edit_username, edit_email, edit_birth.strftime("%Y-%m-%d"), edit_password if edit_password else None)
+                            st.session_state.table_key += 1 # Limpa a seleção
                             st.success("Dados atualizados com sucesso")
                             time.sleep(1)
                             st.rerun()
@@ -96,9 +103,11 @@ def render_admin_view():
                                 st.error("O administrador principal não pode ser excluído.")
                             else:
                                 st.session_state['trigger_admin_delete_user'] = u_data
+                                st.session_state.table_key += 1 # Limpa a seleção para não sobrepor diálogos
                                 st.rerun()
                     with c3:
                         if st.button("Cancelar", use_container_width=True):
+                            st.session_state.table_key += 1 # Incrementa a chave para limpar a seleção e fechar o diálogo
                             st.rerun()
                                 
                 dialog_edit_user(user_data_row)
