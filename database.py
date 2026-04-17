@@ -152,8 +152,10 @@ def init_db():
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP")
-    except:
-        pass
+    except Exception as e:
+        # Se as colunas já existirem ou houver erro de permissão, logamos discretamente
+        import logging
+        logging.warning(f"Aviso na atualização do schema: {e}")
     # Tabela de Proventos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS proventos (

@@ -31,8 +31,9 @@ def get_base64_image(image_path):
         if os.path.exists(image_path):
             with open(image_path, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode()
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.error(f"Erro ao carregar imagem {image_path}: {e}")
     return ""
 
 def render_profile_popover():
@@ -85,9 +86,11 @@ def render_profile_popover():
             if os.path.exists(".version"):
                 with open(".version", "r", encoding="utf-8") as f:
                     version = f.read().strip()
-            st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #a1a1aa; padding-top: 8px; margin-top: 8px; border-top: 1px solid #27272a;'>{version}</div>", unsafe_allow_html=True)
-        except Exception:
-            pass
+            safe_version = escape_html(version)
+            st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #a1a1aa; padding-top: 8px; margin-top: 8px; border-top: 1px solid #27272a;'>{safe_version}</div>", unsafe_allow_html=True)
+        except Exception as e:
+            import logging
+            logging.error(f"Erro ao ler versão: {e}")
 
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
@@ -138,10 +141,12 @@ def render_top_header(title, subtitle):
                 st.rerun()
                 
     with col_title:
+        safe_title = escape_html(title)
+        safe_subtitle = escape_html(subtitle)
         st.markdown(f'''
             <div style="display: flex; flex-direction: column; justify-content: center;">
-                <h1 style="color: #ffffff; font-size: 2.25rem; margin: 0; padding: 0; line-height: 1.1;">{title}</h1>
-                <p style="color: #a1a1aa; font-size: 1rem; margin: 0; padding: 0; line-height: 1.2; margin-top: 4px;">{subtitle}</p>
+                <h1 style="color: #ffffff; font-size: 2.25rem; margin: 0; padding: 0; line-height: 1.1;">{safe_title}</h1>
+                <p style="color: #a1a1aa; font-size: 1rem; margin: 0; padding: 0; line-height: 1.2; margin-top: 4px;">{safe_subtitle}</p>
             </div>
         ''', unsafe_allow_html=True)
     

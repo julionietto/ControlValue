@@ -1,10 +1,15 @@
-streamlit
-yfinance
-pandas
-plotly
-streamlit-autorefresh
-bcrypt
-psycopg2-binary
-SQLAlchemy
-python-dotenv
-holidays
+streamlit==1.55.0
+yfinance==1.2.0
+pandas==2.3.3
+plotly==6.6.0
+streamlit-autorefresh==1.0.1
+bcrypt==4.2.1
+psycopg2-binary==2.9.11
+SQLAlchemy==2.0.48
+python-dotenv==1.2.2
+holidays==0.67
+# Bibliotecas de Auditoria e Utilitários
+numpy==2.4.3
+requests==2.32.5
+safety==3.10.1
+bandit==1.10.1
