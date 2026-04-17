@@ -120,5 +120,9 @@ if current_view == "Proventos" or current_view == "Proventos Recebidos":
 if current_view == "Derivativos":
     render_derivativos_view()
 
+if current_view == "Detalhe do Ativo":
+    from views.geral import show_asset_details_screen
+    show_asset_details_screen(st.session_state.viewing_history)
+
 if current_view == "Visão Geral":
     render_visao_geral_view()

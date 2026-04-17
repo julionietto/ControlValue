@@ -178,7 +178,7 @@ def dialog_adicionar_novo_ativo():
                                 asset_data['current_price'] = live_brl
 
                             st.session_state.viewing_history = asset_data
-                            st.session_state.scroll_to_top = True
+                            st.session_state.navigation_tab = "Detalhe do Ativo"
                             st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
@@ -492,6 +492,7 @@ def show_asset_details_screen(asset_data):
                 new_fair_value
             )
             st.session_state.viewing_history = None
+            st.session_state.navigation_tab = "Visão Geral"
             st.session_state.table_key += 1
             st.success("Alterações salvas com sucesso!")
             st.rerun()
@@ -565,6 +566,7 @@ def show_asset_details_screen(asset_data):
             if current_type != 'Renda Fixa' and history_df.empty:
                 db.delete_asset(asset_id, st.session_state.user_id)
             st.session_state.viewing_history = None
+            st.session_state.navigation_tab = "Visão Geral"
             st.session_state.table_key += 1
             st.rerun()
 
@@ -573,11 +575,6 @@ def show_asset_details_screen(asset_data):
 # Inicializa o banco de dados
 
 def render_visao_geral_view():
-    if st.session_state.viewing_history:
-        # Mostra a tela combinada de Dados do Ativo e Registro de Operações
-        show_asset_details_screen(st.session_state.viewing_history)
-        st.stop()
-
     # Renderiza Visão Geral
     st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Visão Geral</h2>', unsafe_allow_html=True)
 
@@ -959,7 +956,7 @@ def render_visao_geral_view():
             asset_id = unified_df.iloc[row_idx]['id']
             asset_data = assets_df[assets_df['id'] == asset_id].iloc[0]
             st.session_state.viewing_history = asset_data.to_dict()
-            st.session_state.scroll_to_top = True
+            st.session_state.navigation_tab = "Detalhe do Ativo"
             st.rerun()
     
         # Botão Adicionar novo ativo
