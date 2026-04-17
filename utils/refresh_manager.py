@@ -12,7 +12,7 @@ def is_market_open(market_type):
     - CRYPTO: Agora obedece às regras dos demais mercados (não força refresh sozinho).
     """
     if market_type == 'CRYPTO':
-        return False # Não força o auto-refresh sozinho
+        return is_market_open('BR') or is_market_open('US')
     
     if market_type == 'BR':
         tz = ZoneInfo("America/Sao_Paulo")
@@ -64,5 +64,6 @@ def get_market_status():
     """Retorna um dicionário com o status de cada mercado."""
     return {
         'BR': is_market_open('BR'),
-        'US': is_market_open('US')
+        'US': is_market_open('US'),
+        'CRYPTO': is_market_open('CRYPTO')
     }

@@ -67,6 +67,33 @@ def render_asset_detail_view(asset_data):
     ticker = asset_data['ticker']
     display_ticker = format_ticker_for_display(ticker)
     
+    # Lógica de Refresh Imediato para Cripto (Independente de horário de bolsa)
+    current_type = asset_data.get('asset_type', '')
+    if current_type == 'Cripto' and st.session_state.get('detail_refreshed_ticker') != ticker:
+        ticker_to_fetch = ticker
+        if '-' not in ticker and ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+            ticker_to_fetch = f"{ticker}-USD"
+            
+        try:
+            # Força busca com refresh_id único (timestamp) para ignorar cache de 5min
+            fresh_prices = svc.fetch_current_prices([ticker_to_fetch], refresh_id=int(time.time()))
+            new_native_price = fresh_prices.get(ticker_to_fetch, 0.0)
+            
+            if new_native_price > 0:
+                # Atualiza também a taxa do dólar (forçando busca)
+                rate = svc.get_usd_brl_rate(refresh_id=int(time.time()), is_first_load=True)
+                new_brl_price = new_native_price * rate if rate > 0 else 0.0
+                
+                # Atualiza o estado global e o snapshot local
+                st.session_state.viewing_history['original_current_price'] = new_native_price
+                st.session_state.viewing_history['current_price'] = new_brl_price
+                asset_data['original_current_price'] = new_native_price
+                asset_data['current_price'] = new_brl_price
+                
+                st.session_state.detail_refreshed_ticker = ticker
+        except Exception:
+            pass
+    
     # HEADER INTERNALIZED - This forces a native scroll reset on navigation
     render_top_header(f"Detalhe do Ativo: {display_ticker}", "Análise detalhada e gerenciamento de operações.")
 
