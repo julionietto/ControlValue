@@ -24,6 +24,8 @@ from views.geral import render_visao_geral_view
 
 # Lógica de Autenticação e Timeout
 import datetime
+import time
+from zoneinfo import ZoneInfo
 TIMEOUT_MINUTES = 10
 
 # Detectar se esta execução foi disparada pelo auto-refresh
@@ -40,7 +42,8 @@ if 'authenticated' not in st.session_state:
 # Verifica Timeout de Sessão Inativa
 if st.session_state.authenticated:
     last_activity = st.session_state.get('last_activity')
-    now = datetime.datetime.now()
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    now = datetime.datetime.now(sp_tz)
     if last_activity:
         elapsed_min = (now - last_activity).total_seconds() / 60
         if elapsed_min > TIMEOUT_MINUTES:

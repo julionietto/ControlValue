@@ -3,6 +3,8 @@ import pandas as pd
 import time
 import database as db
 from components.ui import render_top_header
+from zoneinfo import ZoneInfo
+from datetime import datetime
 
 def render_admin_view():
     render_top_header("🛡️ Painel de Administração", "Gestão de usuários do sistema.")
@@ -51,10 +53,9 @@ def render_admin_view():
     if not users_df.empty:
         # Reordena e formata dados para exibição
         display_users = users_df.copy()
-        from datetime import datetime
-        
         # Calcula o status baseado no tempo atual
-        now = datetime.now()
+        sp_tz = ZoneInfo("America/Sao_Paulo")
+        now = datetime.now(sp_tz).replace(tzinfo=None)
         display_users['Status'] = display_users.apply(
             lambda r: "⚠️ Bloqueado" if not pd.isna(r['locked_until']) and pd.to_datetime(r['locked_until']) > now else "✔️ Ativo", 
             axis=1
@@ -101,7 +102,8 @@ def render_admin_view():
                     edit_password_confirm = st.text_input("Confirmar Nova Senha", type="password", placeholder="Repita a nova senha")
                     
                     # Verificação de bloqueio para exibir botão de desbloqueio
-                    is_locked = not pd.isna(u_data['locked_until']) and pd.to_datetime(u_data['locked_until']) > datetime.now()
+                    sp_tz = ZoneInfo("America/Sao_Paulo")
+                    is_locked = not pd.isna(u_data['locked_until']) and pd.to_datetime(u_data['locked_until']) > datetime.now(sp_tz).replace(tzinfo=None)
                     if is_locked:
                         st.info(f"🚨 Este usuário está bloqueado até: {pd.to_datetime(u_data['locked_until']).strftime('%H:%M:%S de %d/%m/%Y')}")
                         if st.button("🔓 Desbloquear Usuário Manualmente", type="secondary", use_container_width=True):

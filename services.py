@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 from utils.refresh_manager import is_market_open
 import socket
+from zoneinfo import ZoneInfo
 
 # Força timeout agressivo a nível de socket para evitar travamentos de 60 segundos em firewalls / IP blocking do Yahoo
 socket.setdefaulttimeout(3.0)
@@ -273,7 +274,8 @@ def get_bcb_history(code, start_date):
         dt_obj = datetime.strptime(start_date, '%Y-%m-%d')
         bcb_date = dt_obj.strftime('%d/%m/%Y')
     except:
-        bcb_date = datetime.now().strftime('01/01/%Y') # fallback
+        sp_tz = ZoneInfo("America/Sao_Paulo")
+        bcb_date = datetime.now(sp_tz).strftime('01/01/%Y') # fallback
 
     url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json&dataInicial={bcb_date}"
     
@@ -303,7 +305,8 @@ def get_bcb_history(code, start_date):
 def get_major_indices_history(months=18):
     """Retorna um DataFrame com o histórico acumulado dos principais índices."""
     from datetime import datetime, timedelta
-    start_date = (datetime.now() - timedelta(days=months*31)).strftime('%Y-%m-%d')
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    start_date = (datetime.now(sp_tz).replace(tzinfo=None) - timedelta(days=months*31)).strftime('%Y-%m-%d')
     
     # 1. IBOV
     ibov = get_index_history("^BVSP", period="2y")

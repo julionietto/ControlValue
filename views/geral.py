@@ -573,16 +573,15 @@ def show_asset_details_screen(asset_data):
 # Inicializa o banco de dados
 
 def render_visao_geral_view():
-    # Renderiza Visão Geral
-    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Visão Geral</h2>', unsafe_allow_html=True)
-
-    assets_df = db.get_all_assets(st.session_state.user_id)
-
     if st.session_state.viewing_history:
         # Mostra a tela combinada de Dados do Ativo e Registro de Operações
         show_asset_details_screen(st.session_state.viewing_history)
         st.stop()
 
+    # Renderiza Visão Geral
+    st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Visão Geral</h2>', unsafe_allow_html=True)
+
+    assets_df = db.get_all_assets(st.session_state.user_id)
     if assets_df.empty:
         st.info("O seu portfólio está vazio no momento. Comece adicionando o seu primeiro ativo!")
         if st.button("Adicionar novo ativo", type="primary", key="btn_add_first_asset"):

@@ -9,6 +9,7 @@ from psycopg2.extensions import register_adapter, AsIs
 import threading
 import time
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 # Variável global para controle da thread de desbloqueio
 _unblock_thread_active = False
@@ -21,7 +22,8 @@ def _unblock_worker():
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 # Remove bloqueios expirados
-                cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE locked_until IS NOT NULL AND locked_until <= %s", (datetime.now(),))
+                sp_tz = ZoneInfo("America/Sao_Paulo")
+                cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE locked_until IS NOT NULL AND locked_until <= %s", (datetime.now(sp_tz).replace(tzinfo=None),))
                 conn.commit()
                 
                 # Verifica se ainda existe algum usuário bloqueado
@@ -201,7 +203,8 @@ def create_user(username, email, birth_date, password):
         
     hashed = hash_password(password)
     from datetime import datetime
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    now_str = datetime.now(sp_tz).strftime('%Y-%m-%d %H:%M:%S')
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (%s, %s, %s, %s, %s)", (username, email, birth_date, hashed, now_str))
@@ -230,7 +233,9 @@ def verify_user(login_identifier, password):
         
         # 1. Verifica se está bloqueado
         if locked_until:
-            if datetime.now() < locked_until:
+            sp_tz = ZoneInfo("America/Sao_Paulo")
+            # locked_until do BD vem como naive se não for timestamptz. Tratamos como naive SP para comparação rápida.
+            if datetime.now(sp_tz).replace(tzinfo=None) < locked_until:
                 return False, user_id, username, False, 'LOCKED', locked_until
             else:
                 # Bloqueio expirou "na hora" (lazy unblock)
@@ -259,7 +264,8 @@ def verify_user(login_identifier, password):
             new_locked_until = None
             
             if new_failed >= 3:
-                new_locked_until = datetime.now() + timedelta(minutes=5)
+                sp_tz = ZoneInfo("America/Sao_Paulo")
+                new_locked_until = datetime.now(sp_tz).replace(tzinfo=None) + timedelta(minutes=5)
                 # Dispara a thread de desbloqueio em background
                 trigger_unblock_thread()
             
@@ -754,7 +760,8 @@ def get_total_proventos_by_ticker(ticker, user_id):
 
 def check_and_create_next_year_dashboard(user_id):
     from datetime import datetime
-    now = datetime.now()
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    now = datetime.now(sp_tz)
     current_year = now.year
     next_year = current_year + 1
     
