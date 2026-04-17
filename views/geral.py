@@ -178,6 +178,7 @@ def dialog_adicionar_novo_ativo():
                                 asset_data['current_price'] = live_brl
 
                             st.session_state.viewing_history = asset_data
+                            st.session_state.scroll_to_top = True
                             st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
@@ -189,6 +190,33 @@ def dialog_adicionar_novo_ativo():
 
 
 def show_asset_details_screen(asset_data):
+    # Forçar scroll para o topo ao abrir os detalhes do ativo
+    if st.session_state.pop('scroll_to_top', False):
+        st.components.v1.html(
+            """
+            <script>
+                function forceScroll() {
+                    const containers = [
+                        window.parent.document.querySelector("section.main"),
+                        window.parent.document.querySelector(".main"),
+                        window.parent.document.querySelector('[data-testid="stMainView"]'),
+                        window.parent.document.querySelector('[data-testid="stAppViewMain"]'),
+                        window.parent
+                    ];
+                    containers.forEach(el => {
+                        if (el) {
+                            el.scrollTo(0, 0);
+                            el.scrollTop = 0;
+                        }
+                    });
+                }
+                forceScroll();
+                setTimeout(forceScroll, 100);
+            </script>
+            """,
+            height=0
+        )
+    
     asset_id = asset_data['id']
     ticker = asset_data['ticker']
     display_ticker = format_ticker_for_display(ticker)
@@ -928,6 +956,7 @@ def render_visao_geral_view():
             asset_id = unified_df.iloc[row_idx]['id']
             asset_data = assets_df[assets_df['id'] == asset_id].iloc[0]
             st.session_state.viewing_history = asset_data.to_dict()
+            st.session_state.scroll_to_top = True
             st.rerun()
     
         # Botão Adicionar novo ativo
