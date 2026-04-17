@@ -6,6 +6,43 @@ load_dotenv()
 import pandas as pd
 import numpy as np
 from psycopg2.extensions import register_adapter, AsIs
+import threading
+import time
+from datetime import datetime, timedelta
+
+# Variável global para controle da thread de desbloqueio
+_unblock_thread_active = False
+
+def _unblock_worker():
+    """Worker que roda em segundo plano para limpar bloqueios expirados."""
+    global _unblock_thread_active
+    while True:
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                # Remove bloqueios expirados
+                cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE locked_until IS NOT NULL AND locked_until <= %s", (datetime.now(),))
+                conn.commit()
+                
+                # Verifica se ainda existe algum usuário bloqueado
+                cursor.execute("SELECT COUNT(*) FROM users WHERE locked_until IS NOT NULL")
+                count = cursor.fetchone()[0]
+                
+            if count == 0:
+                _unblock_thread_active = False
+                break
+        except Exception as e:
+            print(f"Erro na thread de desbloqueio: {e}")
+            
+        time.sleep(60)
+
+def trigger_unblock_thread():
+    """Inicia a thread de desbloqueio se ela não estiver ativa."""
+    global _unblock_thread_active
+    if not _unblock_thread_active:
+        _unblock_thread_active = True
+        thread = threading.Thread(target=_unblock_worker, daemon=True)
+        thread.start()
 
 # Adaptadores para resolver incompatibilidade entre Numpy/Pandas e Psycopg2
 register_adapter(np.int64, lambda val: AsIs(int(val)))
@@ -106,9 +143,17 @@ def init_db():
             email TEXT,
             birth_date TEXT,
             password TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            failed_attempts INTEGER DEFAULT 0,
+            locked_until TIMESTAMP
         )
     ''')
+    # Atualização de schema para base existente
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP")
+    except:
+        pass
     # Tabela de Proventos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS proventos (
@@ -164,35 +209,62 @@ def verify_user(login_identifier, password):
     """
     Verifica o usuário pelo email ou pelo nome 'admin' (se for o caso).
     Realiza a migração automática de senhas antigas para o padrão bcrypt.
-    Retorna (sucesso, id, username, is_admin).
+    Retorna (sucesso, id, username, is_admin, status_code, extra_info).
+    status_code: 'SUCCESS', 'WRONG_PASS', 'LOCKED', 'NOT_FOUND'
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if login_identifier == 'admin':
-            cursor.execute("SELECT id, username, password, email, birth_date FROM users WHERE username = %s", (login_identifier,))
+            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until FROM users WHERE username = %s", (login_identifier,))
         else:
-            cursor.execute("SELECT id, username, password, email, birth_date FROM users WHERE email = %s", (login_identifier,))
+            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until FROM users WHERE email = %s", (login_identifier,))
         
         row = cursor.fetchone()
         
         if not row:
-            return (False, None, None, False)
+            return False, None, None, False, 'NOT_FOUND', None
             
-        user_id, username, hashed_password, email, birth_date = row
+        user_id, username, hashed_password, email, birth_date, failed_attempts, locked_until = row
+        
+        # 1. Verifica se está bloqueado
+        if locked_until:
+            if datetime.now() < locked_until:
+                return False, user_id, username, False, 'LOCKED', locked_until
+            else:
+                # Bloqueio expirou "na hora" (lazy unblock)
+                cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user_id,))
+                conn.commit()
+                failed_attempts = 0
+                locked_until = None
+        
         is_valid, needs_rehash = verify_password(password, hashed_password)
         
         if is_valid:
+            # 2. Login de Sucesso - Reseta falhas
+            cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user_id,))
             if needs_rehash:
-                # Rehash in background without interrupting user flow
                 new_hash = hash_password(password)
                 cursor.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, user_id))
-                conn.commit()
+            conn.commit()
             
             # O admin real não tem email e nascimento definidos
             is_admin_flag = (username == 'admin' and (not email or email.strip() == "") and (not birth_date or birth_date.strip() == ""))
-            return True, user_id, username, is_admin_flag
+            return True, user_id, username, is_admin_flag, 'SUCCESS', None
             
-        return False, None, None, False
+        else:
+            # 3. Falha de Senha - Incrementa tentativas
+            new_failed = failed_attempts + 1
+            new_locked_until = None
+            
+            if new_failed >= 3:
+                new_locked_until = datetime.now() + timedelta(minutes=5)
+                # Dispara a thread de desbloqueio em background
+                trigger_unblock_thread()
+            
+            cursor.execute("UPDATE users SET failed_attempts = %s, locked_until = %s WHERE id = %s", (new_failed, new_locked_until, user_id))
+            conn.commit()
+            
+            return False, user_id, username, False, 'WRONG_PASS', new_locked_until
 
 @contextmanager
 def get_db_connection():

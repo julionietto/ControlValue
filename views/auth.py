@@ -34,28 +34,6 @@ def dialog_register_user():
         st.rerun()
 
 def render_auth_view():
-    import datetime
-    
-    # Inicializa controle de bloqueio se não existir
-    if 'login_attempts' not in st.session_state:
-        st.session_state.login_attempts = 0
-    if 'locked_until' not in st.session_state:
-        st.session_state.locked_until = None
-        
-    # Verifica se o usuário está em período de bloqueio
-    if st.session_state.locked_until:
-        now = datetime.datetime.now()
-        if now < st.session_state.locked_until:
-            remaining = int((st.session_state.locked_until - now).total_seconds())
-            mins = remaining // 60
-            secs = remaining % 60
-            st.error(f"🚫 **Acesso bloqueado por múltiplas falhas.** Tente novamente em {mins}m {secs}s.")
-            st.stop()
-        else:
-            # Tempo expirou, libera o login
-            st.session_state.locked_until = None
-            st.session_state.login_attempts = 0
-
     # Centraliza o login usando colunas [15%, 70%, 15%]
     _, login_col, _ = st.columns([0.15, 0.7, 0.15])
     
@@ -105,7 +83,7 @@ def render_auth_view():
                         submit_login = st.form_submit_button("Entrar", use_container_width=True)
                     
                     if submit_login:
-                        success, uid, uname, is_admin = db.verify_user(user_input, password)
+                        success, uid, uname, is_admin, status, extra = db.verify_user(user_input, password)
                         if success:
                             st.session_state.authenticated = True
                             st.session_state.user_id = uid
@@ -113,13 +91,13 @@ def render_auth_view():
                             st.session_state.is_admin = is_admin
                             st.rerun()
                         else:
-                            st.session_state.login_attempts += 1
-                            if st.session_state.login_attempts >= 3:
-                                st.session_state.locked_until = datetime.datetime.now() + datetime.timedelta(minutes=5)
-                                st.rerun()
-                            
-                            remaining_attempts = 3 - st.session_state.login_attempts
-                            st.error(f"Usuário ou senha incorretos. ({remaining_attempts} tentativas restantes)")
+                            if status == 'LOCKED':
+                                st.error("Seu acesso está bloqueado por 3 tentativas de login recusadas. Entre em contato com administrador do sistema ou aguarde alguns instantes para tentar o login novamente.")
+                            elif status == 'WRONG_PASS':
+                                # Busca o usuário para saber quantas tentativas restam (opcional, mantendo o aviso de erro)
+                                st.error("Usuário ou senha incorretos.")
+                            else:
+                                st.error("Usuário não encontrado.")
                 
             # Link para criar conta se não for admin: posicionado abaixo das colunas para manter o alinhamento do logo com o botão Entrar
             if user_count > 0:
