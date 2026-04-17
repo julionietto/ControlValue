@@ -7,12 +7,12 @@ def is_market_open(market_type):
     Verifica se o mercado especificado está aberto no momento atual.
     
     Regras:
-    - BR: Ações e Fiis. 09:00 às 19:00, dias úteis, excluindo feriados em SP.
-    - US: Stocks e Reits. 11:00 às 19:00, dias úteis, excluindo feriados em NY.
-    - CRYPTO: Sempre True (24/7).
+    - BR: Ações e Fiis. 10:00 às 18:30, dias úteis, excluindo feriados em SP.
+    - US: Stocks e Reits. 11:00 às 18:30, dias úteis, excluindo feriados em NY.
+    - CRYPTO: Agora obedece às regras dos demais mercados (não força refresh sozinho).
     """
     if market_type == 'CRYPTO':
-        return True
+        return False # Não força o auto-refresh sozinho
     
     if market_type == 'BR':
         tz = ZoneInfo("America/Sao_Paulo")
@@ -22,8 +22,11 @@ def is_market_open(market_type):
         if now.weekday() > 4:
             return False
             
-        # Horário: 09:00 às 19:00
-        if not (9 <= now.hour < 19):
+        # Horário: 10:00 às 18:30
+        open_time = now.replace(hour=10, minute=0, second=0, microsecond=0)
+        close_time = now.replace(hour=18, minute=30, second=0, microsecond=0)
+        
+        if not (open_time <= now <= close_time):
             return False
             
         # Feriados em SP
@@ -41,8 +44,11 @@ def is_market_open(market_type):
         if now.weekday() > 4:
             return False
             
-        # Horário: 11:00 às 19:00 (Conforme solicitado pelo usuário)
-        if not (11 <= now.hour < 19):
+        # Horário: 11:00 às 18:30
+        open_time = now.replace(hour=11, minute=0, second=0, microsecond=0)
+        close_time = now.replace(hour=18, minute=30, second=0, microsecond=0)
+        
+        if not (open_time <= now <= close_time):
             return False
             
         # Feriados em NY
@@ -52,12 +58,11 @@ def is_market_open(market_type):
             
         return True
 
-    return True # Default safe fallback
+    return False # Default safe fallback
 
 def get_market_status():
     """Retorna um dicionário com o status de cada mercado."""
     return {
         'BR': is_market_open('BR'),
-        'US': is_market_open('US'),
-        'CRYPTO': True
+        'US': is_market_open('US')
     }
