@@ -3,6 +3,7 @@ import database as db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile
+from utils.refresh_manager import get_market_status
 
 db.init_db()
 
@@ -25,6 +26,14 @@ from views.geral import render_visao_geral_view
 import datetime
 TIMEOUT_MINUTES = 10
 
+# Detectar se esta execução foi disparada pelo auto-refresh
+current_refresh_count = st.session_state.get('datarefresh', 0)
+is_auto_refresh = False
+if 'last_refresh_count' in st.session_state:
+    if current_refresh_count != st.session_state.last_refresh_count:
+        is_auto_refresh = True
+st.session_state.last_refresh_count = current_refresh_count
+
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
@@ -43,7 +52,10 @@ if st.session_state.authenticated:
             st.warning("Sessão expirada por inatividade (10 min).")
             # Força o redirecionamento mantendo a mensagem
             st.stop()
-    st.session_state.last_activity = now
+    
+    # Atualiza atividade apenas se for uma interação real (não auto-refresh)
+    if not is_auto_refresh:
+        st.session_state.last_activity = now
 
 if 'table_key' not in st.session_state:
     st.session_state.table_key = 0
@@ -63,8 +75,10 @@ if 'viewing_history' not in st.session_state:
 if 'is_first_load' not in st.session_state:
     st.session_state.is_first_load = True
 
-# Atualização automática a cada 5 minutos (300.000 ms)
-st_autorefresh(interval=300000, key="datarefresh")
+# Atualização automática a cada 5 minutos (apenas se algum mercado estiver aberto)
+m_status = get_market_status()
+if any(m_status.values()):
+    st_autorefresh(interval=300000, key="datarefresh")
 
 # ==============================
 # MENU DE PERFIL
