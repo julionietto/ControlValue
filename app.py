@@ -21,9 +21,30 @@ from views.derivativos import render_derivativos_view
 from views.proventos import render_proventos_view
 from views.geral import render_visao_geral_view
 
-# Lógica de Autenticação
+# Lógica de Autenticação e Timeout
+import datetime
+TIMEOUT_MINUTES = 10
+
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
+
+# Verifica Timeout de Sessão Inativa
+if st.session_state.authenticated:
+    last_activity = st.session_state.get('last_activity')
+    now = datetime.datetime.now()
+    if last_activity:
+        elapsed_min = (now - last_activity).total_seconds() / 60
+        if elapsed_min > TIMEOUT_MINUTES:
+            # Limpa tudo no logout por timeout
+            for key in list(st.session_state.keys()):
+                if key not in ['table_key']: # Mantém chaves estruturais se necessário
+                    del st.session_state[key]
+            st.session_state.authenticated = False
+            st.warning("Sessão expirada por inatividade (10 min).")
+            # Força o redirecionamento mantendo a mensagem
+            st.stop()
+    st.session_state.last_activity = now
+
 if 'table_key' not in st.session_state:
     st.session_state.table_key = 0
 
