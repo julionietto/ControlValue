@@ -158,13 +158,23 @@ def render_top_header(title, subtitle):
         # Link para o Instagram
         ig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-instagram.jpg")
         ig_b64 = get_base64_image(ig_path)
-        img_html = f'<img src="data:image/jpeg;base64,{ig_b64}" alt="Instagram">' if ig_b64 else "IG"
+        ig_html = f'<img src="data:image/jpeg;base64,{ig_b64}" alt="Instagram">' if ig_b64 else "IG"
         
+        # Link para o E-mail
+        em_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-email.png")
+        em_b64 = get_base64_image(em_path)
+        em_html = f'<img src="data:image/png;base64,{em_b64}" alt="E-mail">' if em_b64 else "EM"
+
         st.markdown(
             f"""
-            <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="instagram-link" title="Siga-nos no Instagram">
-                {img_html}
-            </a>
+            <div style="display: flex; gap: 8px;">
+                <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="social-link" title="Siga-nos no Instagram">
+                    {ig_html}
+                </a>
+                <a href="mailto:controlvalueoficial@gmail.com" class="social-link" title="Fale Conosco">
+                    {em_html}
+                </a>
+            </div>
             """,
             unsafe_allow_html=True
         )

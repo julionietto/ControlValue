@@ -113,7 +113,7 @@ def render_proventos_view():
             import os
             growth_icon_tag = "📈"
             tooltip_text = "Essa linha informa o percentual de crescimento de dividendos comparado com o mesmo período do ano anterior."
-            icon_path = os.path.join(os.path.dirname(__file__), "..", "growth_icon.png") # Caminho relativo
+            icon_path = os.path.join(os.path.dirname(__file__), "..", "images", "growth_icon.png") # Caminho atualizado
             if os.path.exists(icon_path):
                 with open(icon_path, "rb") as f:
                     b64_str = base64.b64encode(f.read()).decode()

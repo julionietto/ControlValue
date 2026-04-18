@@ -44,18 +44,31 @@ def render_auth_view():
             col_logo, col_form = st.columns([0.6, 0.4], gap="medium", vertical_alignment="bottom")
             
             with col_logo:
-                # Link para o Instagram acima do logo
-                ig_login_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-instagram.jpg")
+                # Links sociais acima do logo
+                images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images")
+                ig_login_path = os.path.join(images_dir, "logo-instagram.jpg")
+                em_login_path = os.path.join(images_dir, "logo-email.png")
+                
                 try:
                     import base64
+                    # Instagram
                     with open(ig_login_path, "rb") as f:
                         ig_login_b64 = base64.b64encode(f.read()).decode()
+                    # E-mail
+                    with open(em_login_path, "rb") as f:
+                        em_login_b64 = base64.b64encode(f.read()).decode()
+                        
                     st.markdown(
                         f"""
-                        <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: center; gap: 24px; margin-bottom: 24px;">
                             <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" style="text-decoration: none;">
-                                <div class="instagram-link" style="width: 72px; height: 72px; border-radius: 16px;">
+                                <div class="social-link" style="width: 72px; height: 72px; border-radius: 16px;">
                                     <img src="data:image/jpeg;base64,{ig_login_b64}" width="48">
+                                </div>
+                            </a>
+                            <a href="mailto:controlvalueoficial@gmail.com" style="text-decoration: none;">
+                                <div class="social-link" style="width: 72px; height: 72px; border-radius: 16px;">
+                                    <img src="data:image/png;base64,{em_login_b64}" width="48">
                                 </div>
                             </a>
                         </div>
