@@ -43,7 +43,7 @@ def render_auth_view():
             col_logo, col_form = st.columns([0.6, 0.4], gap="medium", vertical_alignment="bottom")
             
             with col_logo:
-                st.image("images/logoInvestControl.png", use_container_width=True)
+                st.image("images/logoControlValue.png", use_container_width=True)
                 
             with col_form:
                 st.markdown('<h1 style="text-align: left; margin-top: 0; margin-bottom: 24px; font-size: 2.25rem; font-weight: 700; color: #ffffff;">🔐 Acesso</h1>', unsafe_allow_html=True)
