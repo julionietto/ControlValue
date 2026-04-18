@@ -52,11 +52,10 @@ def render_auth_view():
                         ig_login_b64 = base64.b64encode(f.read()).decode()
                     st.markdown(
                         f"""
-                        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: center; margin-bottom: 24px;">
                             <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" style="text-decoration: none;">
-                                <div style="display: flex; align-items: center; gap: 8px; color: #a1a1aa; font-size: 0.9rem; transition: all 0.3s ease;">
-                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="24" style="border-radius: 4px;">
-                                    <span>@controlvalueoficial</span>
+                                <div class="instagram-link" style="width: 56px; height: 56px; border-radius: 50%;">
+                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="36" style="border-radius: 4px;">
                                 </div>
                             </a>
                         </div>
