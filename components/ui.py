@@ -172,6 +172,7 @@ def render_top_header(title, subtitle):
         st.markdown(
             f"""
             <div style="display: flex; gap: 10px; align-items: center; margin-right: 15px;">
+                <span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; margin-right: 5px; opacity: 0.8;">Fale conosco:</span>
                 <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="social-link" title="Instagram">
                     {ig_img}
                 </a>

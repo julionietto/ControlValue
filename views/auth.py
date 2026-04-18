@@ -62,13 +62,13 @@ def render_auth_view():
                         f"""
                         <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 24px;">
                             <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" style="text-decoration: none;">
-                                <div class="social-link" style="width: 56px; height: 56px; border-radius: 12px;">
-                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="32" height="32" style="object-fit: contain;">
+                                <div class="social-link" style="width: 67px; height: 67px; border-radius: 14px;">
+                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="38" height="38" style="object-fit: contain;">
                                 </div>
                             </a>
                             <a href="mailto:controlvalueoficial@gmail.com" style="text-decoration: none;">
-                                <div class="social-link" style="width: 56px; height: 56px; border-radius: 12px;">
-                                    <img src="data:image/png;base64,{em_login_b64}" width="32" height="32" style="object-fit: contain;">
+                                <div class="social-link" style="width: 67px; height: 67px; border-radius: 14px;">
+                                    <img src="data:image/png;base64,{em_login_b64}" width="38" height="38" style="object-fit: contain;">
                                 </div>
                             </a>
                         </div>
