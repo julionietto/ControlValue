@@ -79,9 +79,9 @@ if 'is_first_load' not in st.session_state:
     st.session_state.is_first_load = True
 
 # Lógica de Carga Inicial Obrigatória (Independente de horário)
-if st.session_state.authenticated and st.session_state.is_first_load:
+if st.session_state.authenticated and st.session_state.get('is_first_load', True):
     st.session_state.refresh_id += 1
-    st.session_state.is_first_load = False
+    # is_first_load será desmarcado dentro da view correspondente após a carga completa
 
 # Atualização automática a cada 5 minutos (apenas se algum mercado BR/US estiver aberto)
 m_status = get_market_status()

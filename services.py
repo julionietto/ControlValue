@@ -90,23 +90,30 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
     Busca a cotação atual do Dólar em Reais usando o ticker BRL=X.
     Respeita as regras de mercado BR, exceto na primeira carga após o login.
     """
-    if not is_market_open('BR') and not is_first_load:
-        # Retorna o último valor do cache sem incrementar a busca
-        return st.session_state.get('last_usd_rate', 5.0)
+    current_val = st.session_state.get('last_usd_rate', 0.0)
+    
+    # Se o mercado está fechado e já temos um valor válido (diferente de 0), usamos o cache
+    if not is_market_open('BR') and not is_first_load and current_val > 0:
+        return current_val
 
     try:
-        data = yf.Ticker("BRL=X").history(period="1d")
+        # Usamos period="5d" para garantir que pegamos o último fechamento válido em noites/finais de semana
+        data = yf.Ticker("BRL=X").history(period="5d")
         val = 0.0
         if not data.empty:
             val = float(data['Close'].iloc[-1])
         else:
-            val = float(yf.Ticker("BRL=X").fast_info['lastPrice'])
+            try:
+                val = float(yf.Ticker("BRL=X").fast_info['lastPrice'])
+            except:
+                val = 0.0
         
-        st.session_state.last_usd_rate = val
-        return val
+        if val > 0:
+            st.session_state.last_usd_rate = val
+        return val if val > 0 else (current_val if current_val > 0 else 5.0)
     except Exception as e:
         print(f"Erro ao buscar cotação USD/BRL: {e}")
-        return st.session_state.get('last_usd_rate', 5.0)
+        return current_val if current_val > 0 else 5.0
 
 @st.cache_data(ttl=300)
 def get_btc_usd_rate(refresh_id=0):
@@ -129,22 +136,30 @@ def get_ibov(refresh_id=0, is_first_load=False):
     Busca a pontuação atual do IBOVESPA usando o ticker ^BVSP.
     Respeita as regras de mercado BR, exceto na primeira carga após o login.
     """
-    if not is_market_open('BR') and not is_first_load:
-        return st.session_state.get('last_ibov_points', 0.0)
+    current_val = st.session_state.get('last_ibov_points', 0.0)
+    
+    # Se o mercado está fechado e já temos um valor válido (diferente de 0), usamos o cache
+    if not is_market_open('BR') and not is_first_load and current_val > 0:
+        return current_val
 
     try:
-        data = yf.Ticker("^BVSP").history(period="1d")
+        # Usamos period="5d" para garantir que pegamos o último fechamento válido em noites/finais de semana
+        data = yf.Ticker("^BVSP").history(period="5d")
         val = 0.0
         if not data.empty:
             val = float(data['Close'].iloc[-1])
         else:
-            val = float(yf.Ticker("^BVSP").fast_info['lastPrice'])
+            try:
+                val = float(yf.Ticker("^BVSP").fast_info['lastPrice'])
+            except:
+                val = 0.0
         
-        st.session_state.last_ibov_points = val
-        return val
+        if val > 0:
+            st.session_state.last_ibov_points = val
+        return val if val > 0 else current_val
     except Exception as e:
         print(f"Erro ao buscar pontuação do IBOV: {e}")
-        return st.session_state.get('last_ibov_points', 0.0)
+        return current_val
 
 SECTOR_TRANSLATION = {
     "Basic Materials": "Materiais Básicos",
