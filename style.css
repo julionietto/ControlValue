@@ -302,4 +302,30 @@ h3,
 /* Esconde o texto vazio do botão de logo */
 [data-testid="column"] .stButton button[key*="home_logo"] p {
     display: none !important;
-}
+}
+/* Social Icons Overlay */
+.social-header-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.instagram-link {
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+}
+
+.instagram-link:hover {
+    color: #E1306C; /* Instagram core brand color */
+    border-color: #E1306C;
+    background-color: rgba(225, 48, 108, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(225, 48, 108, 0.2);
+}

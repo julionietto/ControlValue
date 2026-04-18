@@ -95,7 +95,8 @@ def render_profile_popover():
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
     
-    col_logo, col_title, col_logout = st.columns([0.15, 0.7, 0.15], gap="small", vertical_alignment="center")
+    # Colunas: Logo (15%), Título (65%), Ações/Login (20%)
+    col_logo, col_title, col_logout = st.columns([0.15, 0.65, 0.20], gap="small", vertical_alignment="center")
     with col_logo:
         # Resolve o caminho da imagem de forma robusta
         image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoHome.png")
@@ -153,6 +154,22 @@ def render_top_header(title, subtitle):
         ''', unsafe_allow_html=True)
     
     with col_logout:
+        st.markdown('<div class="social-header-container">', unsafe_allow_html=True)
+        # Link para o Instagram
+        st.markdown(
+            """
+            <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="instagram-link" title="Siga-nos no Instagram">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+        
         st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
         render_profile_popover()
+        st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
