@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import database as db
+import os
 
 @st.dialog("Criar Conta", dismissible=False)
 def dialog_register_user():
@@ -43,7 +44,12 @@ def render_auth_view():
             col_logo, col_form = st.columns([0.6, 0.4], gap="medium", vertical_alignment="bottom")
             
             with col_logo:
-                st.image("images/logoControlValue.png", use_container_width=True)
+                # Resolve o caminho da imagem de forma robusta
+                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoControlValue.png")
+                if os.path.exists(logo_path):
+                    st.image(logo_path, use_container_width=True)
+                else:
+                    st.error(f"Logo não encontrado em: {logo_path}")
                 
             with col_form:
                 st.markdown('<h1 style="text-align: left; margin-top: 0; margin-bottom: 24px; font-size: 2.25rem; font-weight: 700; color: #ffffff;">🔐 Acesso</h1>', unsafe_allow_html=True)

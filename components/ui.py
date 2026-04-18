@@ -97,7 +97,9 @@ def render_top_header(title, subtitle):
     
     col_logo, col_title, col_logout = st.columns([0.15, 0.7, 0.15], gap="small", vertical_alignment="center")
     with col_logo:
-        logo_b64 = get_base64_image("images/logoHome.png")
+        # Resolve o caminho da imagem de forma robusta
+        image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoHome.png")
+        logo_b64 = get_base64_image(image_path)
         if logo_b64:
             st.markdown(
                 f"""
