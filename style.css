@@ -316,10 +316,20 @@ h3,
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 6px;
     border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-color);
+    width: 36px;
+    height: 36px;
+    overflow: hidden;
+}
+
+.instagram-link img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    border-radius: 4px;
 }
 
 .instagram-link:hover {

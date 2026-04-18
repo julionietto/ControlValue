@@ -44,6 +44,28 @@ def render_auth_view():
             col_logo, col_form = st.columns([0.6, 0.4], gap="medium", vertical_alignment="bottom")
             
             with col_logo:
+                # Link para o Instagram acima do logo
+                ig_login_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-instagram.jpg")
+                try:
+                    import base64
+                    with open(ig_login_path, "rb") as f:
+                        ig_login_b64 = base64.b64encode(f.read()).decode()
+                    st.markdown(
+                        f"""
+                        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                            <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" style="text-decoration: none;">
+                                <div style="display: flex; align-items: center; gap: 8px; color: #a1a1aa; font-size: 0.9rem; transition: all 0.3s ease;">
+                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="24" style="border-radius: 4px;">
+                                    <span>@controlvalueoficial</span>
+                                </div>
+                            </a>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                except:
+                    pass
+
                 # Resolve o caminho da imagem de forma robusta
                 logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoControlValue.png")
                 if os.path.exists(logo_path):

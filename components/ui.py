@@ -156,14 +156,14 @@ def render_top_header(title, subtitle):
     with col_logout:
         st.markdown('<div class="social-header-container">', unsafe_allow_html=True)
         # Link para o Instagram
+        ig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-instagram.jpg")
+        ig_b64 = get_base64_image(ig_path)
+        img_html = f'<img src="data:image/jpeg;base64,{ig_b64}" alt="Instagram">' if ig_b64 else "IG"
+        
         st.markdown(
-            """
+            f"""
             <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="instagram-link" title="Siga-nos no Instagram">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                </svg>
+                {img_html}
             </a>
             """,
             unsafe_allow_html=True
