@@ -320,14 +320,18 @@ h3,
     border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border-color);
-    width: 44px;
-    height: 44px;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     overflow: hidden;
 }
 
 .social-link img {
-    width: 28px;
-    height: 28px;
+    width: 28px !important;
+    height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
     object-fit: contain;
 }
 

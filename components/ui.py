@@ -155,24 +155,28 @@ def render_top_header(title, subtitle):
     
     with col_logout:
         st.markdown('<div class="social-header-container">', unsafe_allow_html=True)
-        # Link para o Instagram
-        ig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-instagram.jpg")
-        ig_b64 = get_base64_image(ig_path)
-        ig_html = f'<img src="data:image/jpeg;base64,{ig_b64}" alt="Instagram">' if ig_b64 else "IG"
         
-        # Link para o E-mail
-        em_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logo-email.png")
+        # Resolve caminhos
+        img_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images")
+        ig_path = os.path.join(img_dir, "logo-instagram.jpg")
+        em_path = os.path.join(img_dir, "logo-email.png")
+        
+        # Converte para Base64
+        ig_b64 = get_base64_image(ig_path)
         em_b64 = get_base64_image(em_path)
-        em_html = f'<img src="data:image/png;base64,{em_b64}" alt="E-mail">' if em_b64 else "EM"
+        
+        # HTML dos Ícones com tamanhos forçados
+        ig_img = f'<img src="data:image/jpeg;base64,{ig_b64}" width="28" height="28" style="object-fit: contain;">' if ig_b64 else "IG"
+        em_img = f'<img src="data:image/png;base64,{em_b64}" width="28" height="28" style="object-fit: contain;">' if em_b64 else "EM"
 
         st.markdown(
             f"""
-            <div style="display: flex; gap: 8px;">
-                <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="social-link" title="Siga-nos no Instagram">
-                    {ig_html}
+            <div style="display: flex; gap: 10px; align-items: center; margin-right: 15px;">
+                <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" class="social-link" title="Instagram">
+                    {ig_img}
                 </a>
-                <a href="mailto:controlvalueoficial@gmail.com" class="social-link" title="Fale Conosco">
-                    {em_html}
+                <a href="mailto:controlvalueoficial@gmail.com" class="social-link" title="E-mail">
+                    {em_img}
                 </a>
             </div>
             """,
