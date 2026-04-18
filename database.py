@@ -63,7 +63,7 @@ def get_database_url():
             return st.secrets["DATABASE_URL"]
     except Exception:
         pass
-    return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/investcontrol")
+    return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/controlvalue")
 
 @st.cache_resource(ttl=3600)
 def init_connection_pool():

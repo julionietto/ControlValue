@@ -7,7 +7,7 @@ from utils.refresh_manager import get_market_status
 
 db.init_db()
 
-st.set_page_config(page_title="Ativos Financeiros", page_icon="📈", layout="wide")
+st.set_page_config(page_title="ControlValue", page_icon="📈", layout="wide")
 
 # Injeção de CSS personalizado
 import os
