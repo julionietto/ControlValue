@@ -54,8 +54,8 @@ def render_auth_view():
                         f"""
                         <div style="display: flex; justify-content: center; margin-bottom: 24px;">
                             <a href="https://www.instagram.com/controlvalueoficial/" target="_blank" style="text-decoration: none;">
-                                <div class="instagram-link" style="width: 56px; height: 56px; border-radius: 50%;">
-                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="36" style="border-radius: 4px;">
+                                <div class="instagram-link" style="width: 72px; height: 72px; border-radius: 16px;">
+                                    <img src="data:image/jpeg;base64,{ig_login_b64}" width="48">
                                 </div>
                             </a>
                         </div>
