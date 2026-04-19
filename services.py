@@ -363,3 +363,16 @@ def get_daily_cdi_history(start_date):
         # Converte de % a.d. para fator diário (1 + taxa/100)
         return (1 + series / 100)
     return pd.Series()
+
+@st.cache_data(ttl=21600)
+def get_usd_brl_history(start_date):
+    """Busca o histórico da cotação USD/BRL (BRL=X)."""
+    try:
+        data = yf.download("BRL=X", start=start_date, progress=False)
+        if not data.empty:
+            if 'Close' in data:
+                return data['Close']
+            return data.iloc[:, 0]
+    except Exception as e:
+        print(f"Erro ao buscar histórico de USD/BRL: {e}")
+    return pd.Series()
