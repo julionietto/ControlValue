@@ -340,3 +340,26 @@ def get_major_indices_history(months=18):
         'cdi': cdi_mensal,
         'ipca': ipca_mensal
     }
+
+@st.cache_data(ttl=3600)
+def get_asset_price_history(ticker, start_date):
+    """Busca o histórico de fechamento diário de um ativo."""
+    try:
+        data = yf.download(ticker, start=start_date, progress=False)
+        if not data.empty:
+            if 'Close' in data:
+                return data['Close']
+            return data.iloc[:, 0] # Fallback
+    except Exception as e:
+        print(f"Erro ao buscar histórico de {ticker}: {e}")
+    return pd.Series()
+
+@st.cache_data(ttl=3600)
+def get_daily_cdi_history(start_date):
+    """Busca a taxa CDI diária (SGS 12) e retorna os fatores diários."""
+    # O código 12 é a taxa diária em % a.d.
+    series = get_bcb_history(12, start_date)
+    if not series.empty:
+        # Converte de % a.d. para fator diário (1 + taxa/100)
+        return (1 + series / 100)
+    return pd.Series()
