@@ -409,109 +409,116 @@ def render_asset_detail_view(asset_data):
         
         if first_op_date:
             with st.spinner("Calculando rentabilidade..."):
-                import plotly.graph_objects as go
-                
-                # Buscar preços e CDI
-                price_history = svc.get_asset_price_history(ticker, first_op_date)
-                cdi_factors = svc.get_daily_cdi_history(first_op_date)
-                
-                if not price_history.empty and not cdi_factors.empty:
-                    # Preparar timeline
-                    start_dt = pd.to_datetime(first_op_date)
-                    end_dt = pd.to_datetime("today")
-                    all_dates = pd.date_range(start=start_dt, end=end_dt, freq='D')
+                try:
+                    import plotly.graph_objects as go
                     
-                    df_chart = pd.DataFrame(index=all_dates)
+                    # Buscar preços e CDI
+                    price_history = svc.get_asset_price_history(ticker, first_op_date)
+                    cdi_factors = svc.get_daily_cdi_history(first_op_date)
                     
-                    # Preço (ffill preenche finais de semana)
-                    df_chart['price'] = price_history
-                    df_chart['price'] = df_chart['price'].ffill()
-                    
-                    # CDI (ffill e fator acumulado)
-                    df_chart['cdi_factor'] = cdi_factors
-                    df_chart['cdi_factor'] = df_chart['cdi_factor'].fillna(1.0) 
-                    df_chart['cdi_cum'] = (df_chart['cdi_factor'].cumprod() - 1) * 100
-                    
-                    # Operações
-                    hist_for_calc = history_df.copy()
-                    hist_for_calc['date'] = pd.to_datetime(hist_for_calc['date'])
-                    
-                    # Proventos
-                    proventos_df = db.get_proventos(st.session_state.user_id)
-                    proventos_df = proventos_df[proventos_df['ticker'] == ticker].copy()
-                    
-                    def get_prov_date(row):
-                        meses = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
-                        return pd.Timestamp(year=int(row['ano'] or 2000), month=meses.get(row['mes'], 1), day=15)
-                    
-                    if not proventos_df.empty:
-                        proventos_df['date'] = proventos_df.apply(get_prov_date, axis=1)
-                    
-                    # Cálculo Diário
-                    daily_qty = []
-                    daily_cost = []
-                    daily_prov_cum = []
-                    
-                    curr_qty = 0.0
-                    curr_cost = 0.0
-                    curr_prov_cum = 0.0
-                    
-                    # Pré-agrupar para performance
-                    ops_grouped = hist_for_calc.groupby('date')
-                    prov_grouped = proventos_df.groupby('date')['valor'].sum() if not proventos_df.empty else pd.Series(dtype=float)
-
-                    for date in all_dates:
-                        # Processa operações
-                        if date in ops_grouped.groups:
-                            ops_today = ops_grouped.get_group(date)
-                            for _, op in ops_today.iterrows():
-                                if op['quantity'] > 0: # Compra
-                                    curr_qty += op['quantity']
-                                    curr_cost += op['quantity'] * op['unit_price']
-                                else: # Venda
-                                    if curr_qty > 0:
-                                        avg_p = curr_cost / curr_qty
-                                        curr_cost += op['quantity'] * avg_p # qty é negativa
-                                    curr_qty += op['quantity']
+                    if price_history.empty:
+                        st.warning(f"Não foi possível encontrar histórico de preços para o ticker {ticker}. Verifique se o código está correto (ex: PETR4.SA).")
+                    elif cdi_factors.empty:
+                        st.warning("Não foi possível carregar o histórico do CDI do Banco Central.")
+                    else:
+                        # Preparar timeline
+                        start_dt = pd.to_datetime(first_op_date).tz_localize(None)
+                        end_dt = pd.to_datetime("today").tz_localize(None)
+                        all_dates = pd.date_range(start=start_dt, end=end_dt, freq='D')
                         
-                        # Processa proventos
-                        if date in prov_grouped.index:
-                            curr_prov_cum += prov_grouped[date]
+                        df_chart = pd.DataFrame(index=all_dates)
+                        
+                        # Preço (ffill preenche finais de semana)
+                        price_history.index = pd.to_datetime(price_history.index).tz_localize(None)
+                        df_chart['price'] = price_history
+                        df_chart['price'] = df_chart['price'].ffill()
+                        
+                        # CDI (ffill e fator acumulado)
+                        cdi_factors.index = pd.to_datetime(cdi_factors.index).tz_localize(None)
+                        df_chart['cdi_factor'] = cdi_factors
+                        df_chart['cdi_factor'] = df_chart['cdi_factor'].fillna(1.0) 
+                        df_chart['cdi_cum'] = (df_chart['cdi_factor'].cumprod() - 1) * 100
+                        
+                        # Operações
+                        hist_for_calc = history_df.copy()
+                        hist_for_calc['date'] = pd.to_datetime(hist_for_calc['date']).dt.tz_localize(None)
+                        
+                        # Proventos
+                        proventos_df = db.get_proventos(st.session_state.user_id)
+                        proventos_df = proventos_df[proventos_df['ticker'] == ticker].copy()
+                        
+                        def get_prov_date(row):
+                            meses = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
+                            return pd.Timestamp(year=int(row['ano'] or 2000), month=meses.get(row['mes'], 1), day=15)
+                        
+                        if not proventos_df.empty:
+                            proventos_df['date'] = proventos_df.apply(get_prov_date, axis=1)
+                        
+                        # Cálculo Diário
+                        daily_qty = []
+                        daily_cost = []
+                        daily_prov_cum = []
+                        
+                        curr_qty = 0.0
+                        curr_cost = 0.0
+                        curr_prov_cum = 0.0
+                        
+                        # Pré-agrupar para performance
+                        ops_grouped = hist_for_calc.groupby('date')
+                        prov_grouped = proventos_df.groupby('date')['valor'].sum() if not proventos_df.empty else pd.Series(dtype=float)
+
+                        for date in all_dates:
+                            # Processa operações
+                            if date in ops_grouped.groups:
+                                ops_today = ops_grouped.get_group(date)
+                                for _, op in ops_today.iterrows():
+                                    if op['quantity'] > 0: # Compra
+                                        curr_qty += op['quantity']
+                                        curr_cost += op['quantity'] * op['unit_price']
+                                    else: # Venda
+                                        if curr_qty > 0:
+                                            avg_p = curr_cost / curr_qty
+                                            curr_cost += op['quantity'] * avg_p # qty é negativa
+                                        curr_qty += op['quantity']
                             
-                        daily_qty.append(curr_qty)
-                        daily_cost.append(curr_cost)
-                        daily_prov_cum.append(curr_prov_cum)
+                            # Processa proventos
+                            if date in prov_grouped.index:
+                                curr_prov_cum += prov_grouped[date]
+                                
+                            daily_qty.append(curr_qty)
+                            daily_cost.append(curr_cost)
+                            daily_prov_cum.append(curr_prov_cum)
+                            
+                        df_chart['qty'] = daily_qty
+                        df_chart['cost'] = daily_cost
+                        df_chart['prov_cum'] = daily_prov_cum
+                        df_chart['market_value'] = df_chart['qty'] * df_chart['price']
                         
-                    df_chart['qty'] = daily_qty
-                    df_chart['cost'] = daily_cost
-                    df_chart['prov_cum'] = daily_prov_cum
-                    df_chart['market_value'] = df_chart['qty'] * df_chart['price']
-                    
-                    # Evitar divisão por zero e tratar casos onde não há custo (venda total)
-                    def calc_profit(row):
-                        if row['cost'] <= 0.01: return 0.0
-                        return ((row['market_value'] + row['prov_cum']) / row['cost'] - 1) * 100
+                        # Evitar divisão por zero e tratar casos onde não há custo (venda total)
+                        def calc_profit(row):
+                            if row['cost'] <= 0.01: return 0.0
+                            return ((row['market_value'] + row['prov_cum']) / row['cost'] - 1) * 100
 
-                    df_chart['profit_pct'] = df_chart.apply(calc_profit, axis=1)
-                    
-                    # Plotly Chart
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['profit_pct'], mode='lines', name=display_ticker, line=dict(color='#00CC96', width=2.5)))
-                    fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['cdi_cum'], mode='lines', name='CDI', line=dict(color='#636EFA', width=1.5, dash='dot')))
-                    
-                    fig.update_layout(
-                        hovermode='x unified',
-                        template='plotly_dark',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        height=350,
-                        margin=dict(l=10, r=10, t=10, b=10),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                        yaxis=dict(title='Rentabilidade (%)', gridcolor='rgba(255,255,255,0.05)', zerolinecolor='rgba(255,255,255,0.2)'),
-                        xaxis=dict(gridcolor='rgba(255,255,255,0.05)')
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("Aguardando carregamento de dados históricos...")
+                        df_chart['profit_pct'] = df_chart.apply(calc_profit, axis=1)
+                        
+                        # Plotly Chart
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['profit_pct'], mode='lines', name=display_ticker, line=dict(color='#00CC96', width=2.5)))
+                        fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['cdi_cum'], mode='lines', name='CDI', line=dict(color='#636EFA', width=1.5, dash='dot')))
+                        
+                        fig.update_layout(
+                            hovermode='x unified',
+                            template='plotly_dark',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            height=350,
+                            margin=dict(l=10, r=10, t=10, b=10),
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                            yaxis=dict(title='Rentabilidade (%)', gridcolor='rgba(255,255,255,0.05)', zerolinecolor='rgba(255,255,255,0.2)'),
+                            xaxis=dict(gridcolor='rgba(255,255,255,0.05)')
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.error(f"Erro ao processar gráfico: {e}")
         else:
             st.info("Adicione sua primeira operação para visualizar o gráfico de rentabilidade.")
