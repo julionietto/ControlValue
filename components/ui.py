@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import base64
 import os
 from utils.formatters import escape_html
@@ -38,6 +39,36 @@ def get_base64_image(image_path):
 
 def render_profile_popover():
     username_display = st.session_state.get('username', 'Perfil')
+    
+    # Injeta script para fechar o popover após 3 segundos (v1.3.0)
+    components.html(
+        """
+        <script>
+        if (!window.parent._popoverTimerSet) {
+            window.parent.document.addEventListener('click', function(e) {
+                const btn = e.target.closest('button');
+                // Alvo: Botão do perfil que contém o emoji 👤
+                if (btn && (btn.innerText.includes('👤') || btn.textContent.includes('👤'))) {
+                    setTimeout(() => {
+                        // Verifica se o popover ainda está aberto antes de fechar
+                        const popover = window.parent.document.querySelector('[data-testid="stPopoverContent"]');
+                        if (popover) {
+                            // Dispara a tecla Escape para fechar o popover de forma limpa
+                            window.parent.document.dispatchEvent(new KeyboardEvent('keydown', {
+                                key: 'Escape',
+                                bubbles: true,
+                                cancelable: true
+                            }));
+                        }
+                    }, 3000);
+                }
+            }, true);
+            window.parent._popoverTimerSet = true;
+        }
+        </script>
+        """,
+        height=0
+    )
     
     label_suffix = "\u200b" * (st.session_state.get('pop_ctrl', 0) % 2)
     with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True):
