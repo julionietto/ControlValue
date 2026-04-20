@@ -51,6 +51,7 @@ def confirm_delete_operation_dialog(op_data, asset_id):
         if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
             db.delete_asset_operation(op_data['id'], asset_id, st.session_state.user_id)
             st.session_state.show_confirm_delete_op = False
+            st.session_state.refresh_id += 1 # Garante o reset total da tabela
             st.session_state.viewing_history = db.get_asset_by_id(asset_id, st.session_state.user_id)
             st.success("Operação excluída com sucesso!")
             st.rerun()
@@ -223,6 +224,7 @@ def render_asset_detail_view(asset_data):
             if st.button("Excluir", type="secondary", use_container_width=True, key=f"delete_op_{op_data['id']}"):
                 st.session_state.show_confirm_delete_op = True
                 st.session_state.op_to_delete = op_data.to_dict()
+                st.session_state.refresh_id += 1 # Limpa a seleção para permitir a abertura do próximo diálogo
                 st.rerun()
         with col_c3:
             if st.button("Cancelar", use_container_width=True, key=f"cancel_edit_{op_data['id']}"):
