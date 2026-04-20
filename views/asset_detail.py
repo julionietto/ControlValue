@@ -61,8 +61,8 @@ def confirm_delete_operation_dialog(op_data, asset_id):
 
 @st.dialog("Aviso: Conversão de Moeda")
 def usd_conversion_notice_dialog():
-    st.warning("Investimentos Internacionais")
-    st.write("Os ativos do Tipo **Stocks** e **Reits** têm suas operações registradas em dólar.")
+    st.warning("Investimentos em Dólar")
+    st.write("Os ativos do Tipo **Stocks, Reits ou Cripto** têm suas operações registradas em dólar.")
     st.write("Para fazer uma comparação com o CDI brasileiro, os valores das compras e as cotações históricas são convertidos para o **Real brasileiro** com base no câmbio da época.")
     
     if st.button("Entendido", type="primary", use_container_width=True):
@@ -557,13 +557,6 @@ def render_asset_detail_view(asset_data):
                         
                         st.markdown("---")
                         st.info("💡 **Informação**: Os dados de rentabilidade do ativo levam em consideração os proventos recebidos no período.")
-                        
-                        # Botão para Recolher
-                        col_r1, col_r2, col_r3 = st.columns([1, 1, 1])
-                        with col_r2:
-                            if st.button("⬅️ Recolher Análise", use_container_width=True, key=f"btn_hide_{ticker}"):
-                                st.session_state[auth_key] = False
-                                st.rerun()
 
                 except Exception as e:
                     st.error(f"Erro ao processar gráfico: {e}")
