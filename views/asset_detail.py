@@ -57,6 +57,7 @@ def confirm_delete_operation_dialog(op_data, asset_id):
     with col_no:
         if st.button("Cancelar", use_container_width=True):
             st.session_state.show_confirm_delete_op = False
+            st.session_state.refresh_id += 1 # Reset selection
             st.rerun()
 
 @st.dialog("Aviso: Conversão de Moeda")
@@ -215,6 +216,7 @@ def render_asset_detail_view(asset_data):
                 target_asset_id = op_data['asset_id'] if 'asset_id' in op_data else asset_id
                 db.update_asset_operation(op_data['id'], target_asset_id, st.session_state.user_id, op_date.strftime("%Y-%m-%d"), final_qty, op_price)
                 st.session_state.viewing_history = db.get_asset_by_id(target_asset_id, st.session_state.user_id)
+                st.session_state.refresh_id += 1 # Reset selection to close dialog
                 st.success("Operação atualizada!")
                 st.rerun()
         with col_c2:
@@ -224,6 +226,7 @@ def render_asset_detail_view(asset_data):
                 st.rerun()
         with col_c3:
             if st.button("Cancelar", use_container_width=True, key=f"cancel_edit_{op_data['id']}"):
+                st.session_state.refresh_id += 1 # Reset selection to close dialog
                 st.rerun()
 
     # Verifica se deve abrir os diálogos de confirmação
@@ -491,6 +494,20 @@ def render_asset_detail_view(asset_data):
                             df_chart['price_brl'] = df_chart['price_native'] * df_chart['usd_rate']
                         else:
                             df_chart['price_brl'] = df_chart['price_native']
+                            
+                        # Normalização da Base (v1.2.1) - Garante que o gráfico comece em 0%
+                        # Ajustando o preço de mercado inicial para coincidir com o preço de custo nominal do usuário
+                        if not df_chart.empty and not history_df.empty:
+                            first_market_price = df_chart['price_brl'].iloc[0]
+                            first_purchase_price = history_df.iloc[0]['unit_price']
+                            
+                            # Se for ativo em USD, converte o preço nominal da primeira compra para BRL usando a taxa do primeiro dia
+                            if asset_data['currency'] == 'USD' and 'usd_rate' in df_chart.columns:
+                                first_purchase_price *= df_chart['usd_rate'].iloc[0]
+                            
+                            if first_market_price > 0:
+                                norm_factor = first_purchase_price / first_market_price
+                                df_chart['price_brl'] = df_chart['price_brl'] * norm_factor
                         
                         # CDI Acumulado
                         cdi_factors.index = pd.to_datetime(cdi_factors.index).tz_localize(None)
