@@ -69,6 +69,19 @@ def confirm_delete_operation_dialog(op_data, asset_id):
 def dialog_adicionar_novo_ativo():
     categoria = st.radio("Selecione a Categoria", ["Renda Variável", "Renda Fixa"], horizontal=True)
     nome = st.text_input("Nome do Ativo")
+    
+    # Campo de Moeda (v1.2.1) - Obrigatório para Renda Variável
+    moeda_default = 0 # BRL
+    if categoria == "Renda Variável" and nome:
+        # Tenta inferir para sugerir um default inteligente
+        clean_temp = nome.strip().upper()
+        if len(clean_temp) >= 4 and "." not in clean_temp and clean_temp not in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+            clean_temp += ".SA"
+        tipo_temp = infer_asset_type(clean_temp)
+        if tipo_temp in ['Stocks', 'Reits']:
+            moeda_default = 1 # USD
+            
+    moeda = st.selectbox("Moeda de Origem", ["BRL", "USD"], index=moeda_default, help="Selecione a moeda em que você registra suas operações para este ativo.")
     msg_container = st.empty()
     
     if categoria == "Renda Fixa":
@@ -153,7 +166,7 @@ def dialog_adicionar_novo_ativo():
                             st.stop()
                             
                     # Adiciona ou recupera o ativo
-                    db.add_empty_asset(clean_name, tipo_inicial, st.session_state.user_id)
+                    db.add_empty_asset(clean_name, tipo_inicial, st.session_state.user_id, currency=moeda)
                     
                     # Busca os dados carregados do BD para garantir consistência
                     with db.get_db_connection() as conn:
@@ -168,7 +181,8 @@ def dialog_adicionar_novo_ativo():
                                 'quantity': row[3],
                                 'average_price': row[4],
                                 'price_ceiling': row[5],
-                                'fair_value': row[6]
+                                'fair_value': row[6],
+                                'currency': row[8]
                             }
                             
                             if tipo_inicial != 'Renda Fixa':
@@ -317,8 +331,12 @@ def render_visao_geral_view():
         
         def apply_exchange_rate(row, column_name, is_market_price=False):
             val = row[column_name]
-            types_to_convert = foreign_market_types if is_market_price else foreign_input_types
-            if row['asset_type'] in types_to_convert:
+            # Usa agora o campo explícito 'currency' (v1.2.1)
+            # is_market_price refere-se à cotação vinda do YF
+            # Para Stocks/Reits/Cripto, o YF sempre retorna em USD ou moeda nativa internacional (que tratamos como USD no MVP)
+            if row['currency'] == 'USD' or (is_market_price and row['asset_type'] in ['Cripto', 'Stocks', 'Reits']):
+                # Se o registro é em BRL mas o mercado é USD (Cripto), converte mercado para BRL
+                # Se o registro é em USD, converte o valor final para BRL para o Dashboard
                 return val * usd_to_brl_rate
             return val
     
@@ -354,9 +372,8 @@ def render_visao_geral_view():
             if history_df.empty:
                 return pd.Series({'profit_loss': base_profit, 'total_invested': base_invested})
                 
-            foreign_types = ['Stocks', 'Reits']
             def convert_to_brl(val):
-                if row['asset_type'] in foreign_types:
+                if row['currency'] == 'USD':
                     return val * usd_to_brl_rate
                 return val
     
@@ -526,7 +543,7 @@ def render_visao_geral_view():
         
         def format_usage_currency(row):
             val = row['Cotação Atual']
-            if row['Tipo'] in ['Stocks', 'Reits', 'Cripto']:
+            if row['currency'] == 'USD':
                 return f"$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             elif row['Tipo'] == 'Renda Fixa':
                 return 'N/A'

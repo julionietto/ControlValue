@@ -268,7 +268,7 @@ def render_asset_detail_view(asset_data):
     if not history_df.empty:
         foreign_types = ['Stocks', 'Reits']
         def convert_to_brl(val):
-            return val * usd_to_brl_rate if current_type in foreign_types else val
+            return val * usd_to_brl_rate if asset_data['currency'] == 'USD' else val
 
         history_df['unit_price_brl'] = history_df['unit_price'].apply(convert_to_brl)
         history_df['valor_operacao'] = history_df['quantity'] * history_df['unit_price_brl']
@@ -342,19 +342,22 @@ def render_asset_detail_view(asset_data):
         try: type_idx = asset_types.index(current_type)
         except ValueError: type_idx = 0
         new_asset_type = st.selectbox("Tipo de Ativo", asset_types, index=type_idx, disabled=(current_type == 'Renda Fixa'))
-
-    display_val, display_sym = (price_now_brl, "R$") if current_type == 'Cripto' else (price_now_native, currency_symbol)
-    
+        
     with col_p2:
+        new_currency = st.selectbox("Moeda de Origem", ["BRL", "USD"], index=0 if asset_data['currency'] == 'BRL' else 1, help="Moeda em que as operações foram registradas.")
+
+    display_val, display_sym = (price_now_brl, "R$") if asset_data['currency'] == 'BRL' and current_type == 'Cripto' else (price_now_native, currency_symbol)
+    
+    with col_p3:
         if current_type == 'Renda Fixa':
             new_avg_price = st.number_input("Saldo Acumulado (R$)", min_value=0.0, format="%.2f", value=float(avg_price_native))
         else:
             st.text_input("Preço Médio", value=f"{currency_symbol} {avg_price_native:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
             new_avg_price = asset_data.get('average_price', 0.0)
             
-    with col_p3: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type == 'Renda Fixa'))
-    with col_p4: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type == 'Renda Fixa'))
-    with col_p5: st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
+    with col_p4: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type == 'Renda Fixa'))
+    with col_p5: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type == 'Renda Fixa'))
+    st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
         
     if current_type != 'Renda Fixa':
         new_guidance = "COMPRA" if compare_init <= new_price_ceiling else "AGUARDE"
@@ -365,7 +368,7 @@ def render_asset_detail_view(asset_data):
         if current_type != 'Renda Fixa' and history_df.empty:
             st.error("É necessário adicionar pelo menos uma operação antes de salvar o ativo.")
         else:
-            db.update_asset(asset_id, st.session_state.user_id, ticker, new_asset_type, asset_data.get('quantity', 0.0), new_avg_price, new_price_ceiling, new_fair_value)
+            db.update_asset(asset_id, st.session_state.user_id, ticker, new_asset_type, asset_data.get('quantity', 0.0), new_avg_price, new_price_ceiling, new_fair_value, currency=new_currency)
             st.session_state.viewing_history = None
             st.session_state.navigation_tab = "Visão Geral"
             st.session_state.table_key += 1
@@ -420,7 +423,11 @@ def render_asset_detail_view(asset_data):
     supported_types = ['Ações', 'Fiis', 'Stocks', 'Reits', 'Cripto']
     if current_type in supported_types:
         st.session_state.last_ticker = ticker
-        is_usd_based = current_type in ['Stocks', 'Reits', 'Cripto']
+        # Moeda definida no banco de dados (v1.2.1)
+        is_usd_based = (asset_data['currency'] == 'USD')
+        # Ativos tipo Stocks/Reits/Cripto SEMPRE buscam histórico USD do Yahoo Finance para o gráfico
+        needs_market_history_usd = current_type in ['Stocks', 'Reits', 'Cripto']
+        
         auth_key = f"auth_chart_{ticker}"
         
         st.markdown("---")
@@ -454,7 +461,9 @@ def render_asset_detail_view(asset_data):
                     # Buscar dados históricos
                     price_history = svc.get_asset_price_history(fetch_ticker, first_op_date)
                     cdi_factors = svc.get_daily_cdi_history(first_op_date)
-                    usd_history = svc.get_usd_brl_history(first_op_date) if is_usd_based else pd.Series()
+                    # Histórico de câmbio é necessário se a moeda do registro for USD OU se for Cripto mas o registro for em BRL (para converter o preço de mercado USD para BRL)
+                    needs_usd_history = is_usd_based or (current_type == 'Cripto' and asset_data['currency'] == 'BRL')
+                    usd_history = svc.get_usd_brl_history(first_op_date) if needs_usd_history else pd.Series()
                     
                     if price_history.empty:
                         st.warning(f"Histórico de preços não disponível para {fetch_ticker}.")
@@ -475,7 +484,7 @@ def render_asset_detail_view(asset_data):
                         df_chart['price_native'] = price_history
                         df_chart['price_native'] = df_chart['price_native'].ffill()
                         
-                        if is_usd_based:
+                        if needs_usd_history:
                             usd_history.index = pd.to_datetime(usd_history.index).tz_localize(None)
                             df_chart['usd_rate'] = usd_history
                             df_chart['usd_rate'] = df_chart['usd_rate'].ffill()
@@ -513,6 +522,7 @@ def render_asset_detail_view(asset_data):
                             if date in ops_grouped.groups:
                                 for _, op in ops_grouped.get_group(date).iterrows():
                                     if op['quantity'] > 0: # Compra
+                                        # Se o registro é em USD, converte custo para BRL usando o câmbio da época
                                         rate = df_chart.loc[date, 'usd_rate'] if is_usd_based and date in df_chart.index else 1.0
                                         if pd.isna(rate): rate = 1.0
                                         curr_qty += op['quantity']

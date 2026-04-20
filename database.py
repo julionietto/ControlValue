@@ -123,7 +123,8 @@ def init_db():
             average_price REAL NOT NULL,
             price_ceiling REAL DEFAULT 0,
             fair_value REAL DEFAULT 0,
-            user_id INTEGER NOT NULL DEFAULT 1
+            user_id INTEGER NOT NULL DEFAULT 1,
+            currency TEXT NOT NULL DEFAULT 'BRL'
         )
     ''')
     # Tabela de Histórico de Operações
@@ -150,12 +151,19 @@ def init_db():
             locked_until TIMESTAMP
         )
     ''')
-    # Atualização de schema para base existente
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP")
+        
+        # Migração da coluna de Moeda (v1.2.1)
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='assets' AND column_name='currency'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE assets ADD COLUMN currency TEXT NOT NULL DEFAULT 'BRL'")
+            # Regra de Migração solicitada: Stocks/Reits = USD, resto = BRL (especialmente Cripto para user 1)
+            cursor.execute("UPDATE assets SET currency = 'USD' WHERE asset_type IN ('Stocks', 'Reits')")
+            cursor.execute("UPDATE assets SET currency = 'BRL' WHERE asset_type IN ('Ações', 'Fiis', 'Renda Fixa', 'Cripto')")
+            
     except Exception as e:
-        # Se as colunas já existirem ou houver erro de permissão, logamos discretamente
         import logging
         logging.warning(f"Aviso na atualização do schema: {e}")
     # Tabela de Proventos
@@ -318,7 +326,7 @@ def recalculate_asset_balance(asset_id, conn):
         (final_qty, avg_price, asset_id)
     )
 
-def add_empty_asset(ticker, asset_type, user_id):
+def add_empty_asset(ticker, asset_type, user_id, currency='BRL'):
     ticker = ticker.upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -327,8 +335,8 @@ def add_empty_asset(ticker, asset_type, user_id):
         
         if not existing_asset:
             cursor.execute(
-                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, %s, 0, 0, %s)",
-                (ticker, asset_type, user_id)
+                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id, currency) VALUES (%s, %s, 0, 0, %s, %s)",
+                (ticker, asset_type, user_id, currency)
             )
             conn.commit()
             return True
@@ -460,19 +468,19 @@ def get_proventos(user_id):
         df['ano'] = df['ano'].apply(safe_int_ano)
     return df
 
-def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price, price_ceiling=0, fair_value=0):
+def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price, price_ceiling=0, fair_value=0, currency='BRL'):
     ticker = ticker.upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if asset_type == 'Renda Fixa':
             cursor.execute(
-                "UPDATE assets SET ticker = %s, asset_type = %s, quantity = %s, average_price = %s, price_ceiling = %s, fair_value = %s WHERE id = %s AND user_id = %s",
-                (ticker, asset_type, quantity, average_price, price_ceiling, fair_value, asset_id, user_id)
+                "UPDATE assets SET ticker = %s, asset_type = %s, quantity = %s, average_price = %s, price_ceiling = %s, fair_value = %s, currency = %s WHERE id = %s AND user_id = %s",
+                (ticker, asset_type, quantity, average_price, price_ceiling, fair_value, currency, asset_id, user_id)
             )
         else:
             cursor.execute(
-                "UPDATE assets SET ticker = %s, asset_type = %s, price_ceiling = %s, fair_value = %s WHERE id = %s AND user_id = %s",
-                (ticker, asset_type, price_ceiling, fair_value, asset_id, user_id)
+                "UPDATE assets SET ticker = %s, asset_type = %s, price_ceiling = %s, fair_value = %s, currency = %s WHERE id = %s AND user_id = %s",
+                (ticker, asset_type, price_ceiling, fair_value, currency, asset_id, user_id)
             )
         conn.commit()
 
