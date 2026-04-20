@@ -295,9 +295,12 @@ def get_bcb_history(code, start_date):
     url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json&dataInicial={bcb_date}"
     
     try:
-        # Adiciona User-Agent para evitar bloqueios triviais
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, timeout=15, headers=headers)
+        # Adiciona User-Agent completo e Accept header para evitar bloqueios e erros 406
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+        }
+        response = requests.get(url, timeout=30, headers=headers)
         if response.status_code == 200:
             data = response.json()
             if not data:
@@ -356,9 +359,12 @@ def get_asset_price_history(ticker, start_date):
 
 @st.cache_data(ttl=86400)
 def get_master_cdi_history():
-    """Busca a série histórica do CDI (SGS 12) desde 2010 e armazena em cache global."""
-    # Usamos 2010 como um compromisso entre histórico longo e performance/estabilidade da API
-    series = get_bcb_history(12, "2010-01-01")
+    """Busca a série histórica do CDI (SGS 12) dos últimos 5 anos e armazena em cache global."""
+    from datetime import datetime, timedelta
+    # O BCB limita consultas de séries diárias a janelas de no máximo 10 anos.
+    # Usamos 5 anos como um compromisso entre performance e histórico.
+    start_dt = (datetime.now() - timedelta(days=1825)).strftime('%Y-%m-%d')
+    series = get_bcb_history(12, start_dt)
     if not series.empty:
         # Converte de % a.d. para fator diário (1 + taxa/100)
         return (1 + series / 100)
@@ -386,9 +392,11 @@ def get_daily_cdi_history(start_date):
     # 1. Tentar usar o Master Cache
     master = get_master_cdi_history()
     if not master.empty:
-        sliced = master[master.index >= dt]
-        if not sliced.empty:
-            return sliced
+        # Verifica se o Master Cache cobre a data solicitada (dt >= data inicial do cache)
+        if master.index.min() <= dt:
+            sliced = master[master.index >= dt]
+            if not sliced.empty:
+                return sliced
             
     # 2. Fallback: Busca específica se o master falhar ou se a data for anterior a 2010
     series = get_bcb_history(12, start_date)
@@ -403,9 +411,11 @@ def get_usd_brl_history(start_date):
     # 1. Tentar usar o Master Cache
     master = get_master_usd_history()
     if not master.empty:
-        sliced = master[master.index >= dt]
-        if not sliced.empty:
-            return sliced
+        # Verifica se o Master Cache cobre a data solicitada
+        if master.index.min() <= dt:
+            sliced = master[master.index >= dt]
+            if not sliced.empty:
+                return sliced
             
     # 2. Fallback: Busca específica
     try:
