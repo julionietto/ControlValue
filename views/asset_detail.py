@@ -416,9 +416,9 @@ def render_asset_detail_view(asset_data):
             st.session_state.table_key += 1
             st.rerun()
 
-    # === GRÁFICO DE RENTABILIDADE (FASE 3: Inclusão de Cripto e Otimização de Processamento) ===
-    allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits', 'Cripto']
-    if current_type in allowed_types:
+    # === ANÁLISE DE RENTABILIDADE (FASE 3: Ações, Fiis, Stocks, Reits, Cripto) ===
+    supported_types = ['Ações', 'Fiis', 'Stocks', 'Reits', 'Cripto']
+    if current_type in supported_types:
         st.session_state.last_ticker = ticker
         is_usd_based = current_type in ['Stocks', 'Reits', 'Cripto']
         auth_key = f"auth_chart_{ticker}"
@@ -427,49 +427,50 @@ def render_asset_detail_view(asset_data):
         st.markdown('<br>', unsafe_allow_html=True)
         st.markdown('<h3 style="color: #ffffff; text-align: center; margin-bottom: 20px;">Análise de Rentabilidade</h3>', unsafe_allow_html=True)
         
-        # Só processa se o usuário clicar no botão
+        # Estado Inicial: Exibir apenas o botão centralizado
         if not st.session_state.get(auth_key, False):
-            col_b1, col_b2, col_b3 = st.columns([1, 1, 1])
-            with col_b2:
-                if st.button("📊 Visualizar Rentabilidade vs CDI", type="primary", use_container_width=True):
-                    if current_type in ['Stocks', 'Reits']:
+            # Usando colunas para centralizar o botão perfeitamente
+            _, col_btn, _ = st.columns([1, 1, 1])
+            with col_btn:
+                if st.button("📊 Visualizar Rentabilidade vs CDI", type="primary", use_container_width=True, key=f"btn_auth_{ticker}"):
+                    if is_usd_based:
                         usd_conversion_notice_dialog()
                     else:
                         st.session_state[auth_key] = True
                         st.rerun()
-            return
+            return # Interrompe aqui até que seja autorizado
             
-        # 1. Carregar Dados Históricos
+        # Se autorizado, processa e exibe o gráfico
         first_op_date = history_df['date'].min() if not history_df.empty else None
         
         if first_op_date:
-            with st.spinner("Buscando dados e calculando..."):
+            with st.spinner("Calculando rentabilidade..."):
                 try:
                     import plotly.graph_objects as go
                     
-                    # Ajuste do Ticker para Cripto
+                    # Ajuste do Ticker para Cripto no Yahoo Finance
                     fetch_ticker = get_crypto_ticker(ticker) if current_type == 'Cripto' else ticker
                     
-                    # Buscar preços, CDI e USD
+                    # Buscar dados históricos
                     price_history = svc.get_asset_price_history(fetch_ticker, first_op_date)
                     cdi_factors = svc.get_daily_cdi_history(first_op_date)
                     usd_history = svc.get_usd_brl_history(first_op_date) if is_usd_based else pd.Series()
                     
                     if price_history.empty:
-                        st.warning(f"Não foi possível encontrar o histórico de preços para {fetch_ticker}.")
+                        st.warning(f"Histórico de preços não disponível para {fetch_ticker}.")
                     elif cdi_factors.empty:
-                        st.warning("Não foi possível carregar os dados do CDI.")
+                        st.warning("Histórico do CDI não disponível no momento.")
                     elif is_usd_based and usd_history.empty:
-                        st.warning("Não foi possível carregar o histórico do Dólar para conversão.")
+                        st.warning("Histórico de câmbio não disponível para conversão.")
                     else:
-                        # Preparar timeline
+                        # Preparar DataFrame temporal
                         start_dt = pd.to_datetime(first_op_date).tz_localize(None)
                         end_dt = pd.to_datetime("today").tz_localize(None)
                         all_dates = pd.date_range(start=start_dt, end=end_dt, freq='D')
                         
                         df_chart = pd.DataFrame(index=all_dates)
                         
-                        # Preço e Câmbio
+                        # Preço e Câmbio (Normalização de Timezone)
                         price_history.index = pd.to_datetime(price_history.index).tz_localize(None)
                         df_chart['price_native'] = price_history
                         df_chart['price_native'] = df_chart['price_native'].ffill()
@@ -482,17 +483,16 @@ def render_asset_detail_view(asset_data):
                         else:
                             df_chart['price_brl'] = df_chart['price_native']
                         
-                        # CDI
+                        # CDI Acumulado
                         cdi_factors.index = pd.to_datetime(cdi_factors.index).tz_localize(None)
                         df_chart['cdi_factor'] = cdi_factors
                         df_chart['cdi_factor'] = df_chart['cdi_factor'].fillna(1.0) 
                         df_chart['cdi_cum'] = (df_chart['cdi_factor'].cumprod() - 1) * 100
                         
-                        # Operações
+                        # Processar Rentabilidade Diária da Posição
                         hist_for_calc = history_df.copy()
                         hist_for_calc['date'] = pd.to_datetime(hist_for_calc['date']).dt.tz_localize(None)
                         
-                        # Proventos
                         proventos_df = db.get_proventos(st.session_state.user_id)
                         proventos_df = proventos_df[proventos_df['ticker'] == ticker].copy()
                         
@@ -503,28 +503,21 @@ def render_asset_detail_view(asset_data):
                         if not proventos_df.empty:
                             proventos_df['date'] = proventos_df.apply(get_prov_date, axis=1)
                         
-                        # Cálculo Diário
-                        daily_qty = []
-                        daily_cost_brl = []
-                        daily_prov_cum_brl = []
-                        
-                        curr_qty = 0.0
-                        curr_cost_brl = 0.0
-                        curr_prov_cum_brl = 0.0
+                        daily_qty, daily_cost_brl, daily_prov_cum_brl = [], [], []
+                        curr_qty, curr_cost_brl, curr_prov_cum_brl = 0.0, 0.0, 0.0
                         
                         ops_grouped = hist_for_calc.groupby('date')
                         prov_grouped = proventos_df.groupby('date')['valor'].sum() if not proventos_df.empty else pd.Series(dtype=float)
 
                         for date in all_dates:
                             if date in ops_grouped.groups:
-                                ops_today = ops_grouped.get_group(date)
-                                for _, op in ops_today.iterrows():
-                                    if op['quantity'] > 0:
+                                for _, op in ops_grouped.get_group(date).iterrows():
+                                    if op['quantity'] > 0: # Compra
                                         rate = df_chart.loc[date, 'usd_rate'] if is_usd_based and date in df_chart.index else 1.0
                                         if pd.isna(rate): rate = 1.0
                                         curr_qty += op['quantity']
                                         curr_cost_brl += op['quantity'] * op['unit_price'] * rate
-                                    else:
+                                    else: # Venda
                                         if curr_qty > 0:
                                             avg_p_brl = curr_cost_brl / curr_qty
                                             curr_cost_brl += op['quantity'] * avg_p_brl
@@ -532,7 +525,7 @@ def render_asset_detail_view(asset_data):
                             
                             if date in prov_grouped.index:
                                 curr_prov_cum_brl += prov_grouped[date]
-                                
+                            
                             daily_qty.append(curr_qty)
                             daily_cost_brl.append(curr_cost_brl)
                             daily_prov_cum_brl.append(curr_prov_cum_brl)
@@ -548,7 +541,7 @@ def render_asset_detail_view(asset_data):
 
                         df_chart['profit_pct'] = df_chart.apply(calc_profit, axis=1)
                         
-                        # Gráfico Rentabilidade
+                        # Plotar Gráfico
                         fig = go.Figure()
                         fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['profit_pct'], mode='lines', name=display_ticker, line=dict(color='#00CC96', width=2.5)))
                         fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['cdi_cum'], mode='lines', name='CDI', line=dict(color='#636EFA', width=1.5, dash='dot')))
@@ -565,9 +558,12 @@ def render_asset_detail_view(asset_data):
                         st.markdown("---")
                         st.info("💡 **Informação**: Os dados de rentabilidade do ativo levam em consideração os proventos recebidos no período.")
                         
-                        if st.button("Recolher Análise", use_container_width=False):
-                            st.session_state[auth_key] = False
-                            st.rerun()
+                        # Botão para Recolher
+                        col_r1, col_r2, col_r3 = st.columns([1, 1, 1])
+                        with col_r2:
+                            if st.button("⬅️ Recolher Análise", use_container_width=True, key=f"btn_hide_{ticker}"):
+                                st.session_state[auth_key] = False
+                                st.rerun()
 
                 except Exception as e:
                     st.error(f"Erro ao processar gráfico: {e}")
