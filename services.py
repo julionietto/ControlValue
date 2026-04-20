@@ -356,8 +356,9 @@ def get_asset_price_history(ticker, start_date):
 
 @st.cache_data(ttl=86400)
 def get_master_cdi_history():
-    """Busca a série histórica do CDI (SGS 12) desde 2000 e armazena em cache global."""
-    series = get_bcb_history(12, "2000-01-01")
+    """Busca a série histórica do CDI (SGS 12) desde 2010 e armazena em cache global."""
+    # Usamos 2010 como um compromisso entre histórico longo e performance/estabilidade da API
+    series = get_bcb_history(12, "2010-01-01")
     if not series.empty:
         # Converte de % a.d. para fator diário (1 + taxa/100)
         return (1 + series / 100)
@@ -379,17 +380,41 @@ def get_master_usd_history():
     return pd.Series()
 
 def get_daily_cdi_history(start_date):
-    """Retorna a série de CDI fatiada a partir da data informada."""
+    """Retorna a série de CDI fatiada do master ou busca especificamente se necessário."""
+    dt = pd.to_datetime(start_date).tz_localize(None)
+    
+    # 1. Tentar usar o Master Cache
     master = get_master_cdi_history()
     if not master.empty:
-        dt = pd.to_datetime(start_date).tz_localize(None)
-        return master[master.index >= dt]
+        sliced = master[master.index >= dt]
+        if not sliced.empty:
+            return sliced
+            
+    # 2. Fallback: Busca específica se o master falhar ou se a data for anterior a 2010
+    series = get_bcb_history(12, start_date)
+    if not series.empty:
+        return (1 + series / 100)
     return pd.Series()
 
 def get_usd_brl_history(start_date):
-    """Retorna a série de USD/BRL fatiada a partir da data informada."""
+    """Retorna a série de USD/BRL fatiada do master ou busca especificamente se necessário."""
+    dt = pd.to_datetime(start_date).tz_localize(None)
+    
+    # 1. Tentar usar o Master Cache
     master = get_master_usd_history()
     if not master.empty:
-        dt = pd.to_datetime(start_date).tz_localize(None)
-        return master[master.index >= dt]
+        sliced = master[master.index >= dt]
+        if not sliced.empty:
+            return sliced
+            
+    # 2. Fallback: Busca específica
+    try:
+        data = yf.download("BRL=X", start=start_date, progress=False)
+        if not data.empty:
+            data.index = pd.to_datetime(data.index).tz_localize(None)
+            if 'Close' in data:
+                return data['Close']
+            return data.iloc[:, 0]
+    except Exception as e:
+        print(f"Erro ao buscar fallback USD: {e}")
     return pd.Series()
