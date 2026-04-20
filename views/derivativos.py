@@ -321,7 +321,8 @@ def render_derivativos_view():
                 "id": None,
                 "diff_num": None
             },
-            key=f"opcoes_table_{st.session_state.refresh_id}"
+            key=f"opcoes_table_{st.session_state.refresh_id}",
+            height=600
         )
         
         st.markdown(f"<div style='text-align: right; font-size: 1.25rem; font-weight: bold;'>Total Vl Prêmio: <span style='color: #00CC96;'>{format_brl(total_vl_premio)}</span></div>", unsafe_allow_html=True)

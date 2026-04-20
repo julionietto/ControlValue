@@ -582,7 +582,8 @@ def render_visao_geral_view():
             use_container_width=True,
             on_select="rerun",
             selection_mode="single-row",
-            key=f"unified_df_{st.session_state.table_key}"
+            key=f"unified_df_{st.session_state.table_key}",
+            height=600
         )
         
         if selected.selection.rows:
@@ -629,7 +630,8 @@ def render_visao_geral_view():
                 st.dataframe(
                     styled_radar, 
                     hide_index=True, 
-                    use_container_width=True
+                    use_container_width=True,
+                    height=600
                 )
             else:
                 st.info(f"Nenhum ativo do tipo {', '.join(asset_types)} para exibir no {title}.")

@@ -69,7 +69,7 @@ def render_admin_view():
         
         # Usamos uma chave dinâmica baseada no table_key para forçar a limpeza da seleção quando necessário
         table_key_str = f"admin_users_table_{st.session_state.get('table_key', 0)}"
-        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key=table_key_str)
+        st.dataframe(display_users, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", key=table_key_str, height=600)
         
         is_trigger_delete = st.session_state.get('trigger_admin_delete_user') is not None
         
