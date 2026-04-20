@@ -517,7 +517,8 @@ def render_visao_geral_view():
                 'Valor atualizado': val_at,
                 'Orientação': orientation,
                 'Lucro / Prejuízo': asset['profit_loss'],
-                'Peso %': asset['weight_pct']
+                'Peso %': asset['weight_pct'],
+                'currency': asset['currency']
             })
         
         unified_df = pd.DataFrame(all_rows)
