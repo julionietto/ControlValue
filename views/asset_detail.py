@@ -69,6 +69,13 @@ def usd_conversion_notice_dialog():
         st.session_state[f"auth_chart_{st.session_state.get('last_ticker', 'global')}"] = True
         st.rerun()
 
+def get_crypto_ticker(ticker):
+    """Ajusta o ticker de cripto para o formato do Yahoo Finance."""
+    if '-' in ticker: return ticker
+    if ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+        return f"{ticker}-USD"
+    return ticker
+
 def render_asset_detail_view(asset_data):
     if not asset_data:
         st.session_state.navigation_tab = "Visão Geral"
@@ -409,44 +416,51 @@ def render_asset_detail_view(asset_data):
             st.session_state.table_key += 1
             st.rerun()
 
-    # === GRÁFICO DE RENTABILIDADE (FASE 2: Inclusão de Stocks e Reits) ===
-    if current_type in ['Ações', 'Fiis', 'Stocks', 'Reits']:
+    # === GRÁFICO DE RENTABILIDADE (FASE 3: Inclusão de Cripto e Otimização de Processamento) ===
+    allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits', 'Cripto']
+    if current_type in allowed_types:
         st.session_state.last_ticker = ticker
-        is_foreign = current_type in ['Stocks', 'Reits']
+        is_usd_based = current_type in ['Stocks', 'Reits', 'Cripto']
         auth_key = f"auth_chart_{ticker}"
         
         st.markdown("---")
         st.markdown('<br>', unsafe_allow_html=True)
-        st.markdown('<h3 style="color: #ffffff; margin-bottom: 20px;">Rentabilidade Acumulada vs CDI</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="color: #ffffff; text-align: center; margin-bottom: 20px;">Análise de Rentabilidade</h3>', unsafe_allow_html=True)
         
-        if is_foreign and not st.session_state.get(auth_key, False):
-            col_info, col_btn = st.columns([3, 1])
-            with col_info:
-                st.info("Este é um ativo estrangeiro. Para comparar com o CDI, precisamos converter os valores para Reais.")
-            with col_btn:
-                if st.button("Visualizar Gráfico", type="primary", use_container_width=True):
-                    usd_conversion_notice_dialog()
-            return # Interrompe a renderização do gráfico até autorizar
+        # Só processa se o usuário clicar no botão
+        if not st.session_state.get(auth_key, False):
+            col_b1, col_b2, col_b3 = st.columns([1, 1, 1])
+            with col_b2:
+                if st.button("📊 Visualizar Rentabilidade vs CDI", type="primary", use_container_width=True):
+                    if current_type in ['Stocks', 'Reits']:
+                        usd_conversion_notice_dialog()
+                    else:
+                        st.session_state[auth_key] = True
+                        st.rerun()
+            return
             
         # 1. Carregar Dados Históricos
         first_op_date = history_df['date'].min() if not history_df.empty else None
         
         if first_op_date:
-            with st.spinner("Calculando rentabilidade..."):
+            with st.spinner("Buscando dados e calculando..."):
                 try:
                     import plotly.graph_objects as go
                     
-                    # Buscar preços e CDI
-                    price_history = svc.get_asset_price_history(ticker, first_op_date)
+                    # Ajuste do Ticker para Cripto
+                    fetch_ticker = get_crypto_ticker(ticker) if current_type == 'Cripto' else ticker
+                    
+                    # Buscar preços, CDI e USD
+                    price_history = svc.get_asset_price_history(fetch_ticker, first_op_date)
                     cdi_factors = svc.get_daily_cdi_history(first_op_date)
-                    usd_history = svc.get_usd_brl_history(first_op_date) if is_foreign else pd.Series()
+                    usd_history = svc.get_usd_brl_history(first_op_date) if is_usd_based else pd.Series()
                     
                     if price_history.empty:
-                        st.warning(f"Não foi possível encontrar histórico de preços para o ticker {ticker}. Verifique se o código está correto.")
+                        st.warning(f"Não foi possível encontrar o histórico de preços para {fetch_ticker}.")
                     elif cdi_factors.empty:
-                        st.warning("Não foi possível carregar o histórico do CDI do Banco Central.")
-                    elif is_foreign and usd_history.empty:
-                        st.warning("Não foi possível carregar o histórico de câmbio USD/BRL.")
+                        st.warning("Não foi possível carregar os dados do CDI.")
+                    elif is_usd_based and usd_history.empty:
+                        st.warning("Não foi possível carregar o histórico do Dólar para conversão.")
                     else:
                         # Preparar timeline
                         start_dt = pd.to_datetime(first_op_date).tz_localize(None)
@@ -457,16 +471,16 @@ def render_asset_detail_view(asset_data):
                         
                         # Preço e Câmbio
                         price_history.index = pd.to_datetime(price_history.index).tz_localize(None)
-                        df_chart['price_usd'] = price_history
-                        df_chart['price_usd'] = df_chart['price_usd'].ffill()
+                        df_chart['price_native'] = price_history
+                        df_chart['price_native'] = df_chart['price_native'].ffill()
                         
-                        if is_foreign:
+                        if is_usd_based:
                             usd_history.index = pd.to_datetime(usd_history.index).tz_localize(None)
                             df_chart['usd_rate'] = usd_history
                             df_chart['usd_rate'] = df_chart['usd_rate'].ffill()
-                            df_chart['price_brl'] = df_chart['price_usd'] * df_chart['usd_rate']
+                            df_chart['price_brl'] = df_chart['price_native'] * df_chart['usd_rate']
                         else:
-                            df_chart['price_brl'] = df_chart['price_usd']
+                            df_chart['price_brl'] = df_chart['price_native']
                         
                         # CDI
                         cdi_factors.index = pd.to_datetime(cdi_factors.index).tz_localize(None)
@@ -505,14 +519,12 @@ def render_asset_detail_view(asset_data):
                             if date in ops_grouped.groups:
                                 ops_today = ops_grouped.get_group(date)
                                 for _, op in ops_today.iterrows():
-                                    if op['quantity'] > 0: # Compra
-                                        # Para ativos estrangeiros, converte o custo da compra usando o câmbio do dia (ou atual do df_chart se disponível)
-                                        rate = df_chart.loc[date, 'usd_rate'] if is_foreign and date in df_chart.index else 1.0
-                                        if pd.isna(rate): rate = 1.0 # fallback
-                                        
+                                    if op['quantity'] > 0:
+                                        rate = df_chart.loc[date, 'usd_rate'] if is_usd_based and date in df_chart.index else 1.0
+                                        if pd.isna(rate): rate = 1.0
                                         curr_qty += op['quantity']
                                         curr_cost_brl += op['quantity'] * op['unit_price'] * rate
-                                    else: # Venda
+                                    else:
                                         if curr_qty > 0:
                                             avg_p_brl = curr_cost_brl / curr_qty
                                             curr_cost_brl += op['quantity'] * avg_p_brl
@@ -536,26 +548,27 @@ def render_asset_detail_view(asset_data):
 
                         df_chart['profit_pct'] = df_chart.apply(calc_profit, axis=1)
                         
-                        # Plotly Chart
+                        # Gráfico Rentabilidade
                         fig = go.Figure()
                         fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['profit_pct'], mode='lines', name=display_ticker, line=dict(color='#00CC96', width=2.5)))
                         fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['cdi_cum'], mode='lines', name='CDI', line=dict(color='#636EFA', width=1.5, dash='dot')))
                         
                         fig.update_layout(
-                            hovermode='x unified',
-                            template='plotly_dark',
-                            paper_bgcolor='rgba(0,0,0,0)',
-                            plot_bgcolor='rgba(0,0,0,0)',
-                            height=350,
-                            margin=dict(l=10, r=10, t=10, b=10),
+                            hovermode='x unified', template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                            height=350, margin=dict(l=10, r=10, t=10, b=10),
                             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                            yaxis=dict(title='Rentabilidade (%)', gridcolor='rgba(255,255,255,0.05)', zerolinecolor='rgba(255,255,255,0.2)'),
+                            yaxis=dict(title='Rentabilidade (%)', gridcolor='rgba(255,255,255,0.05)'),
                             xaxis=dict(gridcolor='rgba(255,255,255,0.05)')
                         )
                         st.plotly_chart(fig, use_container_width=True)
                         
                         st.markdown("---")
                         st.info("💡 **Informação**: Os dados de rentabilidade do ativo levam em consideração os proventos recebidos no período.")
+                        
+                        if st.button("Recolher Análise", use_container_width=False):
+                            st.session_state[auth_key] = False
+                            st.rerun()
+
                 except Exception as e:
                     st.error(f"Erro ao processar gráfico: {e}")
         else:
