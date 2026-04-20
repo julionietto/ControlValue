@@ -163,8 +163,7 @@ def render_proventos_view():
                     on_select="rerun",
                     selection_mode="single-row",
                     column_config={"OriginalTicker": None},
-                    key=key_df,
-                    height=600
+                    key=key_df
                 )
                 
                 if selected.selection.rows:
@@ -296,7 +295,7 @@ def render_proventos_view():
                                               .set_properties(**{'color': '#00CC96'}, subset=['Valor Mensal']) \
                                               .set_properties(**{'color': '#3d9df3'}, subset=['Valor Anual '])
 
-                st.dataframe(styled_resumo, hide_index=True, use_container_width=True, height=600)
+                st.dataframe(styled_resumo, hide_index=True, use_container_width=True)
 
                 # ---- Tabela de Proventos Stocks e Reits ----
                 assets_df_all = db.get_all_assets(st.session_state.user_id) 
@@ -332,8 +331,7 @@ def render_proventos_view():
                             column_config={
                                 "Ano": st.column_config.TextColumn(width="small"),
                                 "Valor": st.column_config.TextColumn(width="small")
-                            },
-                            height=600
+                            }
                         )
                     else:
                         st.info("Nenhum provento de Stocks ou Reits registrado.")
@@ -395,7 +393,7 @@ def render_proventos_view():
                 styled_rank = ranking_display.style.set_properties(**{'text-align': 'center'}, subset=['Posição', 'Ativo'])\
                                                  .set_properties(**{'text-align': 'right'}, subset=['Valor Anual'])
                 
-                st.dataframe(styled_rank, hide_index=True, use_container_width=True, height=600)
+                st.dataframe(styled_rank, hide_index=True, use_container_width=True)
             else:
                 st.info(f"Nenhum provento registrado para o ano {ano_selecionado}.")
 

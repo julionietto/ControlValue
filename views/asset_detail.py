@@ -426,16 +426,7 @@ def render_asset_detail_view(asset_data):
         display_hist = display_hist.reset_index().rename(columns={'index': 'op_idx'})
         styled_hist = display_hist.style.set_properties(**{'text-align': 'center'}, subset=['Data', 'Qtd']) \
                                        .set_properties(**{'text-align': 'right'}, subset=['Preço', 'Valor Operação', '% Ganho', 'Vlr Atualizado', 'Lucro/Prej'])
-        selected_op = st.dataframe(
-            styled_hist, 
-            hide_index=True, 
-            use_container_width=True, 
-            on_select="rerun", 
-            selection_mode="single-row", 
-            column_config={"op_idx": None}, 
-            key=f"history_df_{asset_id}_{st.session_state.refresh_id}",
-            height=600
-        )
+        selected_op = st.dataframe(styled_hist, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", column_config={"op_idx": None}, key=f"history_df_{asset_id}_{st.session_state.refresh_id}")
         if selected_op.selection.rows:
             row_idx = selected_op.selection.rows[0]
             if row_idx < len(history_df): dialog_edit_operation(history_df.iloc[row_idx])
