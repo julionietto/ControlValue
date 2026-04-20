@@ -553,8 +553,8 @@ def render_asset_detail_view(asset_data):
                         
                         # Plotar Gráfico
                         fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['profit_pct'], mode='lines', name=display_ticker, line=dict(color='#00CC96', width=2.5)))
-                        fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['cdi_cum'], mode='lines', name='CDI', line=dict(color='#636EFA', width=1.5, dash='dot')))
+                        fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['profit_pct'], mode='lines', name=display_ticker, line=dict(color='#00CC96', width=2.5), hovertemplate="%{y:.2f}%"))
+                        fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['cdi_cum'], mode='lines', name='CDI', line=dict(color='#636EFA', width=1.5, dash='dot'), hovertemplate="%{y:.2f}%"))
                         
                         fig.update_layout(
                             hovermode='x unified', template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
