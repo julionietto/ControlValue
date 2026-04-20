@@ -354,25 +354,42 @@ def get_asset_price_history(ticker, start_date):
         print(f"Erro ao buscar histórico de {ticker}: {e}")
     return pd.Series()
 
-@st.cache_data(ttl=3600)
-def get_daily_cdi_history(start_date):
-    """Busca a taxa CDI diária (SGS 12) e retorna os fatores diários."""
-    # O código 12 é a taxa diária em % a.d.
-    series = get_bcb_history(12, start_date)
+@st.cache_data(ttl=86400)
+def get_master_cdi_history():
+    """Busca a série histórica do CDI (SGS 12) desde 2000 e armazena em cache global."""
+    series = get_bcb_history(12, "2000-01-01")
     if not series.empty:
         # Converte de % a.d. para fator diário (1 + taxa/100)
         return (1 + series / 100)
     return pd.Series()
 
-@st.cache_data(ttl=21600)
-def get_usd_brl_history(start_date):
-    """Busca o histórico da cotação USD/BRL (BRL=X)."""
+@st.cache_data(ttl=86400)
+def get_master_usd_history():
+    """Busca a série histórica do USD/BRL desde 2000 e armazena em cache global."""
     try:
-        data = yf.download("BRL=X", start=start_date, progress=False)
+        data = yf.download("BRL=X", start="2000-01-01", progress=False)
         if not data.empty:
+            # Garante que o índice seja datetime para facilitar o slicing
+            data.index = pd.to_datetime(data.index).tz_localize(None)
             if 'Close' in data:
                 return data['Close']
             return data.iloc[:, 0]
     except Exception as e:
-        print(f"Erro ao buscar histórico de USD/BRL: {e}")
+        print(f"Erro ao buscar master USD: {e}")
+    return pd.Series()
+
+def get_daily_cdi_history(start_date):
+    """Retorna a série de CDI fatiada a partir da data informada."""
+    master = get_master_cdi_history()
+    if not master.empty:
+        dt = pd.to_datetime(start_date).tz_localize(None)
+        return master[master.index >= dt]
+    return pd.Series()
+
+def get_usd_brl_history(start_date):
+    """Retorna a série de USD/BRL fatiada a partir da data informada."""
+    master = get_master_usd_history()
+    if not master.empty:
+        dt = pd.to_datetime(start_date).tz_localize(None)
+        return master[master.index >= dt]
     return pd.Series()

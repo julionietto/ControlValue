@@ -65,6 +65,11 @@ if 'table_key' not in st.session_state:
 
 if not st.session_state.authenticated:
     render_auth_view()
+else:
+    # Pré-aquecimento do Cache Global (CDI e Dólar) - Executa em background
+    import services as svc
+    svc.get_master_cdi_history()
+    svc.get_master_usd_history()
 
 # Inicializar variáveis de controle no session_state
 if 'refresh_id' not in st.session_state:
