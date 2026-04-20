@@ -52,7 +52,18 @@ def confirm_delete_operation_dialog(op_data, asset_id):
             db.delete_asset_operation(op_data['id'], asset_id, st.session_state.user_id)
             st.session_state.show_confirm_delete_op = False
             st.session_state.refresh_id += 1 # Garante o reset total da tabela
-            st.session_state.viewing_history = db.get_asset_by_id(asset_id, st.session_state.user_id)
+            
+            # Preserva os preços atuais em memória antes de recarregar do DB
+            old_data = st.session_state.get('viewing_history', {})
+            curr_p = old_data.get('current_price', 0.0)
+            orig_p = old_data.get('original_current_price', 0.0)
+            
+            new_data = db.get_asset_by_id(asset_id, st.session_state.user_id)
+            if new_data:
+                new_data['current_price'] = curr_p
+                new_data['original_current_price'] = orig_p
+                st.session_state.viewing_history = new_data
+                
             st.success("Operação excluída com sucesso!")
             st.rerun()
     with col_no:
@@ -216,7 +227,18 @@ def render_asset_detail_view(asset_data):
                 final_qty = -abs(op_qty_input) if op_type == "Venda" else abs(op_qty_input)
                 target_asset_id = op_data['asset_id'] if 'asset_id' in op_data else asset_id
                 db.update_asset_operation(op_data['id'], target_asset_id, st.session_state.user_id, op_date.strftime("%Y-%m-%d"), final_qty, op_price)
-                st.session_state.viewing_history = db.get_asset_by_id(target_asset_id, st.session_state.user_id)
+                
+                # Preserva os preços atuais em memória antes de recarregar do DB
+                old_data = st.session_state.get('viewing_history', {})
+                curr_p = old_data.get('current_price', 0.0)
+                orig_p = old_data.get('original_current_price', 0.0)
+                
+                new_data = db.get_asset_by_id(target_asset_id, st.session_state.user_id)
+                if new_data:
+                    new_data['current_price'] = curr_p
+                    new_data['original_current_price'] = orig_p
+                    st.session_state.viewing_history = new_data
+                
                 st.session_state.refresh_id += 1 # Reset selection to close dialog
                 st.success("Operação atualizada!")
                 st.rerun()
