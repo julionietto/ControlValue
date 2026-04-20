@@ -176,8 +176,7 @@ def render_asset_detail_view(asset_data):
 
     @st.dialog("Adicionar Operação", dismissible=False)
     def dialog_add_operation():
-        st.markdown(f"**Ativo:** `{display_ticker}`")
-        st.markdown("---")
+        st.markdown(f"**Ativo:** `{display_ticker}`<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
         op_type = st.radio("Tipo de Operação", ["Compra", "Venda"], horizontal=True, key="add_op_type")
         op_date = st.date_input("Data", value=pd.Timestamp.now().date(), max_value=pd.Timestamp.now().date(), format="DD/MM/YYYY", key="add_op_date")
         
@@ -202,8 +201,7 @@ def render_asset_detail_view(asset_data):
 
     @st.dialog("Editar Operação", dismissible=False)
     def dialog_edit_operation(op_data):
-        st.markdown(f"**Editando Operação - Ativo:** `{display_ticker}`")
-        st.markdown("---")
+        st.markdown(f"**Editando Operação - Ativo:** `{display_ticker}`<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
         try:
             current_date_obj = pd.to_datetime(op_data['date']).date()
         except:
