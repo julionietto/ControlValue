@@ -359,7 +359,7 @@ def render_asset_detail_view(asset_data):
     with col6: create_card("Quantidade Total", format_qty_hist(total_qtd, current_type))
     
     st.markdown("---")
-    col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
+    col_p1, col_p2, col_p3, col_p4, col_p5, col_p6 = st.columns(6)
     currency_symbol = "$" if current_type in ['Stocks', 'Reits'] else "R$"
     
     with col_p1:
@@ -382,7 +382,7 @@ def render_asset_detail_view(asset_data):
             
     with col_p4: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type == 'Renda Fixa'))
     with col_p5: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type == 'Renda Fixa'))
-    st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
+    with col_p6: st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
         
     if current_type != 'Renda Fixa':
         new_guidance = "COMPRA" if compare_init <= new_price_ceiling else "AGUARDE"
