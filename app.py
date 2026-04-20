@@ -4,6 +4,7 @@ from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile
 from utils.refresh_manager import get_market_status
+import services as svc
 
 db.init_db()
 
@@ -66,10 +67,13 @@ if 'table_key' not in st.session_state:
 if not st.session_state.authenticated:
     render_auth_view()
 else:
-    # Pré-aquecimento do Cache Global (CDI e Dólar) - Executa em background
-    import services as svc
-    svc.get_master_cdi_history()
-    svc.get_master_usd_history()
+    # Pré-aquecimento do Cache Global (CDI e Dólar)
+    try:
+        if hasattr(svc, 'get_master_cdi_history'):
+            svc.get_master_cdi_history()
+            svc.get_master_usd_history()
+    except Exception:
+        pass
 
 # Inicializar variáveis de controle no session_state
 if 'refresh_id' not in st.session_state:
