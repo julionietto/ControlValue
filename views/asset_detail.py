@@ -359,7 +359,7 @@ def render_asset_detail_view(asset_data):
     with col6: create_card("Quantidade Total", format_qty_hist(total_qtd, current_type))
     
     st.markdown("---")
-    col_p1, col_p2, col_p3, col_p4, col_p5, col_p6 = st.columns(6)
+    col_p1, col_p2, col_p3, col_p4, col_p5, col_p6, col_p7 = st.columns([1.2, 1, 1, 1, 1, 1, 0.8])
     currency_symbol = "$" if current_type in ['Stocks', 'Reits'] else "R$"
     
     with col_p1:
@@ -383,22 +383,24 @@ def render_asset_detail_view(asset_data):
     with col_p4: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type == 'Renda Fixa'))
     with col_p5: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type == 'Renda Fixa'))
     with col_p6: st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
-        
+
+    with col_p7:
+        st.markdown('<div style="padding-top: 28px;"></div>', unsafe_allow_html=True)
+        if st.button("Salvar", type="primary", use_container_width=True):
+            if current_type != 'Renda Fixa' and history_df.empty:
+                st.error("É necessário adicionar pelo menos uma operação antes de salvar o ativo.")
+            else:
+                db.update_asset(asset_id, st.session_state.user_id, ticker, new_asset_type, asset_data.get('quantity', 0.0), new_avg_price, new_price_ceiling, new_fair_value, currency=new_currency)
+                st.session_state.viewing_history = None
+                st.session_state.navigation_tab = "Visão Geral"
+                st.session_state.table_key += 1
+                st.success("Alterações salvas com sucesso!")
+                st.rerun()
+            
     if current_type != 'Renda Fixa':
         new_guidance = "COMPRA" if compare_init <= new_price_ceiling else "AGUARDE"
         if new_guidance != init_guidance:
             st.info(f"Nova Orientação baseado no Preço Teto: **{new_guidance}**")
-            
-    if st.button("Salvar", type="primary", use_container_width=False):
-        if current_type != 'Renda Fixa' and history_df.empty:
-            st.error("É necessário adicionar pelo menos uma operação antes de salvar o ativo.")
-        else:
-            db.update_asset(asset_id, st.session_state.user_id, ticker, new_asset_type, asset_data.get('quantity', 0.0), new_avg_price, new_price_ceiling, new_fair_value, currency=new_currency)
-            st.session_state.viewing_history = None
-            st.session_state.navigation_tab = "Visão Geral"
-            st.session_state.table_key += 1
-            st.success("Alterações salvas com sucesso!")
-            st.rerun()
             
     st.markdown("---")
     if history_df.empty:
