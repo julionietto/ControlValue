@@ -3,7 +3,7 @@ import base64
 import os
 from utils.formatters import escape_html
 
-def create_card(label, value, delta=None):
+def create_card(label, value, delta=None, small_font=False):
     """Cria um card premium usando HTML/CSS personalizado."""
     safe_label = escape_html(label)
     safe_value = escape_html(value)
@@ -16,10 +16,13 @@ def create_card(label, value, delta=None):
         if str(delta) == "0,00%": color_class = ""
         delta_html = f'<div class="metric-delta {color_class}">{safe_delta}</div>'
     
+    value_class = "metric-value-small" if small_font else "metric-value"
+    label_class = "metric-label-small" if small_font else "metric-label"
+    
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-label">{safe_label}</div>
-        <div class="metric-value">{safe_value}</div>
+        <div class="{label_class}">{safe_label}</div>
+        <div class="{value_class}">{safe_value}</div>
         {delta_html}
     </div>
     """, unsafe_allow_html=True)

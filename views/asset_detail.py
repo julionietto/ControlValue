@@ -251,6 +251,31 @@ def render_asset_detail_view(asset_data):
                 st.session_state.refresh_id += 1 # Reset selection to close dialog
                 st.rerun()
 
+    @st.dialog("Histórico de Proventos", dismissible=False)
+    def dialog_consultar_proventos(ticker):
+        st.markdown(f"**Proventos de:** `{ticker}`")
+        prov_df = db.get_proventos(st.session_state.user_id)
+        prov_df = prov_df[prov_df['ticker'] == ticker].copy()
+        
+        if prov_df.empty:
+            st.info("Nenhum provento registrado para este ativo.")
+        else:
+            # Ordenação por data (Mês/Ano)
+            meses_map = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
+            prov_df['mes_idx'] = prov_df['mes'].map(meses_map)
+            prov_df = prov_df.sort_values(['ano', 'mes_idx'], ascending=True)
+            
+            display_df = prov_df[['mes', 'ano', 'valor']].copy()
+            display_df.columns = ['Mês', 'Ano', 'Valor']
+            
+            total_prov = display_df['Valor'].sum()
+            
+            st.dataframe(display_df, hide_index=True, use_container_width=True)
+            st.markdown(f"**Total Recebido:** R$ {total_prov:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            
+        if st.button("Fechar", use_container_width=True):
+            st.rerun()
+
     # Verifica se deve abrir os diálogos de confirmação
     if st.session_state.get('show_confirm_delete', False):
         asset_id_del = st.session_state.get('delete_asset_id')
@@ -274,7 +299,7 @@ def render_asset_detail_view(asset_data):
     
     col_h1, col_h2 = st.columns([3, 1])
     with col_h1:
-        st.markdown(f'<h2 style="color: #ffffff; margin-top: 0;">Detalhes do Ativo</h2>', unsafe_allow_html=True)
+        st.markdown(f'<h2 style="color: #ffffff; margin-top: 0;">Valores Sumarizados</h2>', unsafe_allow_html=True)
 
     with col_h2:
         color = "#00CC96" if init_guidance == "COMPRA" else "#EF553B"
@@ -349,14 +374,14 @@ def render_asset_detail_view(asset_data):
         card_retorno = format_brl(retorno_total_com_prov)
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
-    with col1: create_card("Total Investido", card_investido)
-    with col2: create_card("Total do Ativo", card_ativo)
-    with col3: create_card("Total de Proventos", card_proventos)
+    with col1: create_card("Total Investido", card_investido, small_font=True)
+    with col2: create_card("Total do Ativo", card_ativo, small_font=True)
+    with col3: create_card("Total de Proventos", card_proventos, small_font=True)
     ret_delta = f"{retorno_total_pct:,.2f}%".replace('.', ',')
-    with col4: create_card("Retorno Total", card_retorno, ret_delta)
+    with col4: create_card("Retorno Total", card_retorno, ret_delta, small_font=True)
     yoc_formatted = f"{yield_on_cost:,.2f}%".replace('.', ',')
-    with col5: create_card("Yeld On Cost", yoc_formatted)
-    with col6: create_card("Quantidade Total", format_qty_hist(total_qtd, current_type))
+    with col5: create_card("Yeld On Cost", yoc_formatted, small_font=True)
+    with col6: create_card("Quantidade Total", format_qty_hist(total_qtd, current_type), small_font=True)
     
     st.markdown("---")
     col_p1, col_p2, col_p3, col_p4, col_p5, col_p6, col_p7 = st.columns([1.2, 1, 1, 1, 1, 1, 0.8])
@@ -403,11 +428,13 @@ def render_asset_detail_view(asset_data):
             st.info(f"Nova Orientação baseado no Preço Teto: **{new_guidance}**")
             
     st.markdown("---")
+    st.markdown("### Histórico de Operações")
     if history_df.empty:
         st.warning("Nenhum registro de operação encontrado para este ativo.")
     else:
         display_hist = pd.DataFrame()
         display_hist['Data'] = pd.to_datetime(history_df['date']).dt.strftime('%d/%m/%Y')
+        display_hist['Operação'] = history_df['quantity'].apply(lambda x: "Compra" if x > 0 else "Venda")
         display_hist['Qtd'] = history_df.apply(lambda x: format_qty_hist(x['quantity'], current_type), axis=1)
         
         if is_us_asset:
@@ -424,7 +451,7 @@ def render_asset_detail_view(asset_data):
             display_hist['Lucro/Prej'] = history_df['lucro_prejuizo'].apply(format_brl)
         
         display_hist = display_hist.reset_index().rename(columns={'index': 'op_idx'})
-        styled_hist = display_hist.style.set_properties(**{'text-align': 'center'}, subset=['Data', 'Qtd']) \
+        styled_hist = display_hist.style.set_properties(**{'text-align': 'center'}, subset=['Data', 'Operação', 'Qtd']) \
                                        .set_properties(**{'text-align': 'right'}, subset=['Preço', 'Valor Operação', '% Ganho', 'Vlr Atualizado', 'Lucro/Prej'])
         selected_op = st.dataframe(styled_hist, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", column_config={"op_idx": None}, key=f"history_df_{asset_id}_{st.session_state.refresh_id}")
         if selected_op.selection.rows:
@@ -432,9 +459,11 @@ def render_asset_detail_view(asset_data):
             if row_idx < len(history_df): dialog_edit_operation(history_df.iloc[row_idx])
 
     st.markdown("---")
-    col_add, col_del, col_voltar = st.columns(3)
+    col_add, col_prov, col_del, col_voltar = st.columns(4)
     with col_add:
         if current_type != 'Renda Fixa' and st.button("Adicionar Operação", type="primary", use_container_width=True): dialog_add_operation()
+    with col_prov:
+        if st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker)
     with col_del:
         if st.button("Excluir Ativo", type="secondary", use_container_width=True):
             st.session_state.show_confirm_delete, st.session_state.delete_asset_id, st.session_state.delete_asset_ticker = True, asset_id, ticker
