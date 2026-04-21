@@ -89,6 +89,35 @@ def get_crypto_ticker(ticker):
         return f"{ticker}-USD"
     return ticker
 
+@st.dialog("Histórico de Proventos", dismissible=False)
+def dialog_consultar_proventos(ticker):
+    import database as db
+    st.markdown(f"**Proventos de:** `{ticker}`")
+    prov_df = db.get_proventos(st.session_state.user_id)
+    prov_df = prov_df[prov_df['ticker'] == ticker].copy()
+    
+    # [v1.2.5] Filtrar registros com valor zerado
+    prov_df = prov_df[prov_df['valor'] > 0]
+    
+    if prov_df.empty:
+        st.info("Nenhum provento recebido registrado para este ativo.")
+    else:
+        # Ordenação por data (Mês/Ano)
+        meses_map = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
+        prov_df['mes_idx'] = prov_df['mes'].map(meses_map)
+        prov_df = prov_df.sort_values(['ano', 'mes_idx'], ascending=True)
+        
+        display_df = prov_df[['mes', 'ano', 'valor']].copy()
+        display_df.columns = ['Mês', 'Ano', 'Valor']
+        
+        total_prov = display_df['Valor'].sum()
+        
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+        st.markdown(f"**Total Recebido:** R$ {total_prov:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        
+    if st.button("Fechar", use_container_width=True):
+        st.rerun()
+
 def render_asset_detail_view(asset_data):
     if not asset_data:
         st.session_state.navigation_tab = "Visão Geral"
@@ -251,30 +280,7 @@ def render_asset_detail_view(asset_data):
                 st.session_state.refresh_id += 1 # Reset selection to close dialog
                 st.rerun()
 
-    @st.dialog("Histórico de Proventos", dismissible=False)
-    def dialog_consultar_proventos(ticker):
-        st.markdown(f"**Proventos de:** `{ticker}`")
-        prov_df = db.get_proventos(st.session_state.user_id)
-        prov_df = prov_df[prov_df['ticker'] == ticker].copy()
-        
-        if prov_df.empty:
-            st.info("Nenhum provento registrado para este ativo.")
-        else:
-            # Ordenação por data (Mês/Ano)
-            meses_map = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
-            prov_df['mes_idx'] = prov_df['mes'].map(meses_map)
-            prov_df = prov_df.sort_values(['ano', 'mes_idx'], ascending=True)
-            
-            display_df = prov_df[['mes', 'ano', 'valor']].copy()
-            display_df.columns = ['Mês', 'Ano', 'Valor']
-            
-            total_prov = display_df['Valor'].sum()
-            
-            st.dataframe(display_df, hide_index=True, use_container_width=True)
-            st.markdown(f"**Total Recebido:** R$ {total_prov:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-            
-        if st.button("Fechar", use_container_width=True):
-            st.rerun()
+
 
     # Verifica se deve abrir os diálogos de confirmação
     if st.session_state.get('show_confirm_delete', False):
