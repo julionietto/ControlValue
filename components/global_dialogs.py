@@ -25,7 +25,6 @@ def dialog_user_profile():
             
         edit_birth = st.date_input("Data de Nascimento", value=default_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY", disabled=is_admin)
         
-        st.markdown("---")
         st.markdown("**🔐 Alterar Senha** (opcional)")
         new_pwd = st.text_input("Nova Senha", type="password", placeholder="Deixe vazio para manter atual")
         confirm_pwd = st.text_input("Confirmar Nova Senha", type="password")
