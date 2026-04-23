@@ -443,7 +443,7 @@ def render_visao_geral_view():
         assets_df['orientation'] = "Em construção"
     
         # Exibindo os dados de forma tabular
-        st.markdown('<h3 style="text-align: center; color: #ffffff; margin-bottom: 1.5rem;">Meus Ativos</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="text-align: center; color: #ffffff; margin-bottom: -1.5rem;">Meus Ativos</h3>', unsafe_allow_html=True)
         
         display_df = assets_df[['id', 'ticker', 'asset_type', 'quantity', 'average_price_brl', 'current_price', 'current_value', 'weight_pct', 'orientation']].copy()
         display_df.columns = ['ID', 'Ticker', 'Tipo', 'Qtd', 'Preço Médio', 'Preço Atual', 'Valor Atual', 'Peso %', 'Orientação']
@@ -489,7 +489,7 @@ def render_visao_geral_view():
             return f"{row['quantity']:,.0f}".replace(",", ".")
     
         # --- TABELA DE ATIVOS: UNIFICADA COM OPERAÇÕES INDIVIDUAIS PARA CRIPTO ---
-        st.subheader("Ativos Consolidados")
+        st.markdown('<div style="margin-top: 0.5rem;"><h4 style="font-weight: 600; font-size: 1.25rem;">Ativos Consolidados</h4></div>', unsafe_allow_html=True)
         
         all_rows = []
         
@@ -604,7 +604,7 @@ def render_visao_geral_view():
         st.markdown("---")
     
         # --- SEÇÃO RADAR ---
-        st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 2rem; margin-bottom: 2rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 0.5rem; margin-bottom: 1.5rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
     
         def show_radar_table(title, asset_types, df):
             st.subheader(title)
