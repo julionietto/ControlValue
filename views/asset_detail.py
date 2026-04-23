@@ -469,7 +469,7 @@ def render_asset_detail_view(asset_data):
     with col_add:
         if current_type != 'Renda Fixa' and st.button("Adicionar Operação", type="primary", use_container_width=True): dialog_add_operation()
     with col_prov:
-        if st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker)
+        if current_type != 'Renda Fixa' and st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker)
     with col_del:
         if st.button("Excluir Ativo", type="secondary", use_container_width=True):
             st.session_state.show_confirm_delete, st.session_state.delete_asset_id, st.session_state.delete_asset_ticker = True, asset_id, ticker
