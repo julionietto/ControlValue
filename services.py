@@ -428,3 +428,61 @@ def get_usd_brl_history(start_date):
     except Exception as e:
         print(f"Erro ao buscar fallback USD: {e}")
     return pd.Series()
+
+def send_password_reset_email(to_email, reset_link):
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import os
+    
+    try:
+        if "SMTP_EMAIL" in st.secrets:
+            smtp_email = st.secrets["SMTP_EMAIL"]
+            smtp_password = st.secrets["SMTP_PASSWORD"]
+        else:
+            smtp_email = os.getenv("SMTP_EMAIL", "")
+            smtp_password = os.getenv("SMTP_PASSWORD", "")
+    except Exception:
+        smtp_email = os.getenv("SMTP_EMAIL", "")
+        smtp_password = os.getenv("SMTP_PASSWORD", "")
+        
+    if not smtp_email or not smtp_password:
+        print("SMTP Credentials missing")
+        return False, "Servidor de e-mail não configurado pelo administrador."
+        
+    msg = MIMEMultipart("alternative")
+    msg['Subject'] = "Recuperação de Senha - ControlValue"
+    msg['From'] = smtp_email
+    msg['To'] = to_email
+    
+    html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #3b82f6; text-align: center;">ControlValue</h2>
+            <p>Olá,</p>
+            <p>Recebemos uma solicitação para redefinir a senha da sua conta.</p>
+            <p>Se você não fez essa solicitação, pode ignorar este e-mail com segurança.</p>
+            <p>Para redefinir sua senha, clique no botão abaixo (válido por 30 minutos):</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Redefinir Minha Senha</a>
+            </div>
+            <p style="font-size: 12px; color: #999;">Ou copie e cole este link no seu navegador:</p>
+            <p style="font-size: 12px; color: #999; word-break: break-all;">{reset_link}</p>
+        </div>
+      </body>
+    </html>
+    """
+    
+    msg.attach(MIMEText(html, 'html'))
+    
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True, "E-mail enviado com sucesso."
+    except Exception as e:
+        print(f"SMTP erro: {e}")
+        return False, f"Erro ao enviar e-mail."

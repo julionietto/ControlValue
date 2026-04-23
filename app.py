@@ -17,7 +17,7 @@ if os.path.exists(style_path):
     with open(style_path, encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-from views.auth import render_auth_view
+from views.auth import render_auth_view, render_reset_password_view
 from views.admin import render_admin_view
 from views.derivativos import render_derivativos_view
 from views.proventos import render_proventos_view
@@ -65,7 +65,11 @@ if 'table_key' not in st.session_state:
     st.session_state.table_key = 0
 
 if not st.session_state.authenticated:
-    render_auth_view()
+    token = st.query_params.get("token")
+    if token:
+        render_reset_password_view(token)
+    else:
+        render_auth_view()
 else:
     # Pré-aquecimento do Cache Global (CDI e Dólar)
     try:

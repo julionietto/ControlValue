@@ -194,6 +194,18 @@ def init_db():
             user_id INTEGER NOT NULL DEFAULT 1
         )
     ''')
+    # Tabela de Password Resets
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            token TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
     conn.commit()
     db_pool = init_connection_pool()
     db_pool.putconn(conn)
@@ -281,6 +293,71 @@ def verify_user(login_identifier, password):
             conn.commit()
             
             return False, user_id, username, False, 'WRONG_PASS', new_locked_until
+
+def get_user_by_email(email):
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT id, username, email FROM users WHERE email = %s", (email,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+def create_password_reset_token(user_id, token, expires_in_minutes=30):
+    from datetime import datetime, timedelta
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    now = datetime.now(sp_tz).replace(tzinfo=None)
+    expires_at = now + timedelta(minutes=expires_in_minutes)
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Invalida tokens antigos do usuário
+        cursor.execute("UPDATE password_resets SET used = TRUE WHERE user_id = %s AND used = FALSE", (user_id,))
+        
+        cursor.execute(
+            "INSERT INTO password_resets (user_id, token, created_at, expires_at, used) VALUES (%s, %s, %s, %s, FALSE)",
+            (user_id, token, now, expires_at)
+        )
+        conn.commit()
+
+def verify_password_reset_token(token):
+    """
+    Retorna (is_valid, user_id, message)
+    """
+    from datetime import datetime
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    now = datetime.now(sp_tz).replace(tzinfo=None)
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT * FROM password_resets WHERE token = %s", (token,))
+        row = cursor.fetchone()
+        
+        if not row:
+            return False, None, "Token inválido ou não encontrado."
+            
+        if row['used']:
+            return False, None, "Este link de recuperação já foi utilizado."
+            
+        if now > row['expires_at']:
+            return False, None, "Este link de recuperação expirou."
+            
+        return True, row['user_id'], "Token válido."
+
+def reset_password_with_token(token, new_password):
+    is_valid, user_id, msg = verify_password_reset_token(token)
+    if not is_valid:
+        return False, msg
+        
+    hashed = hash_password(new_password)
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Atualiza a senha
+        cursor.execute("UPDATE users SET password = %s, failed_attempts = 0, locked_until = NULL WHERE id = %s", (hashed, user_id))
+        # Marca o token como usado
+        cursor.execute("UPDATE password_resets SET used = TRUE WHERE token = %s", (token,))
+        conn.commit()
+        
+    return True, "Senha redefinida com sucesso."
 
 @contextmanager
 def get_db_connection():

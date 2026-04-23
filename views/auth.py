@@ -2,6 +2,89 @@ import streamlit as st
 import pandas as pd
 import database as db
 import os
+import secrets
+import services as svc
+
+@st.dialog("Recuperar Senha")
+def dialog_recuperar_senha():
+    st.markdown("### 🔑 Redefinição de Senha")
+    st.write("Informe o seu e-mail de cadastro. Se ele existir em nossa base, enviaremos um link para você redefinir sua senha.")
+    
+    rec_email = st.text_input("E-mail", placeholder="seu@email.com")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Enviar Link", type="primary", use_container_width=True):
+            if rec_email:
+                user_info = db.get_user_by_email(rec_email)
+                if user_info:
+                    token = secrets.token_urlsafe(32)
+                    db.create_password_reset_token(user_info['id'], token, 30)
+                    
+                    base_url = "https://controlvalue-o2ayzvj6exmtbyskbxhvqn.streamlit.app"
+                    try:
+                        # Fallback for local testing
+                        if "localhost" in st.context.headers.get("Host", ""):
+                            base_url = "http://localhost:8501"
+                    except Exception:
+                        pass
+                        
+                    reset_link = f"{base_url}/?token={token}"
+                    success, msg = svc.send_password_reset_email(rec_email, reset_link)
+                    
+                    if success:
+                        st.success("Se o e-mail existir em nossa base, um link de recuperação foi enviado.")
+                    else:
+                        st.error(msg)
+                else:
+                    # Generic message to avoid email enumeration
+                    st.success("Se o e-mail existir em nossa base, um link de recuperação foi enviado.")
+            else:
+                st.error("Informe um e-mail válido.")
+                
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
+            st.rerun()
+
+def render_reset_password_view(token):
+    _, login_col, _ = st.columns([0.15, 0.7, 0.15])
+    
+    with login_col:
+        with st.container(border=True):
+            st.markdown('<h1 style="text-align: left; margin-top: 0; margin-bottom: 24px; font-size: 2.25rem; font-weight: 700; color: #ffffff;">🔑 Nova Senha</h1>', unsafe_allow_html=True)
+            
+            is_valid, user_id, msg = db.verify_password_reset_token(token)
+            
+            if not is_valid:
+                st.error(msg)
+                if st.button("Voltar ao Login", use_container_width=True):
+                    st.query_params.clear()
+                    st.rerun()
+            else:
+                with st.form("reset_password_form"):
+                    new_pass = st.text_input("Nova Senha", type="password", placeholder="Sua nova senha")
+                    confirm_pass = st.text_input("Confirmar Nova Senha", type="password", placeholder="Repita a senha")
+                    submit_reset = st.form_submit_button("Redefinir Senha", use_container_width=True)
+                    
+                if submit_reset:
+                    if new_pass and confirm_pass:
+                        if new_pass == confirm_pass:
+                            success, reset_msg = db.reset_password_with_token(token, new_pass)
+                            if success:
+                                st.success(reset_msg)
+                                st.query_params.clear()
+                                st.info("Sua senha foi atualizada. Você já pode fazer login.")
+                            else:
+                                st.error(reset_msg)
+                        else:
+                            st.error("As senhas não conferem.")
+                    else:
+                        st.error("Preencha todos os campos.")
+                
+                st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
+                if st.button("Cancelar e Voltar ao Login", use_container_width=True):
+                    st.query_params.clear()
+                    st.rerun()
 
 @st.dialog("Criar Conta", dismissible=False)
 def dialog_register_user():
@@ -142,6 +225,12 @@ def render_auth_view():
             # Link para criar conta se não for admin: posicionado abaixo das colunas para manter o alinhamento do logo com o botão Entrar
             if user_count > 0:
                 st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
-                if st.button("Não tem conta? Criar conta", use_container_width=True):
-                    dialog_register_user()
+                
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    if st.button("Não tem conta? Criar", use_container_width=True):
+                        dialog_register_user()
+                with col_btn2:
+                    if st.button("Esqueci minha senha", use_container_width=True):
+                        dialog_recuperar_senha()
     st.stop()
