@@ -85,6 +85,7 @@ def render_reset_password_view(token):
                 if st.button("Cancelar e Voltar ao Login", use_container_width=True):
                     st.query_params.clear()
                     st.rerun()
+    st.stop()
 
 @st.dialog("Criar Conta", dismissible=False)
 def dialog_register_user():
