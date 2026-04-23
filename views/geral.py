@@ -1261,6 +1261,8 @@ def render_visao_geral_view():
                     
                     st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">💰 Evolução de Dividendos Sintéticos</h3>', unsafe_allow_html=True)
                     
+                    colors_sint = ['#EF553B' if val < 0 else '#636EFA' for val in resumo_sintetico['vl_premio']]
+                    
                     fig_sint = px.bar(
                         resumo_sintetico,
                         x='ano',
@@ -1269,6 +1271,7 @@ def render_visao_geral_view():
                         text_auto='.2f',
                         labels={'vl_premio': 'Total Prêmio (R$)', 'ano': 'Ano'}
                     )
+                    fig_sint.update_traces(marker_color=colors_sint)
                     
                     x_data_sint = np.arange(len(resumo_sintetico))
                     y_data_sint = resumo_sintetico['vl_premio'].values
