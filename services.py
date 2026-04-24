@@ -549,10 +549,10 @@ def fetch_brapi_proventos(tickers_list):
                     cash_divs = div_data.get('cashDividends', [])
                     
                     for d in cash_divs:
-                        # Chaves corretas da API Brapi: amount, type, exDividendDate
-                        valor = d.get('amount') if d.get('amount') is not None else d.get('rate', 0.0)
-                        tipo = d.get('type') if d.get('type') is not None else d.get('relatedTo', 'N/A')
-                        dt_com = d.get('exDividendDate') if d.get('exDividendDate') is not None else d.get('lastDatePrior', 'N/A')
+                        # Revertendo para as chaves originais solicitadas, com fallbacks para segurança
+                        valor = d.get('rate') if d.get('rate') is not None else d.get('amount', 0.0)
+                        tipo = d.get('relatedTo') if d.get('relatedTo') is not None else d.get('type', 'N/A')
+                        dt_com = d.get('lastDatePrior') if d.get('lastDatePrior') is not None else d.get('exDividendDate', 'N/A')
                         dt_pag = d.get('paymentDate', 'N/A')
                         
                         all_dividends.append({
@@ -575,9 +575,9 @@ def fetch_brapi_proventos(tickers_list):
                             if not s_data.get('error'):
                                 s_divs = s_data.get('dividendsData', {}).get('cashDividends', [])
                                 for d in s_divs:
-                                    valor_s = d.get('amount') if d.get('amount') is not None else d.get('rate', 0.0)
-                                    tipo_s = d.get('type') if d.get('type') is not None else d.get('relatedTo', 'N/A')
-                                    dt_com_s = d.get('exDividendDate') if d.get('exDividendDate') is not None else d.get('lastDatePrior', 'N/A')
+                                    valor_s = d.get('rate') if d.get('rate') is not None else d.get('amount', 0.0)
+                                    tipo_s = d.get('relatedTo') if d.get('relatedTo') is not None else d.get('type', 'N/A')
+                                    dt_com_s = d.get('lastDatePrior') if d.get('lastDatePrior') is not None else d.get('exDividendDate', 'N/A')
                                     dt_pag_s = d.get('paymentDate', 'N/A')
                                     
                                     all_dividends.append({
