@@ -487,3 +487,68 @@ def send_password_reset_email(to_email, reset_link):
     except Exception as e:
         print(f"SMTP erro: {e}")
         return False, f"Erro ao enviar e-mail."
+
+def fetch_brapi_proventos(tickers_list):
+    """
+    Busca dados de proventos (dividendos/JCP) na API da Brapi.
+    Retorna (DataFrame, error_message).
+    """
+    import requests
+    import os
+    
+    try:
+        if "BRAPI_TOKEN" in st.secrets:
+            token = st.secrets["BRAPI_TOKEN"]
+        else:
+            token = os.getenv("BRAPI_TOKEN", "")
+    except Exception:
+        token = os.getenv("BRAPI_TOKEN", "")
+        
+    if not token or token == "":
+        return None, "Token da Brapi não configurado. Por favor, adicione seu Token no arquivo .env (chave BRAPI_TOKEN)."
+        
+    if not tickers_list:
+        return pd.DataFrame(), ""
+        
+    # Brapi recomenda agrupar tickers separados por vírgula
+    tickers_str = ",".join(tickers_list)
+    url = f"https://brapi.dev/api/quote/{tickers_str}?dividends=true&token={token}"
+    
+    try:
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            results = data.get('results', [])
+            
+            all_dividends = []
+            for res in results:
+                ticker = res.get('symbol')
+                div_data = res.get('dividendsData', {})
+                cash_divs = div_data.get('cashDividends', [])
+                
+                for d in cash_divs:
+                    all_dividends.append({
+                        'Ativo': ticker,
+                        'Tipo': d.get('relatedTo', 'N/A'),
+                        'Data Com': d.get('lastDatePrior', 'N/A'),
+                        'Data Pagamento': d.get('paymentDate', 'N/A'),
+                        'Valor': d.get('rate', 0.0)
+                    })
+            
+            df = pd.DataFrame(all_dividends)
+            if not df.empty:
+                # Formatação de datas para o padrão BR
+                df['Data Com'] = pd.to_datetime(df['Data Com'], errors='coerce').dt.strftime('%d/%m/%Y')
+                df['Data Pagamento'] = pd.to_datetime(df['Data Pagamento'], errors='coerce').dt.strftime('%d/%m/%Y')
+                # Remove registros sem data de pagamento ou valor zero (lixo de API)
+                df = df.dropna(subset=['Data Pagamento'])
+                df = df[df['Valor'] > 0]
+                df = df.sort_values(by='Ativo', ascending=True)
+            
+            return df, ""
+        elif response.status_code == 401:
+            return None, "Token da Brapi inválido ou expirado. Verifique suas configurações."
+        else:
+            return None, f"Erro na consulta à Brapi (Status {response.status_code}). Verifique os tickers ou tente mais tarde."
+    except Exception as e:
+        return None, f"Falha na comunicação com o servidor da Brapi: {e}"
