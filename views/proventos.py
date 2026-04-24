@@ -9,6 +9,37 @@ from components.ui import render_top_header
 def render_proventos_view():
     render_top_header("Proventos Recebidos", "Histórico de dividendos, juros sobre capital próprio e rendimentos.")
     
+    # --- Bloco de Consulta Brapi (Sempre visível no topo) ---
+    col_bt1, col_bt2 = st.columns([2, 1])
+    with col_bt2:
+        if st.button("🔍 Consultar Proventos Provisionados", key="btn_brapi_consult", use_container_width=True):
+            with st.spinner("Buscando dados na Brapi..."):
+                assets_df_all = db.get_all_assets(st.session_state.user_id)
+                allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
+                raw_tickers = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
+                
+                if not raw_tickers:
+                    st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
+                else:
+                    df_brapi, err = svc.fetch_brapi_proventos(raw_tickers)
+                    if err:
+                        st.error(err)
+                    else:
+                        st.session_state.brapi_results = df_brapi
+                        st.session_state.show_brapi_results = True
+
+    if st.session_state.get('show_brapi_results'):
+        with st.expander("📅 Proventos Provisionados (Fonte: Brapi.dev)", expanded=True):
+            df_res = st.session_state.brapi_results
+            if df_res.empty:
+                st.info("Nenhum provento provisionado encontrado para os ativos da sua carteira.")
+            else:
+                st.dataframe(df_res, hide_index=True, use_container_width=True)
+            if st.button("Fechar Tabela Brapi", use_container_width=True):
+                st.session_state.show_brapi_results = False
+                st.rerun()
+        st.markdown("---")
+
     proventos_df = db.get_proventos(st.session_state.user_id)
     
     meses_ordem = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -102,36 +133,6 @@ def render_proventos_view():
     else:
         tab_mensal, tab_ranking = st.tabs(["Histórico Mensal", "🏆 Ranking de Pagadores"])
         with tab_mensal:
-            # --- Bloco de Consulta Brapi (v1.2.10) ---
-            col_bt1, col_bt2 = st.columns([2, 1])
-            with col_bt2:
-                if st.button("🔍 Consultar Proventos Provisionados", key="btn_brapi_consult", use_container_width=True):
-                    with st.spinner("Buscando dados na Brapi..."):
-                        assets_df_all = db.get_all_assets(st.session_state.user_id)
-                        allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
-                        raw_tickers = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
-                        
-                        if not raw_tickers:
-                            st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
-                        else:
-                            df_brapi, err = svc.fetch_brapi_proventos(raw_tickers)
-                            if err:
-                                st.error(err)
-                            else:
-                                st.session_state.brapi_results = df_brapi
-                                st.session_state.show_brapi_results = True
-
-            if st.session_state.get('show_brapi_results'):
-                with st.expander("📅 Proventos Provisionados (Fonte: Brapi.dev)", expanded=True):
-                    df_res = st.session_state.brapi_results
-                    if df_res.empty:
-                        st.info("Nenhum provento provisionado encontrado para os ativos da sua carteira.")
-                    else:
-                        st.dataframe(df_res, hide_index=True, use_container_width=True)
-                    if st.button("Fechar Tabela Brapi", use_container_width=True):
-                        st.session_state.show_brapi_results = False
-                        st.rerun()
-                st.markdown("---")
             def format_provento(val):
                 if pd.isna(val) or val == 0:
                     return "0,00"
