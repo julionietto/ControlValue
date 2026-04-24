@@ -590,8 +590,8 @@ def fetch_brapi_proventos(tickers_list):
         
     df = pd.DataFrame(all_dividends)
     
-    # Converte Data Pagamento para datetime para filtragem
-    df['dt_pag_raw'] = pd.to_datetime(df['Data Pagamento'], errors='coerce')
+    # Converte Data Pagamento para datetime para filtragem (garantindo que seja naive para comparação)
+    df['dt_pag_raw'] = pd.to_datetime(df['Data Pagamento'], errors='coerce').dt.tz_localize(None)
     df = df.dropna(subset=['dt_pag_raw'])
     
     # Filtro: Apenas proventos futuros (Data de Pagamento >= Hoje)
