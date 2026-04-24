@@ -589,13 +589,25 @@ def fetch_brapi_proventos(tickers_list):
         return pd.DataFrame(), ""
         
     df = pd.DataFrame(all_dividends)
-    # Formatação final
+    
+    # Converte Data Pagamento para datetime para filtragem
+    df['dt_pag_raw'] = pd.to_datetime(df['Data Pagamento'], errors='coerce')
+    df = df.dropna(subset=['dt_pag_raw'])
+    
+    # Filtro: Apenas proventos futuros (Data de Pagamento >= Hoje)
+    from datetime import datetime
+    hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    df = df[df['dt_pag_raw'] >= hoje]
+    
+    if df.empty:
+        return pd.DataFrame(), ""
+
+    # Formatação final para exibição
     df['Data Com'] = pd.to_datetime(df['Data Com'], errors='coerce').dt.strftime('%d/%m/%Y')
-    df['Data Pagamento'] = pd.to_datetime(df['Data Pagamento'], errors='coerce').dt.strftime('%d/%m/%Y')
-    df = df.dropna(subset=['Data Pagamento'])
+    df['Data Pagamento'] = df['dt_pag_raw'].dt.strftime('%d/%m/%Y')
+    
     df = df[df['Valor'] > 0]
-    # Remover duplicatas que podem vir de diferentes lotes ou ativos
     df = df.drop_duplicates()
-    df = df.sort_values(by=['Ativo', 'Data Pagamento'], ascending=[True, False])
+    df = df.sort_values(by=['dt_pag_raw', 'Ativo'], ascending=[True, True])
     
     return df, ""

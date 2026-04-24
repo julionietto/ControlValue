@@ -29,12 +29,38 @@ def render_proventos_view():
                         st.session_state.show_brapi_results = True
 
     if st.session_state.get('show_brapi_results'):
-        with st.expander("📅 Proventos Provisionados (Fonte: Brapi.dev)", expanded=True):
+        with st.expander("📅 Proventos Provisionados Futuros (Fonte: Brapi.dev)", expanded=True):
             df_res = st.session_state.brapi_results
             if df_res.empty:
-                st.info("Nenhum provento provisionado encontrado para os ativos da sua carteira.")
+                st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira.")
             else:
-                st.dataframe(df_res, hide_index=True, use_container_width=True)
+                # Busca quantidades atuais para calcular o Valor Total
+                assets_df = db.get_all_assets(st.session_state.user_id)
+                # Prepara o ticker para o merge (Brapi retorna sem .SA)
+                assets_df['symbol_merge'] = assets_df['ticker'].str.upper().str.replace('.SA', '', regex=False)
+                
+                # Faz o merge para obter a quantidade
+                df_merged = df_res.merge(assets_df[['symbol_merge', 'quantity']], left_on='Ativo', right_on='symbol_merge', how='left')
+                
+                # Cálculo do Valor Total
+                df_merged['Valor Total'] = df_merged['Valor'] * df_merged['quantity'].fillna(0)
+                
+                # Seleção e renomeação de colunas conforme solicitado
+                df_display = df_merged.rename(columns={
+                    'Data Pagamento': 'Data de Pagamento',
+                    'Valor': 'Valor por Cota/Ação'
+                })
+                
+                # Colunas finais
+                final_cols = ['Ativo', 'Data de Pagamento', 'Valor por Cota/Ação', 'Valor Total']
+                df_display = df_display[final_cols]
+                
+                # Formatação para exibição
+                df_display['Valor por Cota/Ação'] = df_display['Valor por Cota/Ação'].apply(lambda x: f"R$ {x:,.4f}")
+                df_display['Valor Total'] = df_display['Valor Total'].apply(lambda x: f"R$ {x:,.2f}")
+                
+                st.dataframe(df_display, hide_index=True, use_container_width=True)
+                
             if st.button("Fechar Tabela Brapi", use_container_width=True):
                 st.session_state.show_brapi_results = False
                 st.rerun()
