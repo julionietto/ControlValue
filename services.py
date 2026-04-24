@@ -549,12 +549,18 @@ def fetch_brapi_proventos(tickers_list):
                     cash_divs = div_data.get('cashDividends', [])
                     
                     for d in cash_divs:
+                        # Chaves corretas da API Brapi: amount, type, exDividendDate
+                        valor = d.get('amount') if d.get('amount') is not None else d.get('rate', 0.0)
+                        tipo = d.get('type') if d.get('type') is not None else d.get('relatedTo', 'N/A')
+                        dt_com = d.get('exDividendDate') if d.get('exDividendDate') is not None else d.get('lastDatePrior', 'N/A')
+                        dt_pag = d.get('paymentDate', 'N/A')
+                        
                         all_dividends.append({
                             'Ativo': ticker,
-                            'Tipo': d.get('relatedTo', 'N/A'),
-                            'Data Com': d.get('lastDatePrior', 'N/A'),
-                            'Data Pagamento': d.get('paymentDate', 'N/A'),
-                            'Valor': d.get('rate', 0.0)
+                            'Tipo': tipo,
+                            'Data Com': dt_com,
+                            'Data Pagamento': dt_pag,
+                            'Valor': valor
                         })
             elif response.status_code == 401:
                 return None, "Token da Brapi inválido ou expirado."
@@ -569,12 +575,17 @@ def fetch_brapi_proventos(tickers_list):
                             if not s_data.get('error'):
                                 s_divs = s_data.get('dividendsData', {}).get('cashDividends', [])
                                 for d in s_divs:
+                                    valor_s = d.get('amount') if d.get('amount') is not None else d.get('rate', 0.0)
+                                    tipo_s = d.get('type') if d.get('type') is not None else d.get('relatedTo', 'N/A')
+                                    dt_com_s = d.get('exDividendDate') if d.get('exDividendDate') is not None else d.get('lastDatePrior', 'N/A')
+                                    dt_pag_s = d.get('paymentDate', 'N/A')
+                                    
                                     all_dividends.append({
                                         'Ativo': single_t,
-                                        'Tipo': d.get('relatedTo', 'N/A'),
-                                        'Data Com': d.get('lastDatePrior', 'N/A'),
-                                        'Data Pagamento': d.get('paymentDate', 'N/A'),
-                                        'Valor': d.get('rate', 0.0)
+                                        'Tipo': tipo_s,
+                                        'Data Com': dt_com_s,
+                                        'Data Pagamento': dt_pag_s,
+                                        'Valor': valor_s
                                     })
                     except:
                         continue
