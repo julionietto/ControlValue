@@ -495,6 +495,7 @@ def fetch_brapi_proventos(tickers_list):
     """
     import requests
     import os
+    import time
     
     try:
         if "BRAPI_TOKEN" in st.secrets:
@@ -510,45 +511,91 @@ def fetch_brapi_proventos(tickers_list):
     if not tickers_list:
         return pd.DataFrame(), ""
         
-    # Brapi recomenda agrupar tickers separados por vírgula
-    tickers_str = ",".join(tickers_list)
-    url = f"https://brapi.dev/api/quote/{tickers_str}?dividends=true&token={token}"
+    # Limpeza de Tickers: Brapi funciona melhor sem o sufixo .SA
+    cleaned_tickers = []
+    for t in tickers_list:
+        clean_t = t.strip().upper()
+        if clean_t.endswith(".SA"):
+            clean_t = clean_t[:-3]
+        if clean_t and clean_t not in cleaned_tickers:
+            cleaned_tickers.append(clean_t)
+            
+    if not cleaned_tickers:
+        return pd.DataFrame(), ""
+
+    # Dividir em lotes de no máximo 15 tickers para evitar URLs muito longas ou erros de processamento em lote
+    batch_size = 15
+    batches = [cleaned_tickers[i:i + batch_size] for i in range(0, len(cleaned_tickers), batch_size)]
     
-    try:
-        response = requests.get(url, timeout=30)
-        if response.status_code == 200:
-            data = response.json()
-            results = data.get('results', [])
-            
-            all_dividends = []
-            for res in results:
-                ticker = res.get('symbol')
-                div_data = res.get('dividendsData', {})
-                cash_divs = div_data.get('cashDividends', [])
+    all_dividends = []
+    
+    for batch in batches:
+        tickers_str = ",".join(batch)
+        url = f"https://brapi.dev/api/quote/{tickers_str}?dividends=true&token={token}"
+        
+        try:
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get('results', [])
                 
-                for d in cash_divs:
-                    all_dividends.append({
-                        'Ativo': ticker,
-                        'Tipo': d.get('relatedTo', 'N/A'),
-                        'Data Com': d.get('lastDatePrior', 'N/A'),
-                        'Data Pagamento': d.get('paymentDate', 'N/A'),
-                        'Valor': d.get('rate', 0.0)
-                    })
-            
-            df = pd.DataFrame(all_dividends)
-            if not df.empty:
-                # Formatação de datas para o padrão BR
-                df['Data Com'] = pd.to_datetime(df['Data Com'], errors='coerce').dt.strftime('%d/%m/%Y')
-                df['Data Pagamento'] = pd.to_datetime(df['Data Pagamento'], errors='coerce').dt.strftime('%d/%m/%Y')
-                # Remove registros sem data de pagamento ou valor zero (lixo de API)
-                df = df.dropna(subset=['Data Pagamento'])
-                df = df[df['Valor'] > 0]
-                df = df.sort_values(by='Ativo', ascending=True)
-            
-            return df, ""
-        elif response.status_code == 401:
-            return None, "Token da Brapi inválido ou expirado. Verifique suas configurações."
-        else:
-            return None, f"Erro na consulta à Brapi (Status {response.status_code}). Verifique os tickers ou tente mais tarde."
-    except Exception as e:
-        return None, f"Falha na comunicação com o servidor da Brapi: {e}"
+                for res in results:
+                    ticker = res.get('symbol')
+                    # Se o ticker retornar erro individual (ex: não encontrado), ele vem com erro no JSON
+                    if res.get('error'):
+                        continue
+                        
+                    div_data = res.get('dividendsData', {})
+                    cash_divs = div_data.get('cashDividends', [])
+                    
+                    for d in cash_divs:
+                        all_dividends.append({
+                            'Ativo': ticker,
+                            'Tipo': d.get('relatedTo', 'N/A'),
+                            'Data Com': d.get('lastDatePrior', 'N/A'),
+                            'Data Pagamento': d.get('paymentDate', 'N/A'),
+                            'Valor': d.get('rate', 0.0)
+                        })
+            elif response.status_code == 401:
+                return None, "Token da Brapi inválido ou expirado."
+            elif response.status_code == 400:
+                # Se o lote falhar, tentamos processar um por um deste lote para não perder tudo
+                for single_t in batch:
+                    single_url = f"https://brapi.dev/api/quote/{single_t}?dividends=true&token={token}"
+                    try:
+                        s_res = requests.get(single_url, timeout=10)
+                        if s_res.status_code == 200:
+                            s_data = s_res.json().get('results', [{}])[0]
+                            if not s_data.get('error'):
+                                s_divs = s_data.get('dividendsData', {}).get('cashDividends', [])
+                                for d in s_divs:
+                                    all_dividends.append({
+                                        'Ativo': single_t,
+                                        'Tipo': d.get('relatedTo', 'N/A'),
+                                        'Data Com': d.get('lastDatePrior', 'N/A'),
+                                        'Data Pagamento': d.get('paymentDate', 'N/A'),
+                                        'Valor': d.get('rate', 0.0)
+                                    })
+                    except:
+                        continue
+            else:
+                continue # Pula lotes com erro genérico
+                
+        except Exception as e:
+            print(f"Erro no lote Brapi: {e}")
+            continue
+
+    if not all_dividends:
+        return pd.DataFrame(), ""
+        
+    df = pd.DataFrame(all_dividends)
+    # Formatação final
+    df['Data Com'] = pd.to_datetime(df['Data Com'], errors='coerce').dt.strftime('%d/%m/%Y')
+    df['Data Pagamento'] = pd.to_datetime(df['Data Pagamento'], errors='coerce').dt.strftime('%d/%m/%Y')
+    df = df.dropna(subset=['Data Pagamento'])
+    df = df[df['Valor'] > 0]
+    # Remover duplicatas que podem vir de diferentes lotes ou ativos
+    df = df.drop_duplicates()
+    df = df.sort_values(by=['Ativo', 'Data Pagamento'], ascending=[True, False])
+    
+    return df, ""
