@@ -76,8 +76,9 @@ else:
         if hasattr(svc, 'get_master_cdi_history'):
             svc.get_master_cdi_history()
             svc.get_master_usd_history()
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.warning(f"Erro no cache global: {e}")
 
 # Inicializar variáveis de controle no session_state
 if 'refresh_id' not in st.session_state:

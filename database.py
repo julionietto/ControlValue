@@ -61,8 +61,9 @@ def get_database_url():
     try:
         if "DATABASE_URL" in st.secrets:
             return st.secrets["DATABASE_URL"]
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.warning(f"Aviso ao acessar DATABASE_URL no st.secrets: {e}")
     return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/controlvalue")
 
 @st.cache_resource(ttl=3600)

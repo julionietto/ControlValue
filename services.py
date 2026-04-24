@@ -40,8 +40,9 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
                     else:
                         if ticker in close_df:
                             val = float(close_df[ticker].iloc[-1])
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Erro ao extrair valor do ticker {ticker}: {e}")
                 
                 prices[ticker] = val
                 

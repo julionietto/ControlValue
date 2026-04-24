@@ -26,8 +26,9 @@ def dialog_recuperar_senha():
                         # Fallback for local testing
                         if "localhost" in st.context.headers.get("Host", ""):
                             base_url = "http://localhost:8501"
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"Aviso ao determinar host: {e}")
                         
                     reset_link = f"{base_url}/?token={token}"
                     success, msg = svc.send_password_reset_email(rec_email, reset_link)
@@ -159,8 +160,9 @@ def render_auth_view():
                         """,
                         unsafe_allow_html=True
                     )
-                except:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Aviso ao renderizar links sociais: {e}")
 
                 # Resolve o caminho da imagem de forma robusta
                 logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoControlValue.png")

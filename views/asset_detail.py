@@ -150,8 +150,9 @@ def render_asset_detail_view(asset_data):
                 asset_data['current_price'] = new_brl_price
                 
                 st.session_state.detail_refreshed_ticker = ticker
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.warning(f"Erro no refresh de cripto: {e}")
     
     # HEADER INTERNALIZED - This forces a native scroll reset on navigation
     render_top_header(f"Detalhe do Ativo: {display_ticker}", "Análise detalhada e gerenciamento de operações.")

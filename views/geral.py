@@ -157,8 +157,9 @@ def dialog_adicionar_novo_ativo():
                                 live_brl = live_native * cot if cot > 0 else 0.0
                             else:
                                 live_brl = live_native
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            import logging
+                            logging.warning(f"Aviso ao buscar preço de {ticker_to_fetch}: {e}")
                         
                         if live_native <= 0.0:
                             msg_container.empty()
@@ -1193,7 +1194,9 @@ def render_visao_geral_view():
                     for idx, row in resumo_graph.iterrows():
                         try:
                             ano_int = int(row['Ano'])
-                        except:
+                        except Exception as e:
+                            import logging
+                            logging.warning(f"Aviso ao processar ano do resumo_graph: {e}")
                             continue
                             
                         if ano_int >= 2018:
