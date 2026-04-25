@@ -9,11 +9,11 @@ from components.ui import render_top_header
 def render_proventos_view():
     render_top_header("Proventos Recebidos", "Histórico de dividendos, juros sobre capital próprio e rendimentos.")
     
-    # --- Bloco de Consulta Brapi (Sempre visível no topo) ---
+    # --- Bloco de Consulta Status Invest (Sempre visível no topo) ---
     col_bt1, col_bt2 = st.columns([2, 1])
     with col_bt2:
-        if st.button("🔍 Consultar Proventos Provisionados", key="btn_brapi_consult", use_container_width=True):
-            with st.spinner("Buscando dados na Brapi..."):
+        if st.button("🔍 Consultar Proventos Provisionados", key="btn_statusinvest_consult", use_container_width=True):
+            with st.spinner("Buscando dados no Status Invest..."):
                 assets_df_all = db.get_all_assets(st.session_state.user_id)
                 allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
                 raw_tickers = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
@@ -21,36 +21,42 @@ def render_proventos_view():
                 if not raw_tickers:
                     st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
                 else:
-                    df_brapi, err, raw_json = svc.fetch_brapi_proventos(raw_tickers)
+                    df_statusinvest, err, raw_json = svc.fetch_statusinvest_proventos(raw_tickers)
                     if err:
                         st.error(err)
                     else:
-                        st.session_state.brapi_results = df_brapi
-                        st.session_state.brapi_raw_json = raw_json
-                        st.session_state.show_brapi_results = True
+                        st.session_state.statusinvest_results = df_statusinvest
+                        st.session_state.statusinvest_raw_json = raw_json
+                        st.session_state.show_statusinvest_results = True
 
     @st.dialog("🔍 Resposta Bruta da API (Debug)")
-    def dialog_ver_json_bruto(json_data):
-        st.write("Abaixo está o conteúdo original retornado pela Brapi:")
+    def dialog_ver_json_bruto(json_data, requested_tickers):
+        st.write("**Ativos enviados na requisição:**")
+        st.info(", ".join(requested_tickers))
+        st.write("**Abaixo está o conteúdo original retornado pelo Status Invest:**")
         st.json(json_data)
         if st.button("Fechar"):
             st.rerun()
 
-    if st.session_state.get('show_brapi_results'):
-        with st.expander("📅 Proventos Provisionados (Fonte: Brapi.dev)", expanded=True):
+    if st.session_state.get('show_statusinvest_results'):
+        with st.expander("📅 Proventos Provisionados (Fonte: Status Invest)", expanded=True):
             col_d1, col_d2 = st.columns([3, 1])
             with col_d2:
                 if st.button("🛠️ Ver JSON Bruto", use_container_width=True):
-                    dialog_ver_json_bruto(st.session_state.get('brapi_raw_json'))
+                    # Recupera os tickers brutos usados na consulta (precisamos recalcular para o dialog ou passar no session state)
+                    assets_df_all = db.get_all_assets(st.session_state.user_id)
+                    allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
+                    tickers_enviados = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
+                    dialog_ver_json_bruto(st.session_state.get('statusinvest_raw_json'), tickers_enviados)
             
-            df_res = st.session_state.brapi_results
+            df_res = st.session_state.statusinvest_results
             if df_res.empty:
                 st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira.")
             else:
                 st.dataframe(df_res, hide_index=True, use_container_width=True)
                 
-            if st.button("Fechar Tabela Brapi", use_container_width=True):
-                st.session_state.show_brapi_results = False
+            if st.button("Fechar Tabela", use_container_width=True):
+                st.session_state.show_statusinvest_results = False
                 st.rerun()
         st.markdown("---")
 

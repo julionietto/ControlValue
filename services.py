@@ -488,30 +488,21 @@ def send_password_reset_email(to_email, reset_link):
         print(f"SMTP erro: {e}")
         return False, f"Erro ao enviar e-mail."
 
-def fetch_brapi_proventos(tickers_list):
+def fetch_statusinvest_proventos(tickers_list):
     """
-    Busca dados de proventos (dividendos/JCP) na API da Brapi.
-    Retorna (DataFrame, error_message).
+    Busca dados de proventos (dividendos/JCP) provisionados via scraping do Status Invest.
+    Retorna (DataFrame, error_message, raw_json_list).
     """
     import requests
     import os
     import time
+    from datetime import datetime
+    import pandas as pd
     
-    try:
-        if "BRAPI_TOKEN" in st.secrets:
-            token = st.secrets["BRAPI_TOKEN"]
-        else:
-            token = os.getenv("BRAPI_TOKEN", "")
-    except Exception:
-        token = os.getenv("BRAPI_TOKEN", "")
-        
-    if not token or token == "":
-        return None, "Token da Brapi não configurado. Por favor, adicione seu Token no arquivo .env (chave BRAPI_TOKEN)."
-        
     if not tickers_list:
-        return pd.DataFrame(), ""
+        return pd.DataFrame(), "", []
         
-    # Limpeza de Tickers: Brapi funciona melhor sem o sufixo .SA
+    # Limpeza de Tickers: remover sufixo .SA
     cleaned_tickers = []
     for t in tickers_list:
         clean_t = t.strip().upper()
@@ -521,111 +512,77 @@ def fetch_brapi_proventos(tickers_list):
             cleaned_tickers.append(clean_t)
             
     if not cleaned_tickers:
-        return pd.DataFrame(), ""
+        return pd.DataFrame(), "", []
 
-    # Dividir em lotes de no máximo 15 tickers para evitar URLs muito longas ou erros de processamento em lote
-    batch_size = 15
-    batches = [cleaned_tickers[i:i + batch_size] for i in range(0, len(cleaned_tickers), batch_size)]
-    
     all_dividends = []
     full_raw_response = []
     
-    for batch in batches:
-        tickers_str = ",".join(batch)
-        url = f"https://brapi.dev/api/quote/{tickers_str}?dividends=true&token={token}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+    }
+
+    hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Endpoints possíveis para tentar em ordem (ação, fii, bdr)
+    endpoints = ['acao', 'fii', 'bdr']
+
+    for ticker in cleaned_tickers:
+        found_data = False
         
-        try:
-            response = requests.get(url, timeout=30)
-            if response.status_code == 200:
-                data = response.json()
-                full_raw_response.append(data)
-                # Log para debug solicitado pelo usuário
-                print(f"DEBUG BRAPI RESPONSE (Lote {batch}): {data}")
-                
-                results = data.get('results', [])
-                
-                for res in results:
-                    ticker = res.get('symbol')
-                    if res.get('error'):
-                        continue
-                        
-                    div_data = res.get('dividendsData', {})
-                    cash_divs = div_data.get('cashDividends', [])
-                    
-                    for d in cash_divs:
-                        # Revertendo para as chaves originais solicitadas, com fallbacks para segurança
-                        valor = d.get('rate') if d.get('rate') is not None else d.get('amount', 0.0)
-                        tipo = d.get('relatedTo') if d.get('relatedTo') is not None else d.get('type', 'N/A')
-                        dt_com = d.get('lastDatePrior') if d.get('lastDatePrior') is not None else d.get('exDividendDate', 'N/A')
-                        dt_pag = d.get('paymentDate', 'N/A')
-                        
-                        all_dividends.append({
-                            'Ativo': ticker,
-                            'Tipo': tipo,
-                            'Data Com': dt_com,
-                            'Data Pagamento': dt_pag,
-                            'Valor': valor
-                        })
-            elif response.status_code == 401:
-                return None, "Token da Brapi inválido ou expirado.", None
-            elif response.status_code == 400:
-                for single_t in batch:
-                    single_url = f"https://brapi.dev/api/quote/{single_t}?dividends=true&token={token}"
+        for ep in endpoints:
+            url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={ticker}&chartProventsType=2"
+            try:
+                response = requests.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
                     try:
-                        s_res = requests.get(single_url, timeout=10)
-                        if s_res.status_code == 200:
-                            s_data_raw = s_res.json()
-                            full_raw_response.append(s_data_raw)
-                            s_data = s_data_raw.get('results', [{}])[0]
-                            print(f"DEBUG BRAPI FALLBACK ({single_t}): {s_data}")
-                            
-                            if not s_data.get('error'):
-                                s_divs = s_data.get('dividendsData', {}).get('cashDividends', [])
-                                for d in s_divs:
-                                    valor_s = d.get('rate') if d.get('rate') is not None else d.get('amount', 0.0)
-                                    tipo_s = d.get('relatedTo') if d.get('relatedTo') is not None else d.get('type', 'N/A')
-                                    dt_com_s = d.get('lastDatePrior') if d.get('lastDatePrior') is not None else d.get('exDividendDate', 'N/A')
-                                    dt_pag_s = d.get('paymentDate', 'N/A')
-                                    
-                                    all_dividends.append({
-                                        'Ativo': single_t,
-                                        'Tipo': tipo_s,
-                                        'Data Com': dt_com_s,
-                                        'Data Pagamento': dt_pag_s,
-                                        'Valor': valor_s
-                                    })
+                        data = response.json()
                     except:
                         continue
-            else:
+                        
+                    # Checa se retornou dados válidos
+                    if 'assetEarningsModels' in data and len(data['assetEarningsModels']) > 0:
+                        found_data = True
+                        full_raw_response.append({ticker: data})
+                        
+                        for d in data['assetEarningsModels']:
+                            dt_pag_str = d.get('pd', 'N/A')
+                            dt_com_str = d.get('ed', 'N/A')
+                            valor = float(d.get('v', 0.0))
+                            tipo = d.get('etd', 'N/A')
+                            
+                            if dt_pag_str == 'N/A' or dt_pag_str == '-' or dt_pag_str == '':
+                                continue
+                                
+                            try:
+                                dt_pag_obj = datetime.strptime(dt_pag_str, '%d/%m/%Y')
+                            except:
+                                continue
+                                
+                            if dt_pag_obj >= hoje:
+                                all_dividends.append({
+                                    'Ativo': ticker,
+                                    'Tipo': tipo,
+                                    'Data Com': dt_com_str,
+                                    'Data Pagamento': dt_pag_str,
+                                    'Valor': valor,
+                                    'dt_pag_raw': dt_pag_obj
+                                })
+                        break # Achou dados, não tenta o próximo endpoint
+            except Exception as e:
+                print(f"Erro ao buscar {ticker} no StatusInvest ({ep}): {e}")
                 continue
                 
-        except Exception as e:
-            print(f"Erro no lote Brapi: {e}")
-            continue
+        # Pausa leve para não sobrecarregar o Status Invest
+        time.sleep(0.3)
 
     if not all_dividends:
         return pd.DataFrame(), "", full_raw_response
         
     df = pd.DataFrame(all_dividends)
-    
-    # Converte Data Pagamento para datetime para filtragem (garantindo que seja naive para comparação)
-    df['dt_pag_raw'] = pd.to_datetime(df['Data Pagamento'], errors='coerce').dt.tz_localize(None)
-    df = df.dropna(subset=['dt_pag_raw'])
-    
-    # Filtro: Apenas proventos futuros (Data de Pagamento >= Hoje)
-    from datetime import datetime
-    hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    df = df[df['dt_pag_raw'] >= hoje]
-    
-    if df.empty:
-        return pd.DataFrame(), "", full_raw_response
-
-    # Formatação final para exibição
-    df['Data Com'] = pd.to_datetime(df['Data Com'], errors='coerce').dt.strftime('%d/%m/%Y')
-    df['Data Pagamento'] = df['dt_pag_raw'].dt.strftime('%d/%m/%Y')
-    
     df = df[df['Valor'] > 0]
     df = df.drop_duplicates()
     df = df.sort_values(by=['dt_pag_raw', 'Ativo'], ascending=[True, True])
+    df = df.drop(columns=['dt_pag_raw'])
     
     return df, "", full_raw_response
