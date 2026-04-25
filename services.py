@@ -528,6 +528,7 @@ def fetch_brapi_proventos(tickers_list):
     batches = [cleaned_tickers[i:i + batch_size] for i in range(0, len(cleaned_tickers), batch_size)]
     
     all_dividends = []
+    full_raw_response = []
     
     for batch in batches:
         tickers_str = ",".join(batch)
@@ -537,6 +538,7 @@ def fetch_brapi_proventos(tickers_list):
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
                 data = response.json()
+                full_raw_response.append(data)
                 # Log para debug solicitado pelo usuário
                 print(f"DEBUG BRAPI RESPONSE (Lote {batch}): {data}")
                 
@@ -544,7 +546,6 @@ def fetch_brapi_proventos(tickers_list):
                 
                 for res in results:
                     ticker = res.get('symbol')
-                    # Se o ticker retornar erro individual (ex: não encontrado), ele vem com erro no JSON
                     if res.get('error'):
                         continue
                         
@@ -566,16 +567,16 @@ def fetch_brapi_proventos(tickers_list):
                             'Valor': valor
                         })
             elif response.status_code == 401:
-                return None, "Token da Brapi inválido ou expirado."
+                return None, "Token da Brapi inválido ou expirado.", None
             elif response.status_code == 400:
-                # Se o lote falhar, tentamos processar um por um deste lote para não perder tudo
                 for single_t in batch:
                     single_url = f"https://brapi.dev/api/quote/{single_t}?dividends=true&token={token}"
                     try:
                         s_res = requests.get(single_url, timeout=10)
                         if s_res.status_code == 200:
-                            s_data = s_res.json().get('results', [{}])[0]
-                            # Log para debug (fallback)
+                            s_data_raw = s_res.json()
+                            full_raw_response.append(s_data_raw)
+                            s_data = s_data_raw.get('results', [{}])[0]
                             print(f"DEBUG BRAPI FALLBACK ({single_t}): {s_data}")
                             
                             if not s_data.get('error'):
@@ -596,14 +597,14 @@ def fetch_brapi_proventos(tickers_list):
                     except:
                         continue
             else:
-                continue # Pula lotes com erro genérico
+                continue
                 
         except Exception as e:
             print(f"Erro no lote Brapi: {e}")
             continue
 
     if not all_dividends:
-        return pd.DataFrame(), ""
+        return pd.DataFrame(), "", full_raw_response
         
     df = pd.DataFrame(all_dividends)
     
@@ -617,7 +618,7 @@ def fetch_brapi_proventos(tickers_list):
     df = df[df['dt_pag_raw'] >= hoje]
     
     if df.empty:
-        return pd.DataFrame(), ""
+        return pd.DataFrame(), "", full_raw_response
 
     # Formatação final para exibição
     df['Data Com'] = pd.to_datetime(df['Data Com'], errors='coerce').dt.strftime('%d/%m/%Y')
@@ -627,4 +628,4 @@ def fetch_brapi_proventos(tickers_list):
     df = df.drop_duplicates()
     df = df.sort_values(by=['dt_pag_raw', 'Ativo'], ascending=[True, True])
     
-    return df, ""
+    return df, "", full_raw_response

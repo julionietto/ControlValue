@@ -21,15 +21,28 @@ def render_proventos_view():
                 if not raw_tickers:
                     st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
                 else:
-                    df_brapi, err = svc.fetch_brapi_proventos(raw_tickers)
+                    df_brapi, err, raw_json = svc.fetch_brapi_proventos(raw_tickers)
                     if err:
                         st.error(err)
                     else:
                         st.session_state.brapi_results = df_brapi
+                        st.session_state.brapi_raw_json = raw_json
                         st.session_state.show_brapi_results = True
+
+    @st.dialog("🔍 Resposta Bruta da API (Debug)")
+    def dialog_ver_json_bruto(json_data):
+        st.write("Abaixo está o conteúdo original retornado pela Brapi:")
+        st.json(json_data)
+        if st.button("Fechar"):
+            st.rerun()
 
     if st.session_state.get('show_brapi_results'):
         with st.expander("📅 Proventos Provisionados (Fonte: Brapi.dev)", expanded=True):
+            col_d1, col_d2 = st.columns([3, 1])
+            with col_d2:
+                if st.button("🛠️ Ver JSON Bruto", use_container_width=True):
+                    dialog_ver_json_bruto(st.session_state.get('brapi_raw_json'))
+            
             df_res = st.session_state.brapi_results
             if df_res.empty:
                 st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira.")
