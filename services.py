@@ -534,7 +534,9 @@ def fetch_statusinvest_proventos(tickers_with_types):
         url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={clean_t}&chartProventsType=2"
         
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            import cloudscraper
+            scraper = cloudscraper.create_scraper()
+            response = scraper.get(url, headers=headers, timeout=15)
             if response.status_code == 200:
                 try:
                     data = response.json()
@@ -542,6 +544,9 @@ def fetch_statusinvest_proventos(tickers_with_types):
                     continue
                     
                 # Trata erros de NoneType
+                if not isinstance(data, dict):
+                    continue
+                    
                 asset_models = data.get('assetEarningsModels')
                 if asset_models is not None and isinstance(asset_models, list) and len(asset_models) > 0:
                     full_raw_response.append({clean_t: data})
