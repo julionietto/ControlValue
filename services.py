@@ -537,6 +537,9 @@ def fetch_brapi_proventos(tickers_list):
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
                 data = response.json()
+                # Log para debug solicitado pelo usuário
+                print(f"DEBUG BRAPI RESPONSE (Lote {batch}): {data}")
+                
                 results = data.get('results', [])
                 
                 for res in results:
@@ -572,6 +575,9 @@ def fetch_brapi_proventos(tickers_list):
                         s_res = requests.get(single_url, timeout=10)
                         if s_res.status_code == 200:
                             s_data = s_res.json().get('results', [{}])[0]
+                            # Log para debug (fallback)
+                            print(f"DEBUG BRAPI FALLBACK ({single_t}): {s_data}")
+                            
                             if not s_data.get('error'):
                                 s_divs = s_data.get('dividendsData', {}).get('cashDividends', [])
                                 for d in s_divs:
