@@ -514,18 +514,26 @@ def fetch_statusinvest_proventos(tickers_with_types):
     all_dividends = []
     full_raw_response = []
     
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Accept': 'application/json'
-    }
-
     hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    try:
+        from curl_cffi import requests as cffi_requests
+        session = cffi_requests.Session(impersonate='chrome110')
+        
+        # Acessa a home primeiro para pegar cookies e passar por verificações silenciosas do Cloudflare
+        try:
+            session.get("https://statusinvest.com.br/", timeout=15)
+        except:
+            pass
+            
+    except Exception as e:
+        print(f"Erro ao iniciar curl_cffi session: {e}")
+        return pd.DataFrame(), "", []
 
     for item in tickers_with_types:
         t = item['ticker']
         a_type = item['type']
         
-        # Limpeza
         clean_t = t.strip().upper().replace(".SA", "")
         if not clean_t:
             continue
@@ -534,8 +542,8 @@ def fetch_statusinvest_proventos(tickers_with_types):
         url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={clean_t}&chartProventsType=2"
         
         try:
-            from curl_cffi import requests as cffi_requests
-            response = cffi_requests.get(url, headers=headers, timeout=15, impersonate='chrome110')
+            # Não passamos headers customizados para não quebrar a assinatura (impersonate) do chrome
+            response = session.get(url, timeout=15)
             if response.status_code == 200:
                 try:
                     data = response.json()
@@ -579,7 +587,7 @@ def fetch_statusinvest_proventos(tickers_with_types):
             print(f"Erro ao buscar {clean_t} no StatusInvest: {e}")
             full_raw_response.append({clean_t: f"Exception: {str(e)}"})
             
-        time.sleep(0.3)
+        time.sleep(1.0)
 
 
 
