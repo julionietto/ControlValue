@@ -16,12 +16,20 @@ def render_proventos_view():
             with st.spinner("Buscando dados no Status Invest..."):
                 assets_df_all = db.get_all_assets(st.session_state.user_id)
                 allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
-                raw_tickers = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
                 
-                if not raw_tickers:
+                # Prepara os ativos com seus tipos
+                filtered_assets = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]
+                tickers_with_types = []
+                for _, row in filtered_assets.drop_duplicates(subset=['ticker']).iterrows():
+                    tickers_with_types.append({
+                        'ticker': row['ticker'],
+                        'type': row['asset_type']
+                    })
+                
+                if not tickers_with_types:
                     st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
                 else:
-                    df_statusinvest, err, raw_json = svc.fetch_statusinvest_proventos(raw_tickers)
+                    df_statusinvest, err, raw_json = svc.fetch_statusinvest_proventos(tickers_with_types)
                     if err:
                         st.error(err)
                     else:
@@ -46,7 +54,8 @@ def render_proventos_view():
                     # Recupera os tickers brutos usados na consulta (precisamos recalcular para o dialog ou passar no session state)
                     assets_df_all = db.get_all_assets(st.session_state.user_id)
                     allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
-                    tickers_enviados = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
+                    raw_tickers = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
+                    tickers_enviados = [t.strip().upper().replace(".SA", "") for t in raw_tickers]
                     dialog_ver_json_bruto(st.session_state.get('statusinvest_raw_json'), tickers_enviados)
             
             df_res = st.session_state.statusinvest_results

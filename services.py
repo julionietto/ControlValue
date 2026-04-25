@@ -488,9 +488,10 @@ def send_password_reset_email(to_email, reset_link):
         print(f"SMTP erro: {e}")
         return False, f"Erro ao enviar e-mail."
 
-def fetch_statusinvest_proventos(tickers_list):
+def fetch_statusinvest_proventos(tickers_with_types):
     """
-    Busca dados de proventos (dividendos/JCP) provisionados via scraping do Status Invest.
+    Busca dados de proventos provisionados via scraping do Status Invest.
+    Recebe uma lista de dicionários [{'ticker': 'PETR4', 'type': 'Ações'}, ...]
     Retorna (DataFrame, error_message, raw_json_list).
     """
     import requests
@@ -499,82 +500,81 @@ def fetch_statusinvest_proventos(tickers_list):
     from datetime import datetime
     import pandas as pd
     
-    if not tickers_list:
+    if not tickers_with_types:
         return pd.DataFrame(), "", []
         
-    # Limpeza de Tickers: remover sufixo .SA
-    cleaned_tickers = []
-    for t in tickers_list:
-        clean_t = t.strip().upper()
-        if clean_t.endswith(".SA"):
-            clean_t = clean_t[:-3]
-        if clean_t and clean_t not in cleaned_tickers:
-            cleaned_tickers.append(clean_t)
-            
-    if not cleaned_tickers:
-        return pd.DataFrame(), "", []
+    # Mapeamento do tipo do ControlValue para o endpoint do Status Invest
+    type_to_endpoint = {
+        'Ações': 'acao',
+        'Fiis': 'fii',
+        'Stocks': 'bdr',
+        'Reits': 'bdr' # StatusInvest costuma tratar BDRs de Reits no endpoint bdr
+    }
 
     all_dividends = []
     full_raw_response = []
     
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Accept': 'application/json'
     }
 
     hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    # Endpoints possíveis para tentar em ordem (ação, fii, bdr)
-    endpoints = ['acao', 'fii', 'bdr']
 
-    for ticker in cleaned_tickers:
-        found_data = False
+    for item in tickers_with_types:
+        t = item['ticker']
+        a_type = item['type']
         
-        for ep in endpoints:
-            url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={ticker}&chartProventsType=2"
-            try:
-                response = requests.get(url, headers=headers, timeout=10)
-                if response.status_code == 200:
-                    try:
-                        data = response.json()
-                    except:
-                        continue
+        # Limpeza
+        clean_t = t.strip().upper().replace(".SA", "")
+        if not clean_t:
+            continue
+            
+        ep = type_to_endpoint.get(a_type, 'acao')
+        url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={clean_t}&chartProventsType=2"
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                except:
+                    continue
+                    
+                # Trata erros de NoneType
+                asset_models = data.get('assetEarningsModels')
+                if asset_models is not None and isinstance(asset_models, list) and len(asset_models) > 0:
+                    full_raw_response.append({clean_t: data})
+                    
+                    for d in asset_models:
+                        dt_pag_str = d.get('pd', 'N/A')
+                        dt_com_str = d.get('ed', 'N/A')
+                        valor = float(d.get('v', 0.0))
+                        tipo = d.get('etd', 'N/A')
                         
-                    # Checa se retornou dados válidos
-                    if 'assetEarningsModels' in data and len(data['assetEarningsModels']) > 0:
-                        found_data = True
-                        full_raw_response.append({ticker: data})
-                        
-                        for d in data['assetEarningsModels']:
-                            dt_pag_str = d.get('pd', 'N/A')
-                            dt_com_str = d.get('ed', 'N/A')
-                            valor = float(d.get('v', 0.0))
-                            tipo = d.get('etd', 'N/A')
+                        if dt_pag_str in ['N/A', '-', '']:
+                            continue
                             
-                            if dt_pag_str == 'N/A' or dt_pag_str == '-' or dt_pag_str == '':
-                                continue
-                                
-                            try:
-                                dt_pag_obj = datetime.strptime(dt_pag_str, '%d/%m/%Y')
-                            except:
-                                continue
-                                
-                            if dt_pag_obj >= hoje:
-                                all_dividends.append({
-                                    'Ativo': ticker,
-                                    'Tipo': tipo,
-                                    'Data Com': dt_com_str,
-                                    'Data Pagamento': dt_pag_str,
-                                    'Valor': valor,
-                                    'dt_pag_raw': dt_pag_obj
-                                })
-                        break # Achou dados, não tenta o próximo endpoint
-            except Exception as e:
-                print(f"Erro ao buscar {ticker} no StatusInvest ({ep}): {e}")
-                continue
-                
-        # Pausa leve para não sobrecarregar o Status Invest
+                        try:
+                            dt_pag_obj = datetime.strptime(dt_pag_str, '%d/%m/%Y')
+                        except:
+                            continue
+                            
+                        if dt_pag_obj >= hoje:
+                            all_dividends.append({
+                                'Ativo': clean_t,
+                                'Tipo': tipo,
+                                'Data Com': dt_com_str,
+                                'Data Pagamento': dt_pag_str,
+                                'Valor': valor,
+                                'dt_pag_raw': dt_pag_obj
+                            })
+        except Exception as e:
+            print(f"Erro ao buscar {clean_t} no StatusInvest: {e}")
+            
         time.sleep(0.3)
+
+
 
     if not all_dividends:
         return pd.DataFrame(), "", full_raw_response
