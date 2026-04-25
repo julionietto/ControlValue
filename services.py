@@ -534,9 +534,8 @@ def fetch_statusinvest_proventos(tickers_with_types):
         url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={clean_t}&chartProventsType=2"
         
         try:
-            import cloudscraper
-            scraper = cloudscraper.create_scraper()
-            response = scraper.get(url, headers=headers, timeout=15)
+            from curl_cffi import requests as cffi_requests
+            response = cffi_requests.get(url, headers=headers, timeout=15, impersonate='chrome110')
             if response.status_code == 200:
                 try:
                     data = response.json()
