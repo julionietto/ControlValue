@@ -18,13 +18,7 @@ def render_proventos_view():
                 allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
                 
                 # Prepara os ativos com seus tipos
-                filtered_assets = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]
-                tickers_with_types = []
-                for _, row in filtered_assets.drop_duplicates(subset=['ticker']).iterrows():
-                    tickers_with_types.append({
-                        'ticker': row['ticker'],
-                        'type': row['asset_type']
-                    })
+                tickers_with_types = [{'ticker': 'KLBN11', 'type': 'Ações'}]
                 
                 if not tickers_with_types:
                     st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")

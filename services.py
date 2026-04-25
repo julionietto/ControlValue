@@ -569,8 +569,11 @@ def fetch_statusinvest_proventos(tickers_with_types):
                                 'Valor': valor,
                                 'dt_pag_raw': dt_pag_obj
                             })
+            else:
+                full_raw_response.append({clean_t: f"Erro HTTP {response.status_code}"})
         except Exception as e:
             print(f"Erro ao buscar {clean_t} no StatusInvest: {e}")
+            full_raw_response.append({clean_t: f"Exception: {str(e)}"})
             
         time.sleep(0.3)
 
