@@ -518,11 +518,29 @@ def fetch_statusinvest_proventos(tickers_with_types):
     
     try:
         from curl_cffi import requests as cffi_requests
-        session = cffi_requests.Session(impersonate='chrome110')
+        
+        # Adicionando headers padrões de navegador para aumentar a semelhança com tráfego humano
+        custom_headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Referer": "https://statusinvest.com.br/",
+            "Origin": "https://statusinvest.com.br",
+            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin"
+        }
+        
+        session = cffi_requests.Session(impersonate='chrome120')
+        session.headers.update(custom_headers)
         
         # Acessa a home primeiro para pegar cookies e passar por verificações silenciosas do Cloudflare
         try:
             session.get("https://statusinvest.com.br/", timeout=15)
+            import random
+            time.sleep(random.uniform(1.0, 2.5))
         except:
             pass
             
@@ -542,7 +560,6 @@ def fetch_statusinvest_proventos(tickers_with_types):
         url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={clean_t}&chartProventsType=2"
         
         try:
-            # Não passamos headers customizados para não quebrar a assinatura (impersonate) do chrome
             response = session.get(url, timeout=15)
             if response.status_code == 200:
                 try:
@@ -587,7 +604,8 @@ def fetch_statusinvest_proventos(tickers_with_types):
             print(f"Erro ao buscar {clean_t} no StatusInvest: {e}")
             full_raw_response.append({clean_t: f"Exception: {str(e)}"})
             
-        time.sleep(1.0)
+        import random
+        time.sleep(random.uniform(1.5, 3.5))
 
 
 
