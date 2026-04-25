@@ -18,7 +18,7 @@ def render_proventos_view():
                 allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
                 
                 # Prepara os ativos com seus tipos
-                tickers_with_types = [{'ticker': 'KLBN11', 'type': 'Ações'}]
+                tickers_with_types = [{'ticker': 'PSSA3', 'type': 'Ações'}, {'ticker': 'NNN', 'type': 'Reits'}]
                 
                 if not tickers_with_types:
                     st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
