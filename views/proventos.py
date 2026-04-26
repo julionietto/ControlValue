@@ -41,6 +41,10 @@ def render_proventos_view():
                 # Calcula o Total a Receber
                 prov_df['Total a Receber'] = prov_df['valor'] * prov_df['quantidade_elegivel']
                 
+                # Desconto de IR para Juros Sobre Capital Próprio (fator 0.8250 conforme regra do usuário)
+                mask_jcp = prov_df['tipo'].str.contains('Juros', case=False, na=False)
+                prov_df.loc[mask_jcp, 'Total a Receber'] = prov_df.loc[mask_jcp, 'Total a Receber'] * 0.8250
+                
                 prov_df = prov_df.rename(columns={
                     'ticker': 'Ativo',
                     'tipo': 'Tipo',
