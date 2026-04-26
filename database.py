@@ -223,12 +223,24 @@ def init_db():
             id SERIAL PRIMARY KEY,
             ticker TEXT NOT NULL,
             tipo TEXT NOT NULL,
-            data_com TEXT NOT NULL,
-            data_pagamento TEXT NOT NULL,
+            data_com DATE NOT NULL,
+            data_pagamento DATE NOT NULL,
             valor REAL NOT NULL,
             user_id INTEGER NOT NULL DEFAULT 1
         )
     ''')
+    
+    try:
+        # Migração Segura para DATE
+        cursor.execute("SELECT data_type FROM information_schema.columns WHERE table_name='proventos_provisionados' AND column_name='data_com'")
+        dt_type = cursor.fetchone()
+        if dt_type and dt_type[0] == 'text':
+            cursor.execute("ALTER TABLE proventos_provisionados ALTER COLUMN data_com TYPE DATE USING to_date(data_com, 'DD/MM/YYYY')")
+            cursor.execute("ALTER TABLE proventos_provisionados ALTER COLUMN data_pagamento TYPE DATE USING to_date(data_pagamento, 'DD/MM/YYYY')")
+    except Exception as e:
+        import logging
+        logging.warning(f"Aviso na migração de datas do proventos_provisionados: {e}")
+        
     conn.commit()
     db_pool = init_connection_pool()
     db_pool.putconn(conn)
@@ -568,32 +580,54 @@ def get_proventos(user_id):
         df['ano'] = df['ano'].apply(safe_int_ano)
     return df
 
-def get_proventos_provisionados(user_id):
+def get_proventos_provisionados_calculados(user_id):
     with get_db_connection() as conn:
-        df = _query_to_df("SELECT * FROM proventos_provisionados WHERE user_id = %s ORDER BY data_pagamento ASC, ticker", conn, params=(user_id,))
+        query = '''
+            SELECT
+                p.ticker,
+                p.tipo,
+                p.data_com,
+                p.data_pagamento,
+                p.valor,
+                COALESCE(SUM(h.quantity), 0) as quantidade_elegivel
+            FROM proventos_provisionados p
+            JOIN assets a ON a.ticker = p.ticker AND a.user_id = p.user_id
+            LEFT JOIN asset_history h ON h.asset_id = a.id AND CAST(h.date AS DATE) <= p.data_com
+            WHERE p.user_id = %s
+            GROUP BY p.id, p.ticker, p.tipo, p.data_com, p.data_pagamento, p.valor
+            ORDER BY p.data_pagamento ASC, p.ticker ASC
+        '''
+        df = _query_to_df(query, conn, params=(user_id,))
     return df
 
 def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, user_id):
     ticker = str(ticker).strip().upper()
     valor = float(valor)
+    
+    try:
+        dt_com_db = datetime.strptime(data_com, '%d/%m/%Y').strftime('%Y-%m-%d')
+        dt_pag_db = datetime.strptime(data_pagamento, '%d/%m/%Y').strftime('%Y-%m-%d')
+    except:
+        return # Skip se a data não estiver no formato esperado do scraper
+        
     with get_db_connection() as conn:
         cursor = conn.cursor()
         # Verifica se já existe um provento idêntico (mesmo ticker e data de pagamento) para atualizar o valor
         cursor.execute(
             "SELECT id FROM proventos_provisionados WHERE ticker = %s AND data_pagamento = %s AND user_id = %s",
-            (ticker, data_pagamento, user_id)
+            (ticker, dt_pag_db, user_id)
         )
         res = cursor.fetchone()
         
         if res:
             cursor.execute(
                 "UPDATE proventos_provisionados SET valor = %s, tipo = %s, data_com = %s WHERE id = %s AND user_id = %s",
-                (valor, tipo, data_com, res[0], user_id)
+                (valor, tipo, dt_com_db, res[0], user_id)
             )
         else:
             cursor.execute(
                 "INSERT INTO proventos_provisionados (ticker, tipo, data_com, data_pagamento, valor, user_id) VALUES (%s, %s, %s, %s, %s, %s)",
-                (ticker, tipo, data_com, data_pagamento, valor, user_id)
+                (ticker, tipo, dt_com_db, dt_pag_db, valor, user_id)
             )
         conn.commit()
 

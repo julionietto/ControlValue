@@ -70,15 +70,15 @@ def run_sync():
                 
                 ticker_sa = f"{ticker_base}.SA"
                 
-                # Descobre quem tem esse ativo (com ou sem .SA)
-                cursor.execute("SELECT DISTINCT user_id FROM assets WHERE ticker IN (%s, %s)", (ticker_base, ticker_sa))
+                # Descobre quem tem esse ativo (com ou sem .SA) e pega o ticker exato do banco
+                cursor.execute("SELECT DISTINCT ticker, user_id FROM assets WHERE ticker IN (%s, %s)", (ticker_base, ticker_sa))
                 users_with_asset = cursor.fetchall()
                 
                 for u in users_with_asset:
-                    user_id = u[0]
-                    # Salva (upsert) na tabela usando o ticker original do usuário? 
-                    # Na UI, o ticker é mostrado sem o SA ou com SA. Vamos salvar o que veio da API (limpo)
-                    db.upsert_provento_provisionado(ticker_base, tipo, data_com, data_pagamento, valor, user_id)
+                    db_ticker = u[0]
+                    user_id = u[1]
+                    # Salva (upsert) respeitando o sufixo original do banco
+                    db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, valor, user_id)
         
         print("Sincronização gravada no banco de dados com sucesso!")
         db.log_sync_execution(today_str, 'SUCCESS', f"Sincronizados {len(df)} proventos para {len(tickers_with_types)} ativos.")

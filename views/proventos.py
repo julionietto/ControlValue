@@ -27,26 +27,42 @@ def render_proventos_view():
 
     if st.session_state.get('show_statusinvest_results'):
         with st.expander("📅 Proventos Provisionados (Rotina Diária)", expanded=True):
-            prov_df = db.get_proventos_provisionados(st.session_state.user_id)
+            prov_df = db.get_proventos_provisionados_calculados(st.session_state.user_id)
             if prov_df.empty:
                 st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira no momento.")
             else:
+                import pandas as pd
+                
+                # Formata as datas para o padrão brasileiro DD/MM/YYYY
+                prov_df['data_com'] = pd.to_datetime(prov_df['data_com']).dt.strftime('%d/%m/%Y')
+                prov_df['data_pagamento'] = pd.to_datetime(prov_df['data_pagamento']).dt.strftime('%d/%m/%Y')
+                
+                # Limpa o sufixo .SA visualmente
+                prov_df['ticker'] = prov_df['ticker'].str.replace('.SA', '', regex=False)
+                
+                # Calcula o Total a Receber
+                prov_df['Total a Receber'] = prov_df['valor'] * prov_df['quantidade_elegivel']
+                
                 prov_df = prov_df.rename(columns={
                     'ticker': 'Ativo',
                     'tipo': 'Tipo',
                     'data_com': 'Data Com',
                     'data_pagamento': 'Data Pagamento',
-                    'valor': 'Valor'
+                    'valor': 'Valor Cota (R$)',
+                    'quantidade_elegivel': 'Qtd (Data Com)'
                 })
+                
                 # Remove colunas indesejadas (id, user_id) se existirem
                 cols_to_drop = [c for c in ['id', 'user_id'] if c in prov_df.columns]
                 prov_df = prov_df.drop(columns=cols_to_drop)
                 
-                st.success("Estes são os valores futuros mapeados pelas empresas da sua carteira:")
+                st.success("Estes são os valores futuros mapeados com base na sua posição até a Data Com:")
                 
                 st.dataframe(
                     prov_df.style.format({
-                        'Valor': 'R$ {:.4f}'
+                        'Valor Cota (R$)': 'R$ {:.4f}',
+                        'Qtd (Data Com)': '{:,.0f}',
+                        'Total a Receber': 'R$ {:.2f}'
                     }),
                     use_container_width=True,
                     hide_index=True
