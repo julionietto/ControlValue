@@ -66,8 +66,12 @@ def run_sync():
                 tipo = row['Tipo']
                 data_com = row['Data Com']
                 data_pagamento = row['Data Pagamento']
-                valor = row['Valor']
+                valor = float(row['Valor'])
                 
+                # Aplica o desconto de IR na fonte (x 0.8250) para JCP, gravando o valor líquido no banco
+                if 'juros' in str(tipo).lower():
+                    valor = valor * 0.8250
+                    
                 ticker_sa = f"{ticker_base}.SA"
                 
                 # Descobre quem tem esse ativo (com ou sem .SA) e pega o ticker exato do banco
