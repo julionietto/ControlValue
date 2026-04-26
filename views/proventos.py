@@ -31,8 +31,6 @@ def render_proventos_view():
             if prov_df.empty:
                 st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira no momento.")
             else:
-                import pandas as pd
-                
                 # Formata as datas para o padrão brasileiro DD/MM/YYYY
                 prov_df['data_com'] = pd.to_datetime(prov_df['data_com']).dt.strftime('%d/%m/%Y')
                 prov_df['data_pagamento'] = pd.to_datetime(prov_df['data_pagamento']).dt.strftime('%d/%m/%Y')
