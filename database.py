@@ -207,6 +207,28 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
+    # Tabela de Logs de Sincronização (Background Job)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sync_logs (
+            id SERIAL PRIMARY KEY,
+            sync_date TEXT NOT NULL,
+            status TEXT NOT NULL,
+            details TEXT,
+            execution_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # Tabela de Proventos Provisionados (Futuros)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS proventos_provisionados (
+            id SERIAL PRIMARY KEY,
+            ticker TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            data_com TEXT NOT NULL,
+            data_pagamento TEXT NOT NULL,
+            valor REAL NOT NULL,
+            user_id INTEGER NOT NULL DEFAULT 1
+        )
+    ''')
     conn.commit()
     db_pool = init_connection_pool()
     db_pool.putconn(conn)
@@ -545,6 +567,57 @@ def get_proventos(user_id):
             return int(val)
         df['ano'] = df['ano'].apply(safe_int_ano)
     return df
+
+def get_proventos_provisionados(user_id):
+    with get_db_connection() as conn:
+        df = _query_to_df("SELECT * FROM proventos_provisionados WHERE user_id = %s ORDER BY data_pagamento ASC, ticker", conn, params=(user_id,))
+    return df
+
+def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, user_id):
+    ticker = str(ticker).strip().upper()
+    valor = float(valor)
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Verifica se já existe um provento idêntico (mesmo ticker e data de pagamento) para atualizar o valor
+        cursor.execute(
+            "SELECT id FROM proventos_provisionados WHERE ticker = %s AND data_pagamento = %s AND user_id = %s",
+            (ticker, data_pagamento, user_id)
+        )
+        res = cursor.fetchone()
+        
+        if res:
+            cursor.execute(
+                "UPDATE proventos_provisionados SET valor = %s, tipo = %s, data_com = %s WHERE id = %s AND user_id = %s",
+                (valor, tipo, data_com, res[0], user_id)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO proventos_provisionados (ticker, tipo, data_com, data_pagamento, valor, user_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                (ticker, tipo, data_com, data_pagamento, valor, user_id)
+            )
+        conn.commit()
+
+def log_sync_execution(sync_date, status, details=""):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO sync_logs (sync_date, status, details) VALUES (%s, %s, %s)",
+            (sync_date, status, details)
+        )
+        conn.commit()
+
+def get_last_sync_log():
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT * FROM sync_logs ORDER BY execution_time DESC LIMIT 1")
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+def check_sync_completed_today(sync_date):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM sync_logs WHERE sync_date = %s AND status = 'SUCCESS'", (sync_date,))
+        return cursor.fetchone() is not None
 
 def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price, price_ceiling=0, fair_value=0, currency='BRL'):
     ticker = ticker.upper()

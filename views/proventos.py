@@ -12,51 +12,45 @@ def render_proventos_view():
     # --- Bloco de Consulta Status Invest (Sempre visível no topo) ---
     col_bt1, col_bt2 = st.columns([2, 1])
     with col_bt2:
-        if st.button("🔍 Consultar Proventos Provisionados", key="btn_statusinvest_consult", use_container_width=True):
-            with st.spinner("Buscando dados no Status Invest..."):
-                assets_df_all = db.get_all_assets(st.session_state.user_id)
-                allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
-                
-                # Isolando a busca apenas para KLBN11 por segurança contra bloqueios de IP (Anti-bot)
-                tickers_with_types = [{'ticker': 'KLBN11', 'type': 'Ações'}]
-                
-                if not tickers_with_types:
-                    st.warning("Nenhum ativo elegível (Ações, Fiis, Stocks, Reits) na carteira.")
-                else:
-                    df_statusinvest, err, raw_json = svc.fetch_statusinvest_proventos(tickers_with_types)
-                    if err:
-                        st.error(err)
-                    else:
-                        st.session_state.statusinvest_results = df_statusinvest
-                        st.session_state.statusinvest_raw_json = raw_json
-                        st.session_state.show_statusinvest_results = True
+        last_sync = db.get_last_sync_log()
+        sync_msg = "Ainda não sincronizado."
+        if last_sync:
+            # last_sync['execution_time'] is a datetime object
+            sync_dt = last_sync['execution_time'].strftime('%d/%m/%Y às %H:%M')
+            status_text = "sucesso" if last_sync['status'] == 'SUCCESS' else "com erro"
+            sync_msg = f"Última sincronização diária: {sync_dt} ({status_text})"
+            
+        st.caption(f"☁️ {sync_msg}")
 
-    @st.dialog("🔍 Resposta Bruta da API (Debug)")
-    def dialog_ver_json_bruto(json_data, requested_tickers):
-        st.write("**Ativos enviados na requisição:**")
-        st.info(", ".join(requested_tickers))
-        st.write("**Abaixo está o conteúdo original retornado pelo Status Invest:**")
-        st.json(json_data)
-        if st.button("Fechar"):
-            st.rerun()
+        if st.button("🔍 Ver Proventos Provisionados", key="btn_statusinvest_consult", use_container_width=True):
+            st.session_state.show_statusinvest_results = True
 
     if st.session_state.get('show_statusinvest_results'):
-        with st.expander("📅 Proventos Provisionados (Fonte: Status Invest)", expanded=True):
-            col_d1, col_d2 = st.columns([3, 1])
-            with col_d2:
-                if st.button("🛠️ Ver JSON Bruto", use_container_width=True):
-                    # Recupera os tickers brutos usados na consulta (precisamos recalcular para o dialog ou passar no session state)
-                    assets_df_all = db.get_all_assets(st.session_state.user_id)
-                    allowed_types = ['Ações', 'Fiis', 'Stocks', 'Reits']
-                    raw_tickers = assets_df_all[assets_df_all['asset_type'].isin(allowed_types)]['ticker'].unique().tolist()
-                    tickers_enviados = [t.strip().upper().replace(".SA", "") for t in raw_tickers]
-                    dialog_ver_json_bruto(st.session_state.get('statusinvest_raw_json'), tickers_enviados)
-            
-            df_res = st.session_state.statusinvest_results
-            if df_res.empty:
-                st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira.")
+        with st.expander("📅 Proventos Provisionados (Rotina Diária)", expanded=True):
+            prov_df = db.get_proventos_provisionados(st.session_state.user_id)
+            if prov_df.empty:
+                st.info("Nenhum provento provisionado futuro encontrado para os ativos da sua carteira no momento.")
             else:
-                st.dataframe(df_res, hide_index=True, use_container_width=True)
+                prov_df = prov_df.rename(columns={
+                    'ticker': 'Ativo',
+                    'tipo': 'Tipo',
+                    'data_com': 'Data Com',
+                    'data_pagamento': 'Data Pagamento',
+                    'valor': 'Valor'
+                })
+                # Remove colunas indesejadas (id, user_id) se existirem
+                cols_to_drop = [c for c in ['id', 'user_id'] if c in prov_df.columns]
+                prov_df = prov_df.drop(columns=cols_to_drop)
+                
+                st.success("Estes são os valores futuros mapeados pelas empresas da sua carteira:")
+                
+                st.dataframe(
+                    prov_df.style.format({
+                        'Valor': 'R$ {:.4f}'
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
                 
             if st.button("Fechar Tabela", use_container_width=True):
                 st.session_state.show_statusinvest_results = False
