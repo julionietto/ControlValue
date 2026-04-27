@@ -581,6 +581,10 @@ def get_proventos(user_id):
     return df
 
 def get_proventos_provisionados_calculados(user_id):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    hoje_sp = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+    
     with get_db_connection() as conn:
         query = '''
             SELECT
@@ -593,11 +597,11 @@ def get_proventos_provisionados_calculados(user_id):
             FROM proventos_provisionados p
             JOIN assets a ON a.ticker = p.ticker AND a.user_id = p.user_id
             LEFT JOIN asset_history h ON h.asset_id = a.id AND CAST(h.date AS DATE) <= p.data_com
-            WHERE p.user_id = %s
+            WHERE p.user_id = %s AND p.data_pagamento >= %s
             GROUP BY p.id, p.ticker, p.tipo, p.data_com, p.data_pagamento, p.valor
             ORDER BY p.data_pagamento ASC, p.ticker ASC
         '''
-        df = _query_to_df(query, conn, params=(user_id,))
+        df = _query_to_df(query, conn, params=(user_id, hoje_sp))
     return df
 
 def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, user_id):
@@ -632,11 +636,14 @@ def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, 
         conn.commit()
 
 def log_sync_execution(sync_date, status, details=""):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    now_sp = datetime.now(ZoneInfo("America/Sao_Paulo"))
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO sync_logs (sync_date, status, details) VALUES (%s, %s, %s)",
-            (sync_date, status, details)
+            "INSERT INTO sync_logs (sync_date, status, details, execution_time) VALUES (%s, %s, %s, %s)",
+            (sync_date, status, details, now_sp)
         )
         conn.commit()
 
