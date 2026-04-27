@@ -68,9 +68,9 @@ def run_sync():
                 data_pagamento = row['Data Pagamento']
                 valor = float(row['Valor'])
                 
-                # Aplica o desconto de IR na fonte (x 0.8250) para JCP, gravando o valor líquido no banco
+                # Aplica o desconto de IR na fonte (x 0.8252) para JCP, gravando o valor líquido no banco
                 if 'juros' in str(tipo).lower():
-                    valor = valor * 0.8250
+                    valor = valor * 0.8252
                     
                 ticker_sa = f"{ticker_base}.SA"
                 
