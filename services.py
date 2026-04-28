@@ -188,13 +188,26 @@ FII_SECTOR_MAP = {
 }
 
 FII_TICKER_OVERRIDE = {
-    'PVBI11.SA': 'Lajes Corporativas',
-    'MCRE11.SA': 'Recebíveis',
-    'KNHF11.SA': 'Hedge Funds',
-    'KNCA11.SA': 'Recebíveis',
-    'RBRY11.SA': 'Recebíveis',
-    'FATN11.SA': 'Renda Urbana',
-    'TRXF11.SA': 'Renda Urbana'
+    'PVBI11.SA': 'Lajes Corporativas', 'HGRE11.SA': 'Lajes Corporativas', 'KNRI11.SA': 'Lajes Corporativas', 'BRCR11.SA': 'Lajes Corporativas', 'VINO11.SA': 'Lajes Corporativas', 'RBRP11.SA': 'Lajes Corporativas', 'RECT11.SA': 'Lajes Corporativas', 'SARE11.SA': 'Lajes Corporativas',
+    'MCRE11.SA': 'Recebíveis', 'KNCA11.SA': 'Recebíveis', 'RBRY11.SA': 'Recebíveis', 'KNIP11.SA': 'Recebíveis', 'KNCR11.SA': 'Recebíveis', 'IRDM11.SA': 'Recebíveis', 'CPTS11.SA': 'Recebíveis', 'HCTR11.SA': 'Recebíveis', 'MXRF11.SA': 'Recebíveis', 'VGHF11.SA': 'Recebíveis', 'CVBI11.SA': 'Recebíveis', 'HGCR11.SA': 'Recebíveis', 'MCCI11.SA': 'Recebíveis', 'URPR11.SA': 'Recebíveis', 'KNSC11.SA': 'Recebíveis', 'RBRR11.SA': 'Recebíveis', 'KNHY11.SA': 'Recebíveis', 'BARR11.SA': 'Recebíveis', 'VRTA11.SA': 'Recebíveis', 'HABT11.SA': 'Recebíveis',
+    'HGLG11.SA': 'Logística', 'BTLG11.SA': 'Logística', 'XPLG11.SA': 'Logística', 'VILG11.SA': 'Logística', 'ALZR11.SA': 'Logística', 'GGRC11.SA': 'Logística', 'LVBI11.SA': 'Logística', 'BRCO11.SA': 'Logística', 'RBRL11.SA': 'Logística', 'HSLG11.SA': 'Logística', 'GALG11.SA': 'Logística',
+    'VISC11.SA': 'Shoppings', 'XPML11.SA': 'Shoppings', 'HSML11.SA': 'Shoppings', 'MALL11.SA': 'Shoppings', 'HGBS11.SA': 'Shoppings', 'VSHO11.SA': 'Shoppings',
+    'FATN11.SA': 'Renda Urbana', 'TRXF11.SA': 'Renda Urbana', 'HGRU11.SA': 'Renda Urbana', 'RBVA11.SA': 'Renda Urbana',
+    'KNHF11.SA': 'Hedge Funds', 'VGIA11.SA': 'Fiagro', 'SNAG11.SA': 'Fiagro', 'RZAG11.SA': 'Fiagro', 'CPTR11.SA': 'Fiagro'
+}
+
+STOCK_TICKER_OVERRIDE = {
+    'PETR4.SA': 'Óleo e Gás', 'PETR3.SA': 'Óleo e Gás', 'PRIO3.SA': 'Óleo e Gás', 'RRRP3.SA': 'Óleo e Gás', 'RECV3.SA': 'Óleo e Gás', 'ENAT3.SA': 'Óleo e Gás',
+    'VALE3.SA': 'Materiais Básicos', 'CSNA3.SA': 'Materiais Básicos', 'USIM5.SA': 'Materiais Básicos', 'GGBR4.SA': 'Materiais Básicos', 'GOAU4.SA': 'Materiais Básicos', 'SUZB3.SA': 'Materiais Básicos', 'KLBN11.SA': 'Materiais Básicos', 'CBAV3.SA': 'Materiais Básicos',
+    'ITUB4.SA': 'Serviços Financeiros', 'ITUB3.SA': 'Serviços Financeiros', 'BBDC4.SA': 'Serviços Financeiros', 'BBDC3.SA': 'Serviços Financeiros', 'BBAS3.SA': 'Serviços Financeiros', 'SANB11.SA': 'Serviços Financeiros', 'BPAC11.SA': 'Serviços Financeiros', 'B3SA3.SA': 'Serviços Financeiros', 'CXSE3.SA': 'Seguros', 'BBSE3.SA': 'Seguros', 'PSSA3.SA': 'Seguros', 'IRBR3.SA': 'Seguros',
+    'WEGE3.SA': 'Industrial', 'EMBR3.SA': 'Industrial', 'TUPY3.SA': 'Industrial', 'POMO4.SA': 'Industrial', 'RAPT4.SA': 'Industrial',
+    'ELET3.SA': 'Elétricas', 'ELET6.SA': 'Elétricas', 'EQTL3.SA': 'Elétricas', 'TAEE11.SA': 'Elétricas', 'TRPL4.SA': 'Elétricas', 'CPLE6.SA': 'Elétricas', 'CMIG4.SA': 'Elétricas', 'EGIE3.SA': 'Elétricas', 'ENBR3.SA': 'Elétricas', 'ALUP11.SA': 'Elétricas', 'AURE3.SA': 'Elétricas', 'NEOE3.SA': 'Elétricas',
+    'SBSP3.SA': 'Saneamento / Outras Utilidades', 'CSMG3.SA': 'Saneamento / Outras Utilidades', 'SAPR11.SA': 'Saneamento / Outras Utilidades', 'SAPR4.SA': 'Saneamento / Outras Utilidades',
+    'RENT3.SA': 'Consumo Cíclico', 'VAMO3.SA': 'Consumo Cíclico', 'LREN3.SA': 'Consumo Cíclico', 'ALOS3.SA': 'Consumo Cíclico', 'SOMA3.SA': 'Consumo Cíclico', 'ARZZ3.SA': 'Consumo Cíclico', 'CEAB3.SA': 'Consumo Cíclico', 'AMOB3.SA': 'Consumo Cíclico', 'SMFT3.SA': 'Consumo Cíclico', 'COGN3.SA': 'Educação', 'YDUQ3.SA': 'Educação',
+    'RADL3.SA': 'Consumo Defensivo', 'CRFB3.SA': 'Consumo Defensivo', 'ASAI3.SA': 'Consumo Defensivo', 'NTCO3.SA': 'Consumo Defensivo', 'ABEV3.SA': 'Consumo Defensivo', 'JBSS3.SA': 'Consumo Defensivo', 'MRFG3.SA': 'Consumo Defensivo', 'BEEF3.SA': 'Consumo Defensivo', 'BRFS3.SA': 'Consumo Defensivo', 'SMTO3.SA': 'Consumo Defensivo',
+    'HYPE3.SA': 'Saúde', 'FLRY3.SA': 'Saúde', 'RDOR3.SA': 'Saúde', 'HAPV3.SA': 'Saúde', 'MATD3.SA': 'Saúde', 'PNVL3.SA': 'Saúde', 'ODPV3.SA': 'Saúde',
+    'VIVT3.SA': 'Serviços de Comunicação', 'TIMS3.SA': 'Serviços de Comunicação',
+    'EZTC3.SA': 'Construção Civil', 'CYRE3.SA': 'Construção Civil', 'MRVE3.SA': 'Construção Civil', 'TEND3.SA': 'Construção Civil', 'DIRR3.SA': 'Construção Civil'
 }
 
 @st.cache_data(ttl=300)
@@ -204,40 +217,60 @@ def _fetch_single_sector(ticker, a_type):
     elif a_type == 'Renda Fixa':
         return 'Renda Fixa'
     else:
-        try:
-            info = yf.Ticker(ticker).info
-            raw_sector = info.get('sector', 'Outros')
-            raw_industry = info.get('industry', 'N/A')
-            
-            if a_type == 'Fiis':
-                if ticker in FII_TICKER_OVERRIDE:
-                    return FII_TICKER_OVERRIDE[ticker]
-                else:
-                    return FII_SECTOR_MAP.get(raw_industry, 'Fiis - Outros')
+        # Prioridade 1: Dicionários locais de Override (salva a pátria se YF falhar ou não tiver os dados)
+        if a_type == 'Fiis' and ticker in FII_TICKER_OVERRIDE:
+            return FII_TICKER_OVERRIDE[ticker]
+        if a_type == 'Ações' and ticker in STOCK_TICKER_OVERRIDE:
+            return STOCK_TICKER_OVERRIDE[ticker]
 
-            raw_industry_lower = raw_industry.lower()
-            
-            if raw_sector == 'Utilities':
-                if any(term in raw_industry for term in ['power', 'electric', 'renewable', 'utility']):
-                    return "Elétricas"
-                else:
-                    return "Saneamento / Outras Utilidades"
-                    
-            elif raw_sector == 'Energy':
-                if any(term in raw_industry for term in ['oil', 'gas', 'exploration', 'drilling', 'petroleum']):
-                    return "Óleo e Gás"
-                else:
-                    return "Energia (Outros)"
-                    
-            elif raw_sector in ['Industrials', 'Financial Services']:
-                if any(term in raw_industry for term in ['conglomerate', 'holding']):
-                    return "Holdings"
-                else:
-                    return SECTOR_TRANSLATION.get(raw_sector, raw_sector)
+        # Prioridade 2: Tentar Yahoo Finance Direto (Evita o .info bugado do yfinance recente)
+        import requests
+        url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+        }
+        
+        raw_sector = 'Outros'
+        raw_industry = 'N/A'
+        
+        try:
+            resp = requests.get(url, headers=headers, timeout=4)
+            if resp.status_code == 200:
+                data = resp.json()
+                res = data.get('quoteSummary', {}).get('result', [])
+                if res and len(res) > 0 and res[0] is not None:
+                    profile = res[0].get('assetProfile', {})
+                    if profile:
+                        raw_sector = profile.get('sector', 'Outros')
+                        raw_industry = profile.get('industry', 'N/A')
+        except Exception as e:
+            pass # Silencioso, tentará o fallback se falhar
+
+        if a_type == 'Fiis':
+            return FII_SECTOR_MAP.get(raw_industry, 'Fiis - Outros')
+
+        raw_industry_lower = raw_industry.lower()
+        
+        if raw_sector == 'Utilities':
+            if any(term in raw_industry_lower for term in ['power', 'electric', 'renewable', 'utility']):
+                return "Elétricas"
+            else:
+                return "Saneamento / Outras Utilidades"
+                
+        elif raw_sector == 'Energy':
+            if any(term in raw_industry_lower for term in ['oil', 'gas', 'exploration', 'drilling', 'petroleum']):
+                return "Óleo e Gás"
+            else:
+                return "Energia (Outros)"
+                
+        elif raw_sector in ['Industrials', 'Financial Services']:
+            if any(term in raw_industry_lower for term in ['conglomerate', 'holding']):
+                return "Holdings"
             else:
                 return SECTOR_TRANSLATION.get(raw_sector, raw_sector)
-        except Exception:
-            return 'Outros'
+        else:
+            return SECTOR_TRANSLATION.get(raw_sector, raw_sector)
 
 def fetch_asset_sectors(df_assets_tuple, is_auto_refresh=False):
     """

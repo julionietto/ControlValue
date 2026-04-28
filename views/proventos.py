@@ -238,6 +238,7 @@ def render_proventos_view():
                     row_idx = selected.selection.rows[0]
                     ticker_selecionado = display_df.iloc[row_idx]['OriginalTicker']
                     st.session_state.editing_provento = {'ano': ano, 'ticker': ticker_selecionado}
+                    st.session_state.refresh_id += 1
                     st.rerun()
 
                 st.markdown("""
