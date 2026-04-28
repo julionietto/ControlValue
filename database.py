@@ -1309,6 +1309,15 @@ def get_user_allocations(user_id):
         cursor.execute("SELECT asset_class, allocation_percent FROM user_allocations WHERE user_id = %s", (user_id,))
         rows = cursor.fetchall()
         
+    if not rows:
+        return {
+            'Ações': 20.0,
+            'Fiis': 20.0,
+            'Ativos Internacionais': 20.0,
+            'Criptos': 20.0,
+            'Renda Fixa': 20.0
+        }
+
     allocations = {
         'Ações': 0.0,
         'Fiis': 0.0,

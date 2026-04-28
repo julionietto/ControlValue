@@ -207,12 +207,12 @@ def dialog_alocacao_ativos():
     st.markdown(f"**Soma Total:** <span style='color: {color};'>{soma:.2f}%</span>", unsafe_allow_html=True)
     
     if soma != 100.0:
-        st.warning("⚠️ A soma das alocações é diferente de 100%. Isso pode gerar distorções nos futuros cálculos de balanceamento da carteira.")
+        st.error("⚠️ A soma das alocações deve ser exatamente **100%** para permitir o salvamento. Atualmente está em {:.2f}%.".format(soma))
         
     col_btn1, col_btn2 = st.columns(2)
     
     with col_btn1:
-        if st.button("Salvar", type="primary", use_container_width=True):
+        if st.button("Salvar", type="primary", use_container_width=True, disabled=(soma != 100.0)):
             new_allocs = {
                 'Ações': acoes,
                 'Fiis': fiis,
