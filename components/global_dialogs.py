@@ -176,3 +176,59 @@ def dialog_importar_ativos():
                 
         if close_ativos_dialog:
             st.rerun()
+
+@st.dialog("Alocação de Ativos")
+def dialog_alocacao_ativos():
+    import database as db
+    
+    st.markdown("Defina o percentual de capital que deseja alocar em cada classe de ativos. A soma deve fechar em **100%**.")
+    
+    # Busca alocações atuais do banco
+    if 'current_allocations' not in st.session_state:
+        st.session_state.current_allocations = db.get_user_allocations(st.session_state.user_id)
+        
+    allocs = st.session_state.current_allocations
+    
+    # Criar form em colunas para os inputs
+    col1, col2 = st.columns(2)
+    with col1:
+        acoes = st.number_input("Ações (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Ações', 0.0)), step=1.0)
+        fiis = st.number_input("Fiis (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Fiis', 0.0)), step=1.0)
+        internacionais = st.number_input("Ativos Internacionais (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Ativos Internacionais', 0.0)), step=1.0, help="Representa Stocks e Reits")
+    with col2:
+        criptos = st.number_input("Criptos (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Criptos', 0.0)), step=1.0)
+        renda_fixa = st.number_input("Renda Fixa (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Renda Fixa', 0.0)), step=1.0)
+        
+    soma = acoes + fiis + internacionais + criptos + renda_fixa
+    
+    st.markdown("---")
+    
+    color = "green" if soma == 100.0 else ("red" if soma > 100.0 else "orange")
+    st.markdown(f"**Soma Total:** <span style='color: {color};'>{soma:.2f}%</span>", unsafe_allow_html=True)
+    
+    if soma != 100.0:
+        st.warning("⚠️ A soma das alocações é diferente de 100%. Isso pode gerar distorções nos futuros cálculos de balanceamento da carteira.")
+        
+    col_btn1, col_btn2 = st.columns(2)
+    
+    with col_btn1:
+        if st.button("Salvar", type="primary", use_container_width=True):
+            new_allocs = {
+                'Ações': acoes,
+                'Fiis': fiis,
+                'Ativos Internacionais': internacionais,
+                'Criptos': criptos,
+                'Renda Fixa': renda_fixa
+            }
+            db.save_user_allocations(st.session_state.user_id, new_allocs)
+            st.session_state.pop('current_allocations', None)
+            st.success("Metas de alocação salvas com sucesso!")
+            st.session_state.refresh_id += 1
+            import time
+            time.sleep(1)
+            st.rerun()
+            
+    with col_btn2:
+        if st.button("Cancelar", use_container_width=True):
+            st.session_state.pop('current_allocations', None)
+            st.rerun()

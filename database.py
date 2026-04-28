@@ -258,6 +258,18 @@ def init_db():
         )
     ''')
     
+    # Tabela de Alocação de Classes de Ativos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_allocations (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            asset_class TEXT NOT NULL,
+            allocation_percent REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(user_id, asset_class)
+        )
+    ''')
+    
     try:
         # Migração Segura para DATE
         cursor.execute("SELECT data_type FROM information_schema.columns WHERE table_name='proventos_provisionados' AND column_name='data_com'")
@@ -1289,3 +1301,36 @@ def _query_to_df(query, conn, params=None):
     cols = [desc[0] for desc in cursor.description] if cursor.description else []
     import pandas as pd
     return pd.DataFrame(data, columns=cols)
+
+def get_user_allocations(user_id):
+    """Retorna as metas de alocação de classes de ativos do usuário no formato de dicionário."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT asset_class, allocation_percent FROM user_allocations WHERE user_id = %s", (user_id,))
+        rows = cursor.fetchall()
+        
+    allocations = {
+        'Ações': 0.0,
+        'Fiis': 0.0,
+        'Ativos Internacionais': 0.0,
+        'Criptos': 0.0,
+        'Renda Fixa': 0.0
+    }
+    for row in rows:
+        if row[0] in allocations:
+            allocations[row[0]] = float(row[1])
+            
+    return allocations
+
+def save_user_allocations(user_id, allocations_dict):
+    """Salva ou atualiza as metas de alocação de classes de ativos do usuário."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        for asset_class, percent in allocations_dict.items():
+            cursor.execute("""
+                INSERT INTO user_allocations (user_id, asset_class, allocation_percent)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (user_id, asset_class) 
+                DO UPDATE SET allocation_percent = EXCLUDED.allocation_percent
+            """, (user_id, asset_class, percent))
+        conn.commit()

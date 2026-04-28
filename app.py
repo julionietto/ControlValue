@@ -2,7 +2,7 @@ import streamlit as st
 import database as db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
-from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile
+from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile, dialog_alocacao_ativos
 from utils.refresh_manager import get_market_status
 import services as svc
 
@@ -113,6 +113,8 @@ if st.session_state.pop('trigger_dialog_proventos', False):
     dialog_importar_proventos()
 if st.session_state.pop('trigger_dialog_perfil', False):
     dialog_user_profile()
+if st.session_state.pop('trigger_dialog_alocacao', False):
+    dialog_alocacao_ativos()
 
 # ==============================
 # ADMIN DASHBOARD
