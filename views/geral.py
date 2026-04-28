@@ -397,6 +397,20 @@ def render_visao_geral_view():
         total_invested = assets_df['total_invested'].sum()
         current_total_value = assets_df['current_value'].sum()
         
+        # Busca Alocações de Meta do Usuário para o Balanceamento
+        user_targets = db.get_user_allocations(st.session_state.user_id)
+        
+        # Calcula Percentuais Atuais por Classe para validar "Melhor Compra"
+        current_allocs_pct = {}
+        if current_total_value > 0:
+            current_allocs_pct['Ações'] = (assets_df[assets_df['asset_type'] == 'Ações']['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Fiis'] = (assets_df[assets_df['asset_type'] == 'Fiis']['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Criptos'] = (assets_df[assets_df['asset_type'] == 'Cripto']['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Renda Fixa'] = (assets_df[assets_df['asset_type'] == 'Renda Fixa']['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Ativos Internacionais'] = (assets_df[assets_df['asset_type'].isin(['Stocks', 'Reits'])]['current_value'].sum() / current_total_value) * 100
+        else:
+            current_allocs_pct = {k: 0.0 for k in user_targets.keys()}
+        
         # Busca todos os proventos globais
         global_total_proventos = db.get_all_total_proventos(st.session_state.user_id)
         
@@ -607,7 +621,7 @@ def render_visao_geral_view():
         # --- SEÇÃO RADAR ---
         st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 0.5rem; margin-bottom: 1.5rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
     
-        def show_radar_table(title, asset_types, df):
+        def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct):
             st.subheader(title)
             radar_df = df[df['asset_type'].isin(asset_types)].copy()
             
@@ -617,11 +631,35 @@ def render_visao_geral_view():
                 
                 # Regra de Indicação de Compra
                 radar_df['Indicação de Compra'] = "Aguardar"
-                # Elegível: cotação atual (na moeda de origem) menor ou igual ao preço teto
-                eligible_mask = radar_df['original_current_price'] < radar_df['price_ceiling']
-                if eligible_mask.any():
+                
+                # Mapeamento do asset_type para a chave de user_targets
+                def get_target_class_key(a_type):
+                    if a_type == 'Ações': return 'Ações'
+                    if a_type == 'Fiis': return 'Fiis'
+                    if a_type == 'Cripto': return 'Criptos'
+                    if a_type == 'Renda Fixa': return 'Renda Fixa'
+                    if a_type in ['Stocks', 'Reits']: return 'Ativos Internacionais'
+                    return None
+
+                # Elegível se: 
+                # 1. Preço atual < Preço Teto
+                # 2. A classe do ativo está ABAIXO da meta de alocação (%)
+                def is_eligible(row):
+                    if row['original_current_price'] >= row['price_ceiling']:
+                        return False
+                    
+                    target_key = get_target_class_key(row['asset_type'])
+                    if target_key:
+                        target_pct = user_targets.get(target_key, 0.0)
+                        current_pct = current_allocs_pct.get(target_key, 0.0)
+                        return current_pct < target_pct
+                    return False
+
+                radar_df['eligible'] = radar_df.apply(is_eligible, axis=1)
+                
+                if radar_df['eligible'].any():
                     # Como já está ordenado pelo menor Valor do Ativo (current_value), o primeiro elegível é o vencedor
-                    best_buy_idx = radar_df[eligible_mask].index[0]
+                    best_buy_idx = radar_df[radar_df['eligible']].index[0]
                     radar_df.loc[best_buy_idx, 'Indicação de Compra'] = "Melhor Compra"
                 
                 # Prepara o dataframe de exibição
@@ -653,11 +691,11 @@ def render_visao_geral_view():
         if has_us_assets:
             col_radar1, col_radar2 = st.columns(2)
             with col_radar1:
-                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df)
+                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df, user_targets, current_allocs_pct)
             with col_radar2:
-                show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df)
+                show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df, user_targets, current_allocs_pct)
         else:
-            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df)
+            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df, user_targets, current_allocs_pct)
     
     
         # Gráficos
