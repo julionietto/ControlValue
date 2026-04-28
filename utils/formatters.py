@@ -31,12 +31,11 @@ def infer_asset_type(ticker):
         return 'Reits'
 
 def get_annual_proventos_summary(proventos_df, anos_disponiveis):
-    meses_ordem = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    meses_ordem = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     meses_abrev = {
-        'Janeiro': 'Jan', 'Fevereiro': 'Fev', 'Março': 'Mar', 'Abril': 'Abr',
-        'Maio': 'Mai', 'Junho': 'Jun', 'Julho': 'Jul', 'Agosto': 'Ago',
-        'Setembro': 'Set', 'Outubro': 'Out', 'Novembro': 'Nov', 'Dezembro': 'Dez'
+        1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
+        5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+        9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
     }
 
     resumo_rows = []
@@ -53,8 +52,8 @@ def get_annual_proventos_summary(proventos_df, anos_disponiveis):
         media_mensal = retorno_total / 12
 
         row = {'Ano': str(ano), 'Ano_Int': int(ano)}
-        for mes_completo, abrev in meses_abrev.items():
-            row[abrev] = totais_mes[mes_completo]
+        for mes_num, abrev in meses_abrev.items():
+            row[abrev] = totais_mes[mes_num]
         row['Valor Mensal'] = media_mensal
         row['Valor Anual'] = retorno_total
         resumo_rows.append(row)

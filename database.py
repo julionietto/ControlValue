@@ -172,12 +172,40 @@ def init_db():
         CREATE TABLE IF NOT EXISTS proventos (
             id SERIAL PRIMARY KEY,
             ano INTEGER NOT NULL,
-            mes TEXT NOT NULL,
+            mes INTEGER NOT NULL,
             ticker TEXT NOT NULL,
             valor REAL NOT NULL,
             user_id INTEGER NOT NULL DEFAULT 1
         )
     ''')
+    
+    try:
+        # Migração Segura para INTEGER na coluna mes
+        cursor.execute("SELECT data_type FROM information_schema.columns WHERE table_name='proventos' AND column_name='mes'")
+        mes_type = cursor.fetchone()
+        if mes_type and mes_type[0] == 'text':
+            cursor.execute("""
+                UPDATE proventos SET mes = 
+                CASE 
+                    WHEN mes = 'Janeiro' THEN '1'
+                    WHEN mes = 'Fevereiro' THEN '2'
+                    WHEN mes = 'Março' THEN '3'
+                    WHEN mes = 'Abril' THEN '4'
+                    WHEN mes = 'Maio' THEN '5'
+                    WHEN mes = 'Junho' THEN '6'
+                    WHEN mes = 'Julho' THEN '7'
+                    WHEN mes = 'Agosto' THEN '8'
+                    WHEN mes = 'Setembro' THEN '9'
+                    WHEN mes = 'Outubro' THEN '10'
+                    WHEN mes = 'Novembro' THEN '11'
+                    WHEN mes = 'Dezembro' THEN '12'
+                    ELSE '1'
+                END
+            """)
+            cursor.execute("ALTER TABLE proventos ALTER COLUMN mes TYPE INTEGER USING mes::integer")
+    except Exception as e:
+        import logging
+        logging.warning(f"Aviso na migração de meses do proventos: {e}")
     # Tabela de Opções
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS opcoes (
@@ -649,12 +677,6 @@ def sync_proventos_from_provisionados(user_id):
     current_year = now.year
     current_month = now.month
     
-    meses_map_reverse = {
-        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
-    }
-
     with get_db_connection() as conn:
         # Busca todos os proventos provisionados calculando a quantidade elegível
         query = '''
@@ -693,10 +715,6 @@ def sync_proventos_from_provisionados(user_id):
             ano = int(row['ano_pag'])
             mes_num = int(row['mes_pag_num'])
             total_valor = float(row['total_receber'])
-            
-            mes_nome = meses_map_reverse.get(mes_num)
-            if not mes_nome:
-                continue
                 
             # Regra de negócio: Para proventos provisionados para o ano seguinte, 
             # os valores somente serão atualizados depois do dia 01 de Dezembro do ano corrente.
@@ -704,7 +722,7 @@ def sync_proventos_from_provisionados(user_id):
                 continue
                 
             # Verifica se já existe na tabela proventos
-            cursor.execute("SELECT id FROM proventos WHERE ano = %s AND mes = %s AND ticker = %s AND user_id = %s", (ano, mes_nome, ticker, user_id))
+            cursor.execute("SELECT id FROM proventos WHERE ano = %s AND mes = %s AND ticker = %s AND user_id = %s", (ano, mes_num, ticker, user_id))
             res = cursor.fetchone()
             
             if res:
@@ -712,7 +730,7 @@ def sync_proventos_from_provisionados(user_id):
                 cursor.execute("UPDATE proventos SET valor = %s WHERE id = %s AND user_id = %s", (total_valor, res[0], user_id))
             else:
                 # Insere
-                cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, %s, %s, %s, %s)", (ano, mes_nome, ticker, total_valor, user_id))
+                cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, %s, %s, %s, %s)", (ano, mes_num, ticker, total_valor, user_id))
                 
         # Rotina de Limpeza: Remove registros da tabela de provisionados onde a data de pagamento já passou (menor que a data atual)
         hoje_sp = now.date()
@@ -840,9 +858,12 @@ def import_proventos_csv(file_content, user_id):
     import io
     
     meses_map = {
-        'Jan': 'Janeiro', 'Feb': 'Fevereiro', 'Mar': 'Março', 'Apr': 'Abril',
-        'May': 'Maio', 'Jun': 'Junho', 'Jul': 'Julho', 'Aug': 'Agosto',
-        'Sep': 'Setembro', 'Oct': 'Outubro', 'Nov': 'Novembro', 'Dec': 'Dezembro'
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
+        'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8,
+        'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+        'Janeiro': 1, 'Fevereiro': 2, 'Março': 3, 'Abril': 4,
+        'Maio': 5, 'Junho': 6, 'Julho': 7, 'Agosto': 8,
+        'Setembro': 9, 'Outubro': 10, 'Novembro': 11, 'Dezembro': 12
     }
     
     try:
@@ -912,7 +933,8 @@ def import_proventos_csv(file_content, user_id):
                             
                         if idx < len(meses_colunas):
                             mes_original = meses_colunas[idx]
-                            mes_pt = meses_map.get(mes_original, mes_original)
+                            # Tenta mapear o mes, se não encontrar pega o indice + 1 assumindo a ordem Janeiro a Dezembro
+                            mes_pt = meses_map.get(mes_original, idx + 1)
                             val_clean = val_str.replace('R$', '').replace('$', '').replace(',', '.').strip()
                             valor = float(val_clean)
                             
@@ -1065,7 +1087,7 @@ def check_and_create_next_year_dashboard(user_id):
                 for row in tickers:
                     ticker = row[0]
                     cursor.execute(
-                        "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, 'Janeiro', %s, 0.0, %s)",
+                        "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, 1, %s, 0.0, %s)",
                         (next_year, ticker, user_id)
                     )
                 conn.commit()

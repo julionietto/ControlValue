@@ -103,11 +103,11 @@ def dialog_consultar_proventos(ticker):
         st.info("Nenhum provento recebido registrado para este ativo.")
     else:
         # Ordenação por data (Mês/Ano)
-        meses_map = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
-        prov_df['mes_idx'] = prov_df['mes'].map(meses_map)
-        prov_df = prov_df.sort_values(['ano', 'mes_idx'], ascending=True)
+        meses_nomes_dict = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+        prov_df = prov_df.sort_values(['ano', 'mes'], ascending=True)
+        prov_df['mes_str'] = prov_df['mes'].map(meses_nomes_dict)
         
-        display_df = prov_df[['mes', 'ano', 'valor']].copy()
+        display_df = prov_df[['mes_str', 'ano', 'valor']].copy()
         display_df.columns = ['Mês', 'Ano', 'Valor']
         
         total_prov = display_df['Valor'].sum()
@@ -583,8 +583,7 @@ def render_asset_detail_view(asset_data):
                         proventos_df = proventos_df[proventos_df['ticker'] == ticker].copy()
                         
                         def get_prov_date(row):
-                            meses = {'Janeiro':1, 'Fevereiro':2, 'Março':3, 'Abril':4, 'Maio':5, 'Junho':6, 'Julho':7, 'Agosto':8, 'Setembro':9, 'Outubro':10, 'Novembro':11, 'Dezembro':12}
-                            return pd.Timestamp(year=int(row['ano'] or 2000), month=meses.get(row['mes'], 1), day=15)
+                            return pd.Timestamp(year=int(row['ano'] or 2000), month=int(row['mes'] or 1), day=15)
                         
                         if not proventos_df.empty:
                             proventos_df['date'] = proventos_df.apply(get_prov_date, axis=1)

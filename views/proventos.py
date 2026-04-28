@@ -73,15 +73,19 @@ def render_proventos_view():
 
     proventos_df = db.get_proventos(st.session_state.user_id)
     
-    meses_ordem = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    meses_nomes_dict = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+    meses_ordem = list(meses_nomes_dict.values())
+    meses_nums = list(meses_nomes_dict.keys())
     
     # ---- Popup: Editar Provento ----
     @st.dialog("✏️ Editar Provento", dismissible=False)
     def dialog_editar_provento(ano, ticker, df_prov):
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
         st.markdown("---")
-        selected_mes = st.selectbox("Mês", meses_ordem)
-        current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes)]
+        selected_mes_nome = st.selectbox("Mês", meses_ordem)
+        selected_mes_num = {v: k for k, v in meses_nomes_dict.items()}[selected_mes_nome]
+        
+        current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
         novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val)
         st.markdown("")
@@ -89,7 +93,7 @@ def render_proventos_view():
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("💾 Salvar", type="primary", use_container_width=True):
-                db.save_provento(ano, selected_mes, ticker, novo_valor, st.session_state.user_id)
+                db.save_provento(ano, selected_mes_num, ticker, novo_valor, st.session_state.user_id)
                 st.session_state.refresh_id += 1
                 st.rerun()
         with col2:
@@ -131,9 +135,9 @@ def render_proventos_view():
                         if ticker_novo not in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
                             ticker_novo += ".SA"
                             
-                    # Cria todos os registros mensais (Janeiro a Dezembro) simultaneamente
-                    for mes in meses_ordem:
-                        db.save_provento(ano, mes, ticker_novo, 0.0, st.session_state.user_id)
+                    # Cria todos os registros mensais (1 a 12) simultaneamente
+                    for mes_num in meses_nums:
+                        db.save_provento(ano, mes_num, ticker_novo, 0.0, st.session_state.user_id)
                         
                     st.success(f"Novo ativo {ticker_novo} adicionado com sucesso !")
                     st.session_state.refresh_id += 1
@@ -189,6 +193,7 @@ def render_proventos_view():
                 
                 df_ano = proventos_df[proventos_df['ano'] == ano]
                 pivot_df = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
+                pivot_df = pivot_df.rename(columns=meses_nomes_dict)
                 
                 for mes in meses_ordem:
                     if mes not in pivot_df.columns:
@@ -261,6 +266,8 @@ def render_proventos_view():
                     prev_year = ano - 1
                     df_prev = proventos_df[proventos_df['ano'] == prev_year]
                     pivot_prev = df_prev.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
+                    pivot_prev = pivot_prev.rename(columns=meses_nomes_dict)
+                    
                     for mes in meses_ordem:
                         if mes not in pivot_prev.columns:
                             pivot_prev[mes] = 0.0
