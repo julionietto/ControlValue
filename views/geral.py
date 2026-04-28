@@ -411,6 +411,9 @@ def render_visao_geral_view():
         else:
             current_allocs_pct = {k: 0.0 for k in user_targets.keys()}
         
+        # Salva no session_state para que outros componentes (diálogos) possam acessar sem recalcular
+        st.session_state.current_allocs_pct = current_allocs_pct
+        
         # Busca todos os proventos globais
         global_total_proventos = db.get_all_total_proventos(st.session_state.user_id)
         

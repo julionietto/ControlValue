@@ -183,44 +183,71 @@ def dialog_alocacao_ativos():
     
     st.markdown("Defina o percentual de capital que deseja alocar em cada classe de ativos. A soma deve fechar em **100%**.")
     
-    # Busca alocações atuais do banco
+    # Busca alocações desejadas (metas) do banco
     if 'current_allocations' not in st.session_state:
         st.session_state.current_allocations = db.get_user_allocations(st.session_state.user_id)
-        
     allocs = st.session_state.current_allocations
     
-    # Criar form em colunas para os inputs
-    col1, col2 = st.columns(2)
-    with col1:
-        acoes = st.number_input("Ações (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Ações', 0.0)), step=1.0)
-        fiis = st.number_input("Fiis (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Fiis', 0.0)), step=1.0)
-        internacionais = st.number_input("Ativos Internacionais (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Ativos Internacionais', 0.0)), step=1.0, help="Representa Stocks e Reits")
-    with col2:
-        criptos = st.number_input("Criptos (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Criptos', 0.0)), step=1.0)
-        renda_fixa = st.number_input("Renda Fixa (%)", min_value=0.0, max_value=100.0, value=float(allocs.get('Renda Fixa', 0.0)), step=1.0)
+    # Busca percentuais atuais (calculados na Visão Geral)
+    current_allocs_pct = st.session_state.get('current_allocs_pct', {
+        'Ações': 0.0, 'Fiis': 0.0, 'Ativos Internacionais': 0.0, 'Criptos': 0.0, 'Renda Fixa': 0.0
+    })
+    
+    # Header da "Tabela"
+    st.markdown("---")
+    col_h1, col_h2, col_h3 = st.columns([1.5, 1, 1])
+    col_h1.markdown("**Tipo de Ativo**")
+    col_h2.markdown("**Desejado (%)**")
+    col_h3.markdown("**Atual (%)**")
+    
+    classes = [
+        ('Ações', 'Ações'),
+        ('Fiis', 'Fiis'),
+        ('Ativos Internacionais', 'Internacionais'),
+        ('Criptos', 'Criptos'),
+        ('Renda Fixa', 'Renda Fixa')
+    ]
+    
+    new_values = {}
+    
+    for db_key, display_label in classes:
+        c1, c2, c3 = st.columns([1.5, 1, 1])
+        c1.write(display_label)
         
-    soma = acoes + fiis + internacionais + criptos + renda_fixa
+        # Percentual Desejado (Editável)
+        val_desejado = c2.number_input(
+            f"Metas_{db_key}", 
+            min_value=0.0, 
+            max_value=100.0, 
+            value=float(allocs.get(db_key, 0.0)), 
+            step=1.0, 
+            label_visibility="collapsed",
+            key=f"input_alloc_{db_key}"
+        )
+        new_values[db_key] = val_desejado
+        
+        # Percentual Atual
+        val_atual = current_allocs_pct.get(db_key, 0.0)
+        # Cor vermelha (#EF553B) se o atual for maior que o desejado
+        color = "#EF553B" if val_atual > val_desejado else "#a1a1aa"
+        c3.markdown(f"<div style='color: {color}; text-align: center; font-weight: bold; margin-top: 5px;'>{val_atual:.2f}%</div>", unsafe_allow_html=True)
+
+    # Cálculo da soma das metas
+    soma = sum(new_values.values())
     
     st.markdown("---")
     
-    color = "green" if soma == 100.0 else ("red" if soma > 100.0 else "orange")
-    st.markdown(f"**Soma Total:** <span style='color: {color};'>{soma:.2f}%</span>", unsafe_allow_html=True)
+    color_soma = "green" if soma == 100.0 else "red"
+    st.markdown(f"**Soma das Metas:** <span style='color: {color_soma}; font-weight: bold;'>{soma:.2f}%</span>", unsafe_allow_html=True)
     
     if soma != 100.0:
-        st.error("⚠️ A soma das alocações deve ser exatamente **100%** para permitir o salvamento. Atualmente está em {:.2f}%.".format(soma))
+        st.error(f"⚠️ A soma das metas deve ser exatamente **100%**. (Soma atual: {soma:.2f}%)")
         
     col_btn1, col_btn2 = st.columns(2)
     
     with col_btn1:
         if st.button("Salvar", type="primary", use_container_width=True, disabled=(soma != 100.0)):
-            new_allocs = {
-                'Ações': acoes,
-                'Fiis': fiis,
-                'Ativos Internacionais': internacionais,
-                'Criptos': criptos,
-                'Renda Fixa': renda_fixa
-            }
-            db.save_user_allocations(st.session_state.user_id, new_allocs)
+            db.save_user_allocations(st.session_state.user_id, new_values)
             st.session_state.pop('current_allocations', None)
             st.success("Metas de alocação salvas com sucesso!")
             st.session_state.refresh_id += 1
