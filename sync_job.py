@@ -69,6 +69,8 @@ def run_sync():
         print(f"Scraping concluído. {len(df)} proventos futuros encontrados. Consolidando na base...")
 
         # 5. Salva os resultados para cada usuário que possui o ativo
+        affected_users = set()
+        
         with db.get_db_connection() as conn:
             cursor = conn.cursor()
             
@@ -95,6 +97,12 @@ def run_sync():
                     user_id = u[1]
                     # Salva (upsert) respeitando o sufixo original do banco
                     db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, valor, user_id)
+                    affected_users.add(user_id)
+                    
+        # 6. Sincroniza a tabela de proventos para os usuários afetados
+        print(f"Atualizando tabela de proventos para {len(affected_users)} usuários...")
+        for uid in affected_users:
+            db.sync_proventos_from_provisionados(uid)
         
         print("Sincronização gravada no banco de dados com sucesso!")
         db.log_sync_execution(today_str, 'SUCCESS', f"Sincronizados {len(df)} proventos para {len(tickers_with_types)} ativos.")
