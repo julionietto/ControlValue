@@ -614,18 +614,31 @@ def render_visao_geral_view():
             if not radar_df.empty:
                 # Ordena por valor total do ativo na carteira de forma crescente
                 radar_df = radar_df.sort_values(by='current_value', ascending=True)
-                # Calcula a diferença entre a linha atual e a anterior
-                radar_df['diff_calculada'] = radar_df['current_value'].diff().fillna(0)
+                
+                # Regra de Indicação de Compra
+                radar_df['Indicação de Compra'] = "Aguardar"
+                # Elegível: cotação atual (na moeda de origem) menor ou igual ao preço teto
+                eligible_mask = radar_df['original_current_price'] < radar_df['price_ceiling']
+                if eligible_mask.any():
+                    # Como já está ordenado pelo menor Valor do Ativo (current_value), o primeiro elegível é o vencedor
+                    best_buy_idx = radar_df[eligible_mask].index[0]
+                    radar_df.loc[best_buy_idx, 'Indicação de Compra'] = "Melhor Compra"
                 
                 # Prepara o dataframe de exibição
                 display_radar = pd.DataFrame()
                 display_radar['Ticker'] = radar_df['ticker'].apply(format_ticker_for_display)
                 display_radar['Valor do Ativo'] = radar_df['current_value'].apply(format_brl_custom)
-                display_radar['Diferença Ativo Anterior'] = radar_df['diff_calculada'].apply(format_brl_custom)
+                display_radar['Indicação de Compra'] = radar_df['Indicação de Compra']
                 
-                # Alinhamentos via Style
-                styled_radar = display_radar.style.set_properties(**{'text-align': 'center'}, subset=['Ticker']) \
-                                                 .set_properties(**{'text-align': 'right'}, subset=['Valor do Ativo', 'Diferença Ativo Anterior'])
+                # Estilização
+                def style_indication(val):
+                    if val == "Melhor Compra":
+                        return 'color: #00CC96; font-weight: bold; text-align: center;'
+                    return 'color: #a1a1aa; text-align: center;'
+                
+                styled_radar = display_radar.style.map(style_indication, subset=['Indicação de Compra']) \
+                                                 .set_properties(**{'text-align': 'center'}, subset=['Ticker']) \
+                                                 .set_properties(**{'text-align': 'right'}, subset=['Valor do Ativo'])
                 
                 st.dataframe(
                     styled_radar, 
