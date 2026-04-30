@@ -65,6 +65,37 @@ def confirm_delete_operation_dialog(op_data, asset_id):
             st.session_state.show_confirm_delete_op = False
             st.rerun()
 
+@st.dialog("Ativos por Categoria", dismissible=True)
+def dialog_assets_by_type(selected_type, assets_df):
+    st.markdown(f"### Ativos na Categoria: {selected_type}")
+    
+    filtered_df = assets_df[assets_df['asset_type'] == selected_type].copy()
+    
+    if filtered_df.empty:
+        st.info("Nenhum ativo encontrado nesta categoria.")
+    else:
+        display_df = pd.DataFrame()
+        display_df['Ticker'] = filtered_df['ticker'].apply(format_ticker_for_display)
+        
+        def format_qty_hist(qty, a_type):
+            if a_type == 'Cripto':
+                formatted = f"{qty:,.8f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                if "," in formatted: formatted = formatted.rstrip('0').rstrip(',')
+                return formatted
+            return f"{qty:,.0f}".replace(",", ".")
+            
+        display_df['Quantidade'] = filtered_df.apply(lambda x: format_qty_hist(x['quantity'], x['asset_type']), axis=1)
+        display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
+        
+        styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual'])
+                                    
+        st.dataframe(styled_df, hide_index=True, use_container_width=True)
+        
+    if st.button("Fechar", use_container_width=True):
+        st.session_state.pie_dialog_handled = True
+        st.rerun()
+
 @st.dialog("Adicionar novo ativo", dismissible=False)
 def dialog_adicionar_novo_ativo():
     categoria = st.radio("Selecione a Categoria", ["Renda Variável", "Renda Fixa"], horizontal=True)
@@ -740,7 +771,17 @@ def render_visao_geral_view():
             with col_g1:
                 if current_total_value > 0:
                     fig_type = px.pie(assets_df, values='current_value', names='asset_type', title='Por Tipo de Ativo', hole=0.4)
-                    st.plotly_chart(fig_type, use_container_width=True)
+                    event = st.plotly_chart(fig_type, use_container_width=True, on_select="rerun", key="pie_chart_type")
+                    
+                    if event and event.selection and event.selection.points:
+                        selected_type = event.selection.points[0]["label"]
+                        
+                        if st.session_state.get('last_pie_selection') != selected_type:
+                            st.session_state.pie_dialog_handled = False
+                            st.session_state.last_pie_selection = selected_type
+                            
+                        if not st.session_state.get('pie_dialog_handled'):
+                            dialog_assets_by_type(selected_type, assets_df)
                 else:
                     st.write("Sem valor suficiente para gráfico.")
                 
