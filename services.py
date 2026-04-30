@@ -216,6 +216,8 @@ def _fetch_single_sector(ticker, a_type):
         return 'Criptomoedas'
     elif a_type == 'Renda Fixa':
         return 'Renda Fixa'
+    elif a_type == 'ETF':
+        return 'ETF'
     else:
         # Prioridade 1: Dicionários locais de Override (salva a pátria se YF falhar ou não tiver os dados)
         if a_type == 'Fiis' and ticker in FII_TICKER_OVERRIDE:
@@ -540,6 +542,7 @@ def fetch_statusinvest_proventos(tickers_with_types):
     type_to_endpoint = {
         'Ações': 'acao',
         'Fiis': 'fii',
+        'ETF': 'etf',
         'Stocks': 'bdr',
         'Reits': 'bdr' # StatusInvest costuma tratar BDRs de Reits no endpoint bdr
     }

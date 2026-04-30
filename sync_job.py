@@ -44,7 +44,7 @@ def run_sync():
             cursor.execute("""
                 SELECT DISTINCT ticker, asset_type 
                 FROM assets 
-                WHERE asset_type IN ('Ações', 'Fiis', 'Stocks', 'Reits')
+                WHERE asset_type IN ('Ações', 'Fiis', 'ETF', 'Stocks', 'Reits')
             """)
             rows = cursor.fetchall()
             

@@ -102,9 +102,33 @@ def verify_password(plain_password, hashed_password):
 def infer_asset_type(ticker):
     ticker = ticker.upper()
     if ticker.endswith('.SA'):
-        if '11.SA' in ticker:
-            return 'Fiis'
-        return 'Ações'
+        try:
+            import yfinance as yf
+            info = yf.Ticker(ticker).info
+            sector = info.get('sector', '')
+            industry = info.get('industry', '')
+            long_name = str(info.get('longName', '')).upper()
+            
+            if sector == 'Real Estate' and 'REIT' in str(industry):
+                return 'Fiis'
+                
+            # Fallback inteligente pelo nome (muitos FIIs/Fiagros não têm setor definido no Yahoo)
+            fii_keywords = [' FII', 'FUNDO DE INVESTIMENTO IMOBILI', 'FUNDO INVESTIMETO IMOBILI', 'CREDITO IMOBILIARIO', 'FIAGRO', 'FUNDO DE INVEST IMOB']
+            if any(k in long_name for k in fii_keywords):
+                return 'Fiis'
+                
+            etf_keywords = ['ETF', 'FUNDO DE INDICE', 'INDEX FUND', 'ISHARES']
+            if any(k in long_name for k in etf_keywords):
+                return 'ETF'
+                
+            if not sector and not industry:
+                return 'ETF'
+                
+            return 'Ações'
+        except Exception:
+            if '11.SA' in ticker:
+                return 'Fiis'
+            return 'Ações'
     elif '-' in ticker or ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
         return 'Cripto'
     else:
@@ -162,7 +186,7 @@ def init_db():
             cursor.execute("ALTER TABLE assets ADD COLUMN currency TEXT NOT NULL DEFAULT 'BRL'")
             # Regra de Migração solicitada: Stocks/Reits = USD, resto = BRL (especialmente Cripto para user 1)
             cursor.execute("UPDATE assets SET currency = 'USD' WHERE asset_type IN ('Stocks', 'Reits')")
-            cursor.execute("UPDATE assets SET currency = 'BRL' WHERE asset_type IN ('Ações', 'Fiis', 'Renda Fixa', 'Cripto')")
+            cursor.execute("UPDATE assets SET currency = 'BRL' WHERE asset_type IN ('Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Cripto')")
             
     except Exception as e:
         import logging

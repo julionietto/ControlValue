@@ -403,7 +403,7 @@ def render_visao_geral_view():
         # Calcula Percentuais Atuais por Classe para validar "Melhor Compra"
         current_allocs_pct = {}
         if current_total_value > 0:
-            current_allocs_pct['Ações'] = (assets_df[assets_df['asset_type'] == 'Ações']['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Ações'] = (assets_df[assets_df['asset_type'].isin(['Ações', 'ETF'])]['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Fiis'] = (assets_df[assets_df['asset_type'] == 'Fiis']['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Criptos'] = (assets_df[assets_df['asset_type'] == 'Cripto']['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Renda Fixa'] = (assets_df[assets_df['asset_type'] == 'Renda Fixa']['current_value'].sum() / current_total_value) * 100
@@ -424,8 +424,8 @@ def render_visao_geral_view():
         total_renda_fixa = assets_df[assets_df['asset_type'] == 'Renda Fixa']['current_value'].sum()
         total_renda_variavel = assets_df[assets_df['asset_type'] != 'Renda Fixa']['current_value'].sum()
         
-        # Calcular o total de ações/FIIs/Reits/Stocks (ignora Cripto e Renda Fixa)
-        tipos_acoes = ['Ações', 'Fiis', 'Stocks', 'Reits']
+        # Calcular o total de ações/FIIs/Reits/Stocks/ETFs (ignora Cripto e Renda Fixa)
+        tipos_acoes = ['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits']
         total_qtd_acoes = assets_df[assets_df['asset_type'].isin(tipos_acoes)]['quantity'].sum()
     
         st.markdown("### 💰 Valores Sumarizados")
@@ -637,7 +637,7 @@ def render_visao_geral_view():
                 
                 # Mapeamento do asset_type para a chave de user_targets
                 def get_target_class_key(a_type):
-                    if a_type == 'Ações': return 'Ações'
+                    if a_type in ['Ações', 'ETF']: return 'Ações'
                     if a_type == 'Fiis': return 'Fiis'
                     if a_type == 'Cripto': return 'Criptos'
                     if a_type == 'Renda Fixa': return 'Renda Fixa'
@@ -694,11 +694,11 @@ def render_visao_geral_view():
         if has_us_assets:
             col_radar1, col_radar2 = st.columns(2)
             with col_radar1:
-                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df, user_targets, current_allocs_pct)
+                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF'], assets_df, user_targets, current_allocs_pct)
             with col_radar2:
                 show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df, user_targets, current_allocs_pct)
         else:
-            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis'], assets_df, user_targets, current_allocs_pct)
+            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF'], assets_df, user_targets, current_allocs_pct)
     
     
         # Gráficos

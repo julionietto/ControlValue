@@ -210,7 +210,7 @@ def render_asset_detail_view(asset_data):
         op_type = st.radio("Tipo de Operação", ["Compra", "Venda"], horizontal=True, key="add_op_type")
         op_date = st.date_input("Data", value=pd.Timestamp.now().date(), max_value=pd.Timestamp.now().date(), format="DD/MM/YYYY", key="add_op_date")
         
-        if current_type in ['Ações', 'Fiis', 'Stocks', 'Reits']:
+        if current_type in ['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits']:
             op_qty_input = st.number_input("Quantidade", min_value=1, step=1, format="%d", key="add_op_qty")
             op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", key="add_op_price")
         else:
@@ -241,7 +241,7 @@ def render_asset_detail_view(asset_data):
         op_date = st.date_input("Data", value=current_date_obj, max_value=pd.Timestamp.now().date(), format="DD/MM/YYYY", key=f"edit_op_date_{op_data['id']}")
         
         initial_qty = abs(op_data['quantity'])
-        if current_type in ['Ações', 'Fiis', 'Stocks', 'Reits']:
+        if current_type in ['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits']:
             op_qty_input = st.number_input("Quantidade", min_value=1, step=1, format="%d", value=int(initial_qty), key=f"edit_op_qty_{op_data['id']}")
             op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", value=float(op_data['unit_price']), key=f"edit_op_price_{op_data['id']}")
         else:
@@ -395,7 +395,7 @@ def render_asset_detail_view(asset_data):
     currency_symbol = "$" if current_type in ['Stocks', 'Reits'] else "R$"
     
     with col_p1:
-        asset_types = ["Ações", "Fiis", "Cripto", "Reits", "Stocks", "Renda Fixa"]
+        asset_types = ["Ações", "Fiis", "ETF", "Cripto", "Reits", "Stocks", "Renda Fixa"]
         try: type_idx = asset_types.index(current_type)
         except ValueError: type_idx = 0
         new_asset_type = st.selectbox("Tipo de Ativo", asset_types, index=type_idx, disabled=(current_type == 'Renda Fixa'))
@@ -483,7 +483,7 @@ def render_asset_detail_view(asset_data):
             st.rerun()
 
     # === ANÁLISE DE RENTABILIDADE (FASE 3: Ações, Fiis, Stocks, Reits, Cripto) ===
-    supported_types = ['Ações', 'Fiis', 'Stocks', 'Reits', 'Cripto']
+    supported_types = ['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits', 'Cripto']
     if current_type in supported_types:
         st.session_state.last_ticker = ticker
         # Moeda definida no banco de dados (v1.2.1)
