@@ -770,13 +770,32 @@ def render_visao_geral_view():
             col_g1, col_g2 = st.columns(2)
             with col_g1:
                 if current_total_value > 0:
-                    fig_type = px.pie(assets_df, values='current_value', names='asset_type', title='Por Tipo de Ativo', hole=0.4)
+                    # O Plotly/Streamlit não emite eventos on_select para gráficos de pizza.
+                    # Utilizando um gráfico de barras horizontais (Treemap/Bar) para suportar a interatividade
+                    bar_df = assets_df.groupby('asset_type', as_index=False)['current_value'].sum()
+                    bar_df = bar_df.sort_values('current_value', ascending=True)
+                    
+                    fig_type = px.bar(
+                        bar_df, 
+                        x='current_value', 
+                        y='asset_type', 
+                        orientation='h', 
+                        title='Por Tipo de Ativo', 
+                        color='asset_type',
+                        text_auto='.2s'
+                    )
+                    fig_type.update_layout(
+                        clickmode='event+select', 
+                        showlegend=False,
+                        xaxis_title="Saldo Total (R$)",
+                        yaxis_title=""
+                    )
                     event = st.plotly_chart(fig_type, use_container_width=True, on_select="rerun", key="pie_chart_type")
                     
                     if event and event.selection and event.selection.points:
-                        selected_type = event.selection.points[0]["label"]
+                        selected_type = event.selection.points[0].get("y", "") # No gráfico de barras horizontal, a categoria fica no eixo Y
                         
-                        if st.session_state.get('last_pie_selection') != selected_type:
+                        if selected_type and st.session_state.get('last_pie_selection') != selected_type:
                             st.session_state.pie_dialog_handled = False
                             st.session_state.last_pie_selection = selected_type
                             

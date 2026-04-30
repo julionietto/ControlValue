@@ -1,0 +1,1 @@
+{'selection': {'points': [], 'point_indices': [], 'box': [], 'lasso': []}}
