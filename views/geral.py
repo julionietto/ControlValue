@@ -847,14 +847,17 @@ def render_visao_geral_view():
                     bar_df = assets_df.groupby('asset_type', as_index=False)['current_value'].sum()
                     bar_df = bar_df.sort_values('current_value', ascending=True)
                     
+                    bar_df['percentual'] = (bar_df['current_value'] / current_total_value) * 100
+                    bar_df['text_pct'] = bar_df['percentual'].apply(lambda x: f"{x:.2f}%".replace('.', ','))
+                    
                     fig_type = px.bar(
                         bar_df, 
                         x='current_value', 
                         y='asset_type', 
                         orientation='h', 
-                        title='Por Tipo de Ativo', 
+                        title='Por Classe de Ativo', 
                         color='asset_type',
-                        text_auto='.2s'
+                        text='text_pct'
                     )
                     fig_type.update_layout(
                         clickmode='event+select', 
