@@ -60,7 +60,8 @@ def render_proventos_view():
                         'Valor Cota (R$)': 'R$ {:.4f}',
                         'Qtd (Data Com)': '{:,.0f}',
                         'Total a Receber': 'R$ {:.2f}'
-                    }).set_properties(**{'text-align': 'center'})
+                    }).set_properties(**{'text-align': 'center'}) \
+                      .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
                     
                 st.dataframe(
                     styled_prov,

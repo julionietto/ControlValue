@@ -88,7 +88,8 @@ def dialog_assets_by_type(selected_type, assets_df):
         display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
         
         styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
-                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual'])
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual']) \
+                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
                                     
         st.dataframe(styled_df, hide_index=True, use_container_width=True)
         
@@ -99,7 +100,7 @@ def dialog_assets_by_type(selected_type, assets_df):
 
 @st.dialog("Ativos por Setor", dismissible=True)
 def dialog_assets_by_sector(selected_sector, assets_df):
-    st.markdown(f"### Ativos no Setor: {selected_sector}")
+    st.markdown(f"<h3 style='text-align: center;'>Ativos no Setor: {selected_sector}</h3>", unsafe_allow_html=True)
     
     filtered_df = assets_df[assets_df['sector'] == selected_sector].copy()
     
@@ -120,7 +121,8 @@ def dialog_assets_by_sector(selected_sector, assets_df):
         display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
         
         styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
-                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual'])
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual']) \
+                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
                                     
         st.dataframe(styled_df, hide_index=True, use_container_width=True)
         
@@ -130,7 +132,7 @@ def dialog_assets_by_sector(selected_sector, assets_df):
 
 @st.dialog("FIIs por Classe", dismissible=True)
 def dialog_fiis_by_class(selected_class, chart_df):
-    st.markdown(f"### FIIs na Classe: {selected_class}")
+    st.markdown(f"<h3 style='text-align: center;'>FIIs na Classe: {selected_class}</h3>", unsafe_allow_html=True)
     
     filtered_df = chart_df[chart_df['classe'] == selected_class].copy()
     
@@ -147,7 +149,8 @@ def dialog_fiis_by_class(selected_class, chart_df):
         display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
         
         styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
-                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual'])
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual']) \
+                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
                                     
         st.dataframe(styled_df, hide_index=True, use_container_width=True)
         
@@ -598,7 +601,6 @@ def render_visao_geral_view():
             return f"{row['quantity']:,.0f}".replace(",", ".")
     
         # --- TABELA DE ATIVOS: UNIFICADA COM OPERAÇÕES INDIVIDUAIS PARA CRIPTO ---
-        st.markdown('<div style="margin-top: 0.5rem;"><h4 style="font-weight: 600; font-size: 1.25rem;">Ativos Consolidados</h4></div>', unsafe_allow_html=True)
         
         all_rows = []
         
@@ -682,9 +684,10 @@ def render_visao_geral_view():
         
         # Alinhamentos via Style
         styled_final_df = styled_final_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tipo', 'Quantidade', 'Orientação']) \
-                                         .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Valor atualizado', 'Peso %'])
+                                         .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Valor atualizado', 'Peso %']) \
+                                         .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
         
-        st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️ Editar</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️</div>', unsafe_allow_html=True)
         selected = st.dataframe(
             styled_final_df,
             hide_index=True,
@@ -715,8 +718,40 @@ def render_visao_geral_view():
         # --- SEÇÃO RADAR ---
         st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 0.5rem; margin-bottom: 1.5rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
     
+        # Mapeamento do asset_type para a chave de user_targets
+        def get_target_class_key(a_type):
+            if a_type in ['Ações', 'ETF']: return 'Ações'
+            if a_type == 'Fiis': return 'Fiis'
+            if a_type == 'Cripto': return 'Criptos'
+            if a_type == 'Renda Fixa': return 'Renda Fixa'
+            if a_type in ['Stocks', 'Reits']: return 'Ativos Internacionais'
+            return None
+
+        # Elegível se: 
+        # 1. Preço atual < Preço Teto
+        # 2. A classe do ativo está ABAIXO da meta de alocação (%)
+        def is_eligible(row):
+            if row['original_current_price'] >= row['price_ceiling']:
+                return False
+            
+            target_key = get_target_class_key(row['asset_type'])
+            if target_key:
+                target_pct = user_targets.get(target_key, 0.0)
+                current_pct = current_allocs_pct.get(target_key, 0.0)
+                return current_pct < target_pct
+            return False
+            
+        any_eligible = False
+        full_radar_df = assets_df[assets_df['asset_type'].isin(['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits'])].copy()
+        if not full_radar_df.empty:
+            full_radar_df['eligible'] = full_radar_df.apply(is_eligible, axis=1)
+            any_eligible = full_radar_df['eligible'].any()
+            
+        if not any_eligible and not full_radar_df.empty:
+            st.warning("Considere aportar em Renda Fixa ou revise os percentuais de alocação na opção de Alocação de Ativos")
+
         def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct):
-            st.subheader(title)
+            st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;'>{title}</h3>", unsafe_allow_html=True)
             radar_df = df[df['asset_type'].isin(asset_types)].copy()
             
             if not radar_df.empty:
@@ -725,29 +760,6 @@ def render_visao_geral_view():
                 
                 # Regra de Indicação de Compra
                 radar_df['Indicação de Compra'] = "Aguardar"
-                
-                # Mapeamento do asset_type para a chave de user_targets
-                def get_target_class_key(a_type):
-                    if a_type in ['Ações', 'ETF']: return 'Ações'
-                    if a_type == 'Fiis': return 'Fiis'
-                    if a_type == 'Cripto': return 'Criptos'
-                    if a_type == 'Renda Fixa': return 'Renda Fixa'
-                    if a_type in ['Stocks', 'Reits']: return 'Ativos Internacionais'
-                    return None
-
-                # Elegível se: 
-                # 1. Preço atual < Preço Teto
-                # 2. A classe do ativo está ABAIXO da meta de alocação (%)
-                def is_eligible(row):
-                    if row['original_current_price'] >= row['price_ceiling']:
-                        return False
-                    
-                    target_key = get_target_class_key(row['asset_type'])
-                    if target_key:
-                        target_pct = user_targets.get(target_key, 0.0)
-                        current_pct = current_allocs_pct.get(target_key, 0.0)
-                        return current_pct < target_pct
-                    return False
 
                 radar_df['eligible'] = radar_df.apply(is_eligible, axis=1)
                 

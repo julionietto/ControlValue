@@ -188,11 +188,11 @@ FII_SECTOR_MAP = {
 }
 
 FII_TICKER_OVERRIDE = {
-    'PVBI11.SA': 'Lajes Corporativas', 'HGRE11.SA': 'Lajes Corporativas', 'KNRI11.SA': 'Lajes Corporativas', 'BRCR11.SA': 'Lajes Corporativas', 'VINO11.SA': 'Lajes Corporativas', 'RBRP11.SA': 'Lajes Corporativas', 'RECT11.SA': 'Lajes Corporativas', 'SARE11.SA': 'Lajes Corporativas',
+    'FATN11.SA': 'Lajes Corporativas', 'PVBI11.SA': 'Lajes Corporativas', 'HGRE11.SA': 'Lajes Corporativas', 'KNRI11.SA': 'Lajes Corporativas', 'BRCR11.SA': 'Lajes Corporativas', 'VINO11.SA': 'Lajes Corporativas', 'RBRP11.SA': 'Lajes Corporativas', 'RECT11.SA': 'Lajes Corporativas', 'SARE11.SA': 'Lajes Corporativas',
     'MCRE11.SA': 'Recebíveis', 'KNCA11.SA': 'Recebíveis', 'RBRY11.SA': 'Recebíveis', 'KNIP11.SA': 'Recebíveis', 'KNCR11.SA': 'Recebíveis', 'IRDM11.SA': 'Recebíveis', 'CPTS11.SA': 'Recebíveis', 'HCTR11.SA': 'Recebíveis', 'MXRF11.SA': 'Recebíveis', 'VGHF11.SA': 'Recebíveis', 'CVBI11.SA': 'Recebíveis', 'HGCR11.SA': 'Recebíveis', 'MCCI11.SA': 'Recebíveis', 'URPR11.SA': 'Recebíveis', 'KNSC11.SA': 'Recebíveis', 'RBRR11.SA': 'Recebíveis', 'KNHY11.SA': 'Recebíveis', 'BARR11.SA': 'Recebíveis', 'VRTA11.SA': 'Recebíveis', 'HABT11.SA': 'Recebíveis',
     'HGLG11.SA': 'Logística', 'BTLG11.SA': 'Logística', 'XPLG11.SA': 'Logística', 'VILG11.SA': 'Logística', 'ALZR11.SA': 'Logística', 'GGRC11.SA': 'Logística', 'LVBI11.SA': 'Logística', 'BRCO11.SA': 'Logística', 'RBRL11.SA': 'Logística', 'HSLG11.SA': 'Logística', 'GALG11.SA': 'Logística',
     'VISC11.SA': 'Shoppings', 'XPML11.SA': 'Shoppings', 'HSML11.SA': 'Shoppings', 'MALL11.SA': 'Shoppings', 'HGBS11.SA': 'Shoppings', 'VSHO11.SA': 'Shoppings',
-    'FATN11.SA': 'Renda Urbana', 'TRXF11.SA': 'Renda Urbana', 'HGRU11.SA': 'Renda Urbana', 'RBVA11.SA': 'Renda Urbana',
+    'TRXF11.SA': 'Renda Urbana', 'HGRU11.SA': 'Renda Urbana', 'RBVA11.SA': 'Renda Urbana',
     'KNHF11.SA': 'Hedge Funds', 'VGIA11.SA': 'Fiagro', 'SNAG11.SA': 'Fiagro', 'RZAG11.SA': 'Fiagro', 'CPTR11.SA': 'Fiagro'
 }
 
@@ -201,13 +201,14 @@ STOCK_TICKER_OVERRIDE = {
     'VALE3.SA': 'Materiais Básicos', 'CSNA3.SA': 'Materiais Básicos', 'USIM5.SA': 'Materiais Básicos', 'GGBR4.SA': 'Materiais Básicos', 'GOAU4.SA': 'Materiais Básicos', 'SUZB3.SA': 'Materiais Básicos', 'KLBN11.SA': 'Materiais Básicos', 'CBAV3.SA': 'Materiais Básicos',
     'ITUB4.SA': 'Serviços Financeiros', 'ITUB3.SA': 'Serviços Financeiros', 'BBDC4.SA': 'Serviços Financeiros', 'BBDC3.SA': 'Serviços Financeiros', 'BBAS3.SA': 'Serviços Financeiros', 'SANB11.SA': 'Serviços Financeiros', 'BPAC11.SA': 'Serviços Financeiros', 'B3SA3.SA': 'Serviços Financeiros', 'CXSE3.SA': 'Seguros', 'BBSE3.SA': 'Seguros', 'PSSA3.SA': 'Seguros', 'IRBR3.SA': 'Seguros',
     'WEGE3.SA': 'Industrial', 'EMBR3.SA': 'Industrial', 'TUPY3.SA': 'Industrial', 'POMO4.SA': 'Industrial', 'RAPT4.SA': 'Industrial',
-    'ELET3.SA': 'Elétricas', 'ELET6.SA': 'Elétricas', 'EQTL3.SA': 'Elétricas', 'TAEE11.SA': 'Elétricas', 'TRPL4.SA': 'Elétricas', 'CPLE6.SA': 'Elétricas', 'CMIG4.SA': 'Elétricas', 'EGIE3.SA': 'Elétricas', 'ENBR3.SA': 'Elétricas', 'ALUP11.SA': 'Elétricas', 'AURE3.SA': 'Elétricas', 'NEOE3.SA': 'Elétricas',
+    'ELET3.SA': 'Elétricas', 'ELET6.SA': 'Elétricas', 'EQTL3.SA': 'Elétricas', 'TAEE11.SA': 'Elétricas', 'TRPL4.SA': 'Elétricas', 'CPLE6.SA': 'Elétricas', 'CMIG4.SA': 'Elétricas', 'EGIE3.SA': 'Elétricas', 'ENBR3.SA': 'Elétricas', 'ALUP11.SA': 'Elétricas', 'AURE3.SA': 'Elétricas', 'NEOE3.SA': 'Elétricas', 'CPFE3.SA': 'Elétricas',
     'SBSP3.SA': 'Saneamento / Outras Utilidades', 'CSMG3.SA': 'Saneamento / Outras Utilidades', 'SAPR11.SA': 'Saneamento / Outras Utilidades', 'SAPR4.SA': 'Saneamento / Outras Utilidades',
     'RENT3.SA': 'Consumo Cíclico', 'VAMO3.SA': 'Consumo Cíclico', 'LREN3.SA': 'Consumo Cíclico', 'ALOS3.SA': 'Consumo Cíclico', 'SOMA3.SA': 'Consumo Cíclico', 'ARZZ3.SA': 'Consumo Cíclico', 'CEAB3.SA': 'Consumo Cíclico', 'AMOB3.SA': 'Consumo Cíclico', 'SMFT3.SA': 'Consumo Cíclico', 'COGN3.SA': 'Educação', 'YDUQ3.SA': 'Educação',
     'RADL3.SA': 'Consumo Defensivo', 'CRFB3.SA': 'Consumo Defensivo', 'ASAI3.SA': 'Consumo Defensivo', 'NTCO3.SA': 'Consumo Defensivo', 'ABEV3.SA': 'Consumo Defensivo', 'JBSS3.SA': 'Consumo Defensivo', 'MRFG3.SA': 'Consumo Defensivo', 'BEEF3.SA': 'Consumo Defensivo', 'BRFS3.SA': 'Consumo Defensivo', 'SMTO3.SA': 'Consumo Defensivo',
     'HYPE3.SA': 'Saúde', 'FLRY3.SA': 'Saúde', 'RDOR3.SA': 'Saúde', 'HAPV3.SA': 'Saúde', 'MATD3.SA': 'Saúde', 'PNVL3.SA': 'Saúde', 'ODPV3.SA': 'Saúde',
     'VIVT3.SA': 'Serviços de Comunicação', 'TIMS3.SA': 'Serviços de Comunicação',
-    'EZTC3.SA': 'Construção Civil', 'CYRE3.SA': 'Construção Civil', 'MRVE3.SA': 'Construção Civil', 'TEND3.SA': 'Construção Civil', 'DIRR3.SA': 'Construção Civil'
+    'EZTC3.SA': 'Construção Civil', 'CYRE3.SA': 'Construção Civil', 'MRVE3.SA': 'Construção Civil', 'TEND3.SA': 'Construção Civil', 'DIRR3.SA': 'Construção Civil',
+    'ITSA4.SA': 'Holdings'
 }
 
 @st.cache_data(ttl=300)
@@ -218,6 +219,8 @@ def _fetch_single_sector(ticker, a_type):
         return 'Renda Fixa'
     elif a_type == 'ETF':
         return 'ETF'
+    elif a_type == 'Reits':
+        return 'Reits-USA'
     else:
         # Prioridade 1: Dicionários locais de Override (salva a pátria se YF falhar ou não tiver os dados)
         if a_type == 'Fiis' and ticker in FII_TICKER_OVERRIDE:

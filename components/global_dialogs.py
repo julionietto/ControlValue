@@ -197,8 +197,8 @@ def dialog_alocacao_ativos():
     st.markdown("---")
     col_h1, col_h2, col_h3 = st.columns([1.2, 1.5, 1])
     col_h1.markdown("**Tipo de Ativo**")
-    col_h2.markdown("**Desejado (%)**")
-    col_h3.markdown("**Atual (%)**")
+    col_h2.markdown("<div style='text-align: center;'><b>Desejado (%)</b></div>", unsafe_allow_html=True)
+    col_h3.markdown("<div style='text-align: center;'><b>Atual (%)</b></div>", unsafe_allow_html=True)
     
     classes = [
         ('Ações', 'Ações'),
