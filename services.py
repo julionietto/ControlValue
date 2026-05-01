@@ -192,7 +192,7 @@ FII_TICKER_OVERRIDE = {
     'MCRE11.SA': 'Recebíveis', 'KNCA11.SA': 'Recebíveis', 'RBRY11.SA': 'Recebíveis', 'KNIP11.SA': 'Recebíveis', 'KNCR11.SA': 'Recebíveis', 'IRDM11.SA': 'Recebíveis', 'CPTS11.SA': 'Recebíveis', 'HCTR11.SA': 'Recebíveis', 'MXRF11.SA': 'Recebíveis', 'VGHF11.SA': 'Recebíveis', 'CVBI11.SA': 'Recebíveis', 'HGCR11.SA': 'Recebíveis', 'MCCI11.SA': 'Recebíveis', 'URPR11.SA': 'Recebíveis', 'KNSC11.SA': 'Recebíveis', 'RBRR11.SA': 'Recebíveis', 'KNHY11.SA': 'Recebíveis', 'BARR11.SA': 'Recebíveis', 'VRTA11.SA': 'Recebíveis', 'HABT11.SA': 'Recebíveis',
     'HGLG11.SA': 'Logística', 'BTLG11.SA': 'Logística', 'XPLG11.SA': 'Logística', 'VILG11.SA': 'Logística', 'ALZR11.SA': 'Logística', 'GGRC11.SA': 'Logística', 'LVBI11.SA': 'Logística', 'BRCO11.SA': 'Logística', 'RBRL11.SA': 'Logística', 'HSLG11.SA': 'Logística', 'GALG11.SA': 'Logística',
     'VISC11.SA': 'Shoppings', 'XPML11.SA': 'Shoppings', 'HSML11.SA': 'Shoppings', 'MALL11.SA': 'Shoppings', 'HGBS11.SA': 'Shoppings', 'VSHO11.SA': 'Shoppings',
-    'TRXF11.SA': 'Renda Urbana', 'HGRU11.SA': 'Renda Urbana', 'RBVA11.SA': 'Renda Urbana',
+    'TRXF11.SA': 'Renda Urbana', 'HGRU11.SA': 'Renda Urbana', 'RBVA11.SA': 'Renda Urbana', 'GARE11.SA': 'Renda Urbana',
     'KNHF11.SA': 'Hedge Funds', 'VGIA11.SA': 'Fiagro', 'SNAG11.SA': 'Fiagro', 'RZAG11.SA': 'Fiagro', 'CPTR11.SA': 'Fiagro'
 }
 
@@ -526,28 +526,27 @@ def send_password_reset_email(to_email, reset_link):
         print(f"SMTP erro: {e}")
         return False, f"Erro ao enviar e-mail."
 
-def fetch_statusinvest_proventos(tickers_with_types):
+def fetch_investidor10_proventos(tickers_with_types):
     """
-    Busca dados de proventos provisionados via scraping do Status Invest.
+    Busca dados de proventos provisionados via scraping do Investidor10.
     Recebe uma lista de dicionários [{'ticker': 'PETR4', 'type': 'Ações'}, ...]
     Retorna (DataFrame, error_message, raw_json_list).
     """
-    import requests
     import os
     import time
     from datetime import datetime
     import pandas as pd
+    from bs4 import BeautifulSoup
     
     if not tickers_with_types:
         return pd.DataFrame(), "", []
         
-    # Mapeamento do tipo do ControlValue para o endpoint do Status Invest
     type_to_endpoint = {
-        'Ações': 'acao',
-        'Fiis': 'fii',
-        'ETF': 'etf',
-        'Stocks': 'bdr',
-        'Reits': 'bdr' # StatusInvest costuma tratar BDRs de Reits no endpoint bdr
+        'Ações': 'acoes',
+        'Fiis': 'fiis',
+        'ETF': 'etfs',
+        'Stocks': 'stocks',
+        'Reits': 'reits'
     }
 
     all_dividends = []
@@ -558,28 +557,27 @@ def fetch_statusinvest_proventos(tickers_with_types):
     try:
         from curl_cffi import requests as cffi_requests
         
-        # Adicionando headers padrões de navegador para aumentar a semelhança com tráfego humano
         custom_headers = {
-            "Accept": "application/json, text/plain, */*",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://statusinvest.com.br/",
-            "Origin": "https://statusinvest.com.br",
+            "Referer": "https://investidor10.com.br/",
             "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin"
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin",
+            "Upgrade-Insecure-Requests": "1"
         }
         
         session = cffi_requests.Session(impersonate='chrome120')
         session.headers.update(custom_headers)
         
-        # Acessa a home primeiro para pegar cookies e passar por verificações silenciosas do Cloudflare
+        # Acessa a home primeiro para pegar cookies e passar pelo Cloudflare
         try:
-            session.get("https://statusinvest.com.br/", timeout=15)
+            session.get("https://investidor10.com.br/", timeout=15)
             import random
-            time.sleep(random.uniform(1.0, 2.5))
+            time.sleep(random.uniform(1.0, 2.0))
         except:
             pass
             
@@ -595,64 +593,80 @@ def fetch_statusinvest_proventos(tickers_with_types):
         if not clean_t:
             continue
             
-        ep = type_to_endpoint.get(a_type, 'acao')
-        url = f"https://statusinvest.com.br/{ep}/companytickerprovents?ticker={clean_t}&chartProventsType=2"
+        ep = type_to_endpoint.get(a_type, 'acoes')
         
-        try:
-            response = session.get(url, timeout=15)
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                except:
-                    continue
-                    
-                # Trata erros de NoneType
-                if not isinstance(data, dict):
-                    continue
-                    
-                asset_models = data.get('assetEarningsModels')
-                if asset_models is not None and isinstance(asset_models, list) and len(asset_models) > 0:
-                    full_raw_response.append({clean_t: data})
-                    
-                    for d in asset_models:
-                        dt_pag_str = d.get('pd', 'N/A')
-                        dt_com_str = d.get('ed', 'N/A')
-                        valor = float(d.get('v', 0.0))
-                        tipo = d.get('etd', 'N/A')
-                        
-                        if dt_pag_str in ['N/A', '-', '']:
-                            continue
-                            
-                        try:
-                            dt_pag_obj = datetime.strptime(dt_pag_str, '%d/%m/%Y')
-                        except:
-                            continue
-                            
-                        if dt_pag_obj >= hoje:
-                            all_dividends.append({
-                                'Ativo': clean_t,
-                                'Tipo': tipo,
-                                'Data Com': dt_com_str,
-                                'Data Pagamento': dt_pag_str,
-                                'Valor': valor,
-                                'dt_pag_raw': dt_pag_obj
-                            })
-            else:
-                full_raw_response.append({clean_t: f"Erro HTTP {response.status_code}"})
-        except Exception as e:
-            print(f"Erro ao buscar {clean_t} no StatusInvest: {e}")
-            full_raw_response.append({clean_t: f"Exception: {str(e)}"})
+        # Caso especial: muitas BDRs cadastradas como Stocks caem na rota /bdrs/
+        # Vamos tentar a rota original primeiro
+        urls_to_try = [f"https://investidor10.com.br/{ep}/{clean_t.lower()}/"]
+        if a_type == 'Stocks':
+            urls_to_try.append(f"https://investidor10.com.br/bdrs/{clean_t.lower()}/")
             
+        success = False
+        
+        for url in urls_to_try:
+            if success:
+                break
+                
+            try:
+                response = session.get(url, timeout=15)
+                if response.status_code == 200:
+                    html = response.text
+                    soup = BeautifulSoup(html, "html.parser")
+                    
+                    table = soup.find('table', id='table-dividends-history')
+                    if not table:
+                        full_raw_response.append({clean_t: "Tabela de dividendos não encontrada na página."})
+                        success = True # Pagina carregou mas não tem dividendos
+                        break
+                        
+                    rows = table.find('tbody').find_all('tr')
+                    full_raw_response.append({clean_t: f"Tabela encontrada com {len(rows)} proventos históricos/futuros."})
+                    
+                    for row in rows:
+                        cols = row.find_all('td')
+                        if len(cols) >= 4:
+                            tipo_prov = cols[0].text.strip()
+                            dt_com_str = cols[1].text.strip()
+                            dt_pag_str = cols[2].text.strip()
+                            valor_str = cols[3].text.strip().replace('R$', '').replace('$', '').strip()
+                            
+                            if dt_pag_str in ['N/A', '-', '']:
+                                continue
+                                
+                            try:
+                                dt_pag_obj = datetime.strptime(dt_pag_str, '%d/%m/%Y')
+                            except:
+                                continue
+                                
+                            if dt_pag_obj >= hoje:
+                                try:
+                                    valor = float(valor_str.replace('.', '').replace(',', '.'))
+                                except:
+                                    valor = 0.0
+                                    
+                                if valor > 0:
+                                    all_dividends.append({
+                                        'Ativo': clean_t,
+                                        'Tipo': tipo_prov,
+                                        'Data Com': dt_com_str,
+                                        'Data Pagamento': dt_pag_str,
+                                        'Valor': valor,
+                                        'dt_pag_raw': dt_pag_obj
+                                    })
+                    success = True
+                else:
+                    full_raw_response.append({clean_t: f"Erro HTTP {response.status_code}"})
+            except Exception as e:
+                print(f"Erro ao buscar {clean_t} no Investidor10: {e}")
+                full_raw_response.append({clean_t: f"Exception: {str(e)}"})
+                
         import random
         time.sleep(random.uniform(1.5, 3.5))
-
-
 
     if not all_dividends:
         return pd.DataFrame(), "", full_raw_response
         
     df = pd.DataFrame(all_dividends)
-    df = df[df['Valor'] > 0]
     df = df.drop_duplicates()
     df = df.sort_values(by=['dt_pag_raw', 'Ativo'], ascending=[True, True])
     df = df.drop(columns=['dt_pag_raw'])

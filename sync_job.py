@@ -58,7 +58,7 @@ def run_sync():
 
         # 4. Executa a extração (usando a função existente robusta do services.py)
         # O services.py já tem os sleeps aleatórios e curl_cffi para evitar o Cloudflare
-        df, err, raw = svc.fetch_statusinvest_proventos(tickers_with_types)
+        df, err, raw = svc.fetch_investidor10_proventos(tickers_with_types)
         
         if df.empty and not raw:
             # Se não retornou nada e deu erro
