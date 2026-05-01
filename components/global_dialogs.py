@@ -195,7 +195,7 @@ def dialog_alocacao_ativos():
     
     # Header da "Tabela"
     st.markdown("---")
-    col_h1, col_h2, col_h3 = st.columns([1.5, 1, 1])
+    col_h1, col_h2, col_h3 = st.columns([1.2, 1.5, 1])
     col_h1.markdown("**Tipo de Ativo**")
     col_h2.markdown("**Desejado (%)**")
     col_h3.markdown("**Atual (%)**")
@@ -211,7 +211,7 @@ def dialog_alocacao_ativos():
     new_values = {}
     
     for db_key, display_label in classes:
-        c1, c2, c3 = st.columns([1.5, 1, 1])
+        c1, c2, c3 = st.columns([1.2, 1.5, 1])
         c1.write(display_label)
         
         # Percentual Desejado (Editável)
@@ -221,6 +221,7 @@ def dialog_alocacao_ativos():
             max_value=100.0, 
             value=float(allocs.get(db_key, 0.0)), 
             step=1.0, 
+            format="%.2f",
             label_visibility="collapsed",
             key=f"input_alloc_{db_key}"
         )

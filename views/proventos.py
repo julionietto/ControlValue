@@ -56,12 +56,14 @@ def render_proventos_view():
                 
                 st.success("Estes são os valores futuros mapeados com base na sua posição até a Data Com:")
                 
-                st.dataframe(
-                    prov_df.style.format({
+                styled_prov = prov_df.style.format({
                         'Valor Cota (R$)': 'R$ {:.4f}',
                         'Qtd (Data Com)': '{:,.0f}',
                         'Total a Receber': 'R$ {:.2f}'
-                    }),
+                    }).set_properties(**{'text-align': 'center'})
+                    
+                st.dataframe(
+                    styled_prov,
                     use_container_width=True,
                     hide_index=True
                 )

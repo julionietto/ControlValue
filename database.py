@@ -778,7 +778,7 @@ def sync_proventos_from_provisionados(user_id):
 def log_sync_execution(sync_date, status, details=""):
     from datetime import datetime
     from zoneinfo import ZoneInfo
-    now_sp = datetime.now(ZoneInfo("America/Sao_Paulo"))
+    now_sp = datetime.now(ZoneInfo("America/Sao_Paulo")).replace(tzinfo=None)
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(

@@ -92,9 +92,69 @@ def dialog_assets_by_type(selected_type, assets_df):
                                     
         st.dataframe(styled_df, hide_index=True, use_container_width=True)
         
+        
     if st.button("Fechar", use_container_width=True):
         st.session_state.pie_dialog_handled = True
         st.rerun()
+
+@st.dialog("Ativos por Setor", dismissible=True)
+def dialog_assets_by_sector(selected_sector, assets_df):
+    st.markdown(f"### Ativos no Setor: {selected_sector}")
+    
+    filtered_df = assets_df[assets_df['sector'] == selected_sector].copy()
+    
+    if filtered_df.empty:
+        st.info("Nenhum ativo encontrado neste setor.")
+    else:
+        display_df = pd.DataFrame()
+        display_df['Ticker'] = filtered_df['ticker'].apply(format_ticker_for_display)
+        
+        def format_qty_hist(qty, a_type):
+            if a_type == 'Cripto':
+                formatted = f"{qty:,.8f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                if "," in formatted: formatted = formatted.rstrip('0').rstrip(',')
+                return formatted
+            return f"{qty:,.0f}".replace(",", ".")
+            
+        display_df['Quantidade'] = filtered_df.apply(lambda x: format_qty_hist(x['quantity'], x['asset_type']), axis=1)
+        display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
+        
+        styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual'])
+                                    
+        st.dataframe(styled_df, hide_index=True, use_container_width=True)
+        
+    if st.button("Fechar", use_container_width=True):
+        st.session_state.sector_dialog_handled = True
+        st.rerun()
+
+@st.dialog("FIIs por Classe", dismissible=True)
+def dialog_fiis_by_class(selected_class, chart_df):
+    st.markdown(f"### FIIs na Classe: {selected_class}")
+    
+    filtered_df = chart_df[chart_df['classe'] == selected_class].copy()
+    
+    if filtered_df.empty:
+        st.info("Nenhum FII encontrado nesta classe.")
+    else:
+        display_df = pd.DataFrame()
+        display_df['Ticker'] = filtered_df['ticker'].apply(format_ticker_for_display)
+        
+        def format_qty_hist(qty, a_type):
+            return f"{qty:,.0f}".replace(",", ".")
+            
+        display_df['Quantidade'] = filtered_df.apply(lambda x: format_qty_hist(x['quantity'], x['asset_type']), axis=1)
+        display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
+        
+        styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual'])
+                                    
+        st.dataframe(styled_df, hide_index=True, use_container_width=True)
+        
+    if st.button("Fechar", use_container_width=True):
+        st.session_state.fii_class_dialog_handled = True
+        st.rerun()
+
 
 @st.dialog("Adicionar novo ativo", dismissible=False)
 def dialog_adicionar_novo_ativo():
@@ -1045,7 +1105,18 @@ def render_visao_geral_view():
                     text_auto='.2f',
                     labels={'sector': 'Setor', 'percent': 'Peso (%)'}
                 )
-                st.plotly_chart(fig_sect, use_container_width=True)
+                fig_sect.update_layout(clickmode='event+select')
+                event_sect = st.plotly_chart(fig_sect, use_container_width=True, on_select="rerun", key="bar_chart_sector")
+                
+                if event_sect and event_sect.selection and event_sect.selection.points:
+                    selected_sector = event_sect.selection.points[0].get("x", "")
+                    
+                    if selected_sector and st.session_state.get('last_sector_selection') != selected_sector:
+                        st.session_state.sector_dialog_handled = False
+                        st.session_state.last_sector_selection = selected_sector
+                        
+                    if not st.session_state.get('sector_dialog_handled'):
+                        dialog_assets_by_sector(selected_sector, rv_assets)
             else:
                 st.info("Adicione ativos de Renda Variável para visualizar esta distribuição.")
                 
@@ -1155,25 +1226,45 @@ def render_visao_geral_view():
                     )
                     st.plotly_chart(fig_fii, use_container_width=True)
                 with col_fii2:
-                    fig_fii_sect = px.pie(
-                        fii_assets, 
-                        values='current_value', 
-                        names='sector', 
+                    fii_sect_df = fii_assets.groupby('sector')['current_value'].sum().reset_index()
+                    fig_fii_sect = px.bar(
+                        fii_sect_df, 
+                        x='sector',
+                        y='current_value', 
                         title='Distribuição por Segmento', 
-                        hole=0.4
+                        text_auto='.2s'
                     )
-                    st.plotly_chart(fig_fii_sect, use_container_width=True)
+                    fig_fii_sect.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Segmento", yaxis_title="")
+                    event_fii_sect = st.plotly_chart(fig_fii_sect, use_container_width=True, on_select="rerun", key="bar_fii_sect")
+                    
+                    if event_fii_sect and event_fii_sect.selection and event_fii_sect.selection.points:
+                        selected_sector = event_fii_sect.selection.points[0].get("x", "")
+                        if selected_sector and st.session_state.get('last_fii_sect_selection') != selected_sector:
+                            st.session_state.sector_dialog_handled = False
+                            st.session_state.last_fii_sect_selection = selected_sector
+                        if not st.session_state.get('sector_dialog_handled'):
+                            dialog_assets_by_sector(selected_sector, fii_assets)
                 with col_fii3:
-                    fig_fii_class = px.pie(
-                        chart_df, 
-                        values='current_value', 
-                        names='classe', 
+                    class_df = chart_df.groupby('classe')['current_value'].sum().reset_index()
+                    fig_fii_class = px.bar(
+                        class_df, 
+                        x='classe',
+                        y='current_value', 
                         title='Recebíveis x Tijolos', 
-                        hole=0.4,
                         color='classe',
-                        color_discrete_map={'Tijolo': '#00CC96', 'Recebíveis': '#636EFA'}
+                        color_discrete_map={'Tijolo': '#00CC96', 'Recebíveis': '#636EFA'},
+                        text_auto='.2s'
                     )
-                    st.plotly_chart(fig_fii_class, use_container_width=True)
+                    fig_fii_class.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Classe", yaxis_title="")
+                    event_fii_class = st.plotly_chart(fig_fii_class, use_container_width=True, on_select="rerun", key="bar_fii_class")
+                    
+                    if event_fii_class and event_fii_class.selection and event_fii_class.selection.points:
+                        selected_class = event_fii_class.selection.points[0].get("x", "")
+                        if selected_class and st.session_state.get('last_fii_class_selection') != selected_class:
+                            st.session_state.fii_class_dialog_handled = False
+                            st.session_state.last_fii_class_selection = selected_class
+                        if not st.session_state.get('fii_class_dialog_handled'):
+                            dialog_fiis_by_class(selected_class, chart_df)
                 
                 st.markdown("---")
                 # NOVO GRÁFICO: Proventos Fiis
