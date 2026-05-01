@@ -17,20 +17,20 @@ def run_sync():
     print(f"Data atual (SP): {now.strftime('%Y-%m-%d %H:%M:%S')}")
     
     # 1.1 Verifica se é fim de semana (5=Sábado, 6=Domingo)
-    # if now.weekday() > 4:
-    #     print("Hoje é final de semana. O mercado não abriu. Abortando execução para economizar recursos.")
-    #     return
-    #     
-    # # 1.2 Verifica se é feriado
-    # import holidays
-    # br_holidays = holidays.BR(state='SP')
-    # if now.date() in br_holidays:
-    #     print("Hoje é feriado (SP/BR). O mercado não abriu. Abortando execução para economizar recursos.")
-    #     return
-    #     
-    # if now.hour < 19:
-    #     print("Ainda não são 19:00. O mercado pode estar aberto ou os dados não foram atualizados. Abortando execução para evitar chamadas desnecessárias.")
-    #     return
+    if now.weekday() > 4:
+        print("Hoje é final de semana. O mercado não abriu. Abortando execução para economizar recursos.")
+        return
+        
+    # 1.2 Verifica se é feriado
+    import holidays
+    br_holidays = holidays.BR(state='SP')
+    if now.date() in br_holidays:
+        print("Hoje é feriado (SP/BR). O mercado não abriu. Abortando execução para economizar recursos.")
+        return
+        
+    if now.hour < 19:
+        print("Ainda não são 19:00. O mercado pode estar aberto ou os dados não foram atualizados. Abortando execução para evitar chamadas desnecessárias.")
+        return
 
     # 2. Verifica se já rodou com sucesso hoje
     if db.check_sync_completed_today(today_str):
