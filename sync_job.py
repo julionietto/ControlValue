@@ -71,6 +71,14 @@ def run_sync():
         # 5. Salva os resultados para cada usuário que possui o ativo
         affected_users = set()
         
+        # Busca a cotação do dólar para conversão de Stocks e Reits
+        try:
+            import yfinance as yf
+            data_usd = yf.Ticker("BRL=X").history(period="5d")
+            usd_rate = float(data_usd['Close'].iloc[-1]) if not data_usd.empty else 5.0
+        except:
+            usd_rate = 5.0
+            
         with db.get_db_connection() as conn:
             cursor = conn.cursor()
             
@@ -83,20 +91,28 @@ def run_sync():
                 valor = float(row['Valor'])
                 
                 # Aplica o desconto de IR na fonte (x 0.8252) para JCP, gravando o valor líquido no banco
-                if 'juros' in str(tipo).lower():
+                # Investidor10 retorna 'JSCP'
+                if 'juros' in str(tipo).lower() or 'jscp' in str(tipo).lower():
                     valor = valor * 0.8252
                     
                 ticker_sa = f"{ticker_base}.SA"
                 
-                # Descobre quem tem esse ativo (com ou sem .SA) e pega o ticker exato do banco
-                cursor.execute("SELECT DISTINCT ticker, user_id FROM assets WHERE ticker IN (%s, %s)", (ticker_base, ticker_sa))
+                # Descobre quem tem esse ativo (com ou sem .SA) e pega o ticker exato e o tipo do banco
+                cursor.execute("SELECT DISTINCT ticker, user_id, asset_type FROM assets WHERE ticker IN (%s, %s)", (ticker_base, ticker_sa))
                 users_with_asset = cursor.fetchall()
                 
                 for u in users_with_asset:
                     db_ticker = u[0]
                     user_id = u[1]
+                    asset_type = u[2]
+                    
+                    # Converte para BRL se for ativo internacionalizado
+                    user_valor = valor
+                    if asset_type in ['Stocks', 'Reits']:
+                        user_valor = valor * usd_rate
+                        
                     # Salva (upsert) respeitando o sufixo original do banco
-                    db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, valor, user_id)
+                    db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, user_valor, user_id)
                     affected_users.add(user_id)
                     
         # 6. Sincroniza a tabela de proventos para os usuários afetados
