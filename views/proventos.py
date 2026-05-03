@@ -22,7 +22,7 @@ def render_proventos_view():
             
         st.caption(f"☁️ {sync_msg}")
 
-        if st.button("🔍 Ver Proventos Provisionados", key="btn_statusinvest_consult", use_container_width=True):
+        if st.button("🔍 Proventos Futuros", key="btn_statusinvest_consult", use_container_width=True):
             st.session_state.show_statusinvest_results = True
 
     if st.session_state.get('show_statusinvest_results'):
