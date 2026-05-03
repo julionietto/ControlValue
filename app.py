@@ -3,12 +3,14 @@ import database as db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile, dialog_alocacao_ativos
+from components.pwa import inject_pwa
 from utils.refresh_manager import get_market_status
 import services as svc
 
 db.init_db()
 
 st.set_page_config(page_title="ControlValue", page_icon="📈", layout="wide")
+inject_pwa()
 
 # Injeção de CSS personalizado
 import os
