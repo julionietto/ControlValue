@@ -8,7 +8,7 @@ from utils.refresh_manager import get_market_status
 import services as svc
 import traceback
 
-st.set_page_config(page_title="ControlValue", page_icon="📈", layout="wide")
+st.set_page_config(page_title="ControlValue", page_icon="static/icon-192x192.png", layout="wide")
 
 try:
     db.init_db()
@@ -135,15 +135,6 @@ try:
 
     # Pega a navegação inicial do estado
     current_view = st.session_state.get('navigation_tab', 'Visão Geral')
-
-    # ==============================
-    # BOTÃO DE TESTE DE EMAIL (TEMPORÁRIO)
-    # ==============================
-    with st.sidebar:
-        st.divider()
-        if st.button("🚨 Testar Notificação de Erro"):
-            # Força uma exception para testar o envio de e-mail
-            raise Exception("ERRO DE TESTE: O sistema de notificação por e-mail está funcionando!")
 
     # Área Principal - Divisão de Telas Baseada na Seleção
     if current_view == "Proventos" or current_view == "Proventos Recebidos":
