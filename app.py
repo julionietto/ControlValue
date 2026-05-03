@@ -147,3 +147,10 @@ if current_view == "Detalhe do Ativo":
 
 if current_view == "Visão Geral":
     render_visao_geral_view()
+
+# Diagnóstico PWA (Remover após funcionar)
+import os
+if not os.path.exists("static/manifest.json"):
+    st.sidebar.error("⚠️ Arquivos PWA não encontrados no servidor. Certifique-se de fazer o Push para o GitHub.")
+elif not st.config.get_option("server.enableStaticServing"):
+    st.sidebar.warning("⚠️ Servidor estático não habilitado. Tente reiniciar o App no painel do Streamlit Cloud.")
