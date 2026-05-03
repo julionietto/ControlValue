@@ -525,6 +525,67 @@ def send_password_reset_email(to_email, reset_link):
     except Exception as e:
         print(f"SMTP erro: {e}")
         return False, f"Erro ao enviar e-mail."
+        
+def send_exception_report_email(exception_details):
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import os
+    import streamlit as st
+    
+    try:
+        if "SMTP_EMAIL" in st.secrets:
+            smtp_email = st.secrets["SMTP_EMAIL"]
+            smtp_password = st.secrets["SMTP_PASSWORD"]
+        else:
+            smtp_email = os.getenv("SMTP_EMAIL", "controlvalueoficial@gmail.com")
+            smtp_password = os.getenv("SMTP_PASSWORD", "")
+    except Exception:
+        smtp_email = os.getenv("SMTP_EMAIL", "controlvalueoficial@gmail.com")
+        smtp_password = os.getenv("SMTP_PASSWORD", "")
+        
+    if not smtp_email or not smtp_password:
+        print("SMTP Credentials missing for Exception Report")
+        return False
+        
+    to_email = "julionietto@gmail.com"
+    msg = MIMEMultipart("alternative")
+    msg['Subject'] = "Exception capturada no App ControlValue"
+    msg['From'] = smtp_email
+    msg['To'] = to_email
+    
+    # Adiciona informações extras se disponíveis
+    user_info = ""
+    if 'user_id' in st.session_state:
+        user_info = f"<p><b>User ID:</b> {st.session_state.user_id}</p>"
+    
+    html = f"""
+    <html>
+      <body style="font-family: 'Courier New', Courier, monospace; color: #333; background-color: #f9f9f9; padding: 20px;">
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px; border: 2px solid #ff4b4b; border-radius: 10px; background-color: white;">
+            <h2 style="color: #ff4b4b; text-align: center;">🚨 Exception Capturada</h2>
+            <p>Ocorreu um erro inesperado na aplicação ControlValue.</p>
+            {user_info}
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p><b>Detalhes da Exception:</b></p>
+            <pre style="background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap;">{exception_details}</pre>
+        </div>
+      </body>
+    </html>
+    """
+    
+    msg.attach(MIMEText(html, 'html'))
+    
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"SMTP erro ao enviar Exception Report: {e}")
+        return False
 
 def fetch_investidor10_proventos(tickers_with_types):
     """
