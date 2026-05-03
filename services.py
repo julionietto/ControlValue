@@ -468,52 +468,37 @@ def get_usd_brl_history(start_date):
         print(f"Erro ao buscar fallback USD: {e}")
     return pd.Series()
 
-def send_password_reset_email(to_email, reset_link):
+def _send_smtp_email(to_email, subject, html_content):
+    """Função auxiliar centralizada para envio de e-mails via SMTP Gmail."""
     import smtplib
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
     import os
+    import streamlit as st
     
+    # Busca credenciais de forma idêntica ao que funciona na recuperação de senha
+    smtp_email = ""
+    smtp_password = ""
     try:
         if "SMTP_EMAIL" in st.secrets:
             smtp_email = st.secrets["SMTP_EMAIL"]
             smtp_password = st.secrets["SMTP_PASSWORD"]
-        else:
-            smtp_email = os.getenv("SMTP_EMAIL", "")
-            smtp_password = os.getenv("SMTP_PASSWORD", "")
-    except Exception:
-        smtp_email = os.getenv("SMTP_EMAIL", "")
-        smtp_password = os.getenv("SMTP_PASSWORD", "")
+    except:
+        pass
         
     if not smtp_email or not smtp_password:
+        smtp_email = os.getenv("SMTP_EMAIL", "controlvalueoficial@gmail.com")
+        smtp_password = os.getenv("SMTP_PASSWORD", "")
+
+    if not smtp_email or not smtp_password:
         print("SMTP Credentials missing")
-        return False, "Servidor de e-mail não configurado pelo administrador."
+        return False, "Credenciais SMTP não encontradas."
         
     msg = MIMEMultipart("alternative")
-    msg['Subject'] = "Recuperação de Senha - ControlValue"
+    msg['Subject'] = subject
     msg['From'] = smtp_email
     msg['To'] = to_email
-    
-    html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #3b82f6; text-align: center;">ControlValue</h2>
-            <p>Olá,</p>
-            <p>Recebemos uma solicitação para redefinir a senha da sua conta.</p>
-            <p>Se você não fez essa solicitação, pode ignorar este e-mail com segurança.</p>
-            <p>Para redefinir sua senha, clique no botão abaixo (válido por 30 minutos):</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{reset_link}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Redefinir Minha Senha</a>
-            </div>
-            <p style="font-size: 12px; color: #999;">Ou copie e cole este link no seu navegador:</p>
-            <p style="font-size: 12px; color: #999; word-break: break-all;">{reset_link}</p>
-        </div>
-      </body>
-    </html>
-    """
-    
-    msg.attach(MIMEText(html, 'html'))
+    msg.attach(MIMEText(html_content, 'html'))
     
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -524,37 +509,30 @@ def send_password_reset_email(to_email, reset_link):
         return True, "E-mail enviado com sucesso."
     except Exception as e:
         print(f"SMTP erro: {e}")
-        return False, f"Erro ao enviar e-mail."
-        
+        return False, str(e)
+
+def send_password_reset_email(to_email, reset_link):
+    html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #3b82f6; text-align: center;">ControlValue</h2>
+            <p>Olá,</p>
+            <p>Recebemos uma solicitação para redefinir a senha da sua conta.</p>
+            <p>Para redefinir sua senha, clique no botão abaixo (válido por 30 minutos):</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Redefinir Minha Senha</a>
+            </div>
+            <p style="font-size: 12px; color: #999;">Ou copie e cole este link no seu navegador:</p>
+            <p style="font-size: 12px; color: #999; word-break: break-all;">{reset_link}</p>
+        </div>
+      </body>
+    </html>
+    """
+    return _send_smtp_email(to_email, "Recuperação de Senha - ControlValue", html)
+
 def send_exception_report_email(exception_details):
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    import os
     import streamlit as st
-    
-    try:
-        if "SMTP_EMAIL" in st.secrets:
-            smtp_email = st.secrets["SMTP_EMAIL"]
-            smtp_password = st.secrets["SMTP_PASSWORD"]
-        else:
-            smtp_email = os.getenv("SMTP_EMAIL", "controlvalueoficial@gmail.com")
-            smtp_password = os.getenv("SMTP_PASSWORD", "")
-    except Exception:
-        smtp_email = os.getenv("SMTP_EMAIL", "controlvalueoficial@gmail.com")
-        smtp_password = os.getenv("SMTP_PASSWORD", "")
-        
-    if not smtp_email or not smtp_password:
-        print("SMTP Credentials missing for Exception Report")
-        return False
-        
-    to_email = "julionietto@gmail.com"
-    msg = MIMEMultipart("alternative")
-    msg['Subject'] = "Exception capturada no App ControlValue"
-    msg['From'] = smtp_email
-    msg['To'] = to_email
-    
-    # Adiciona informações extras se disponíveis
     user_info = ""
     if 'user_id' in st.session_state:
         user_info = f"<p><b>User ID:</b> {st.session_state.user_id}</p>"
@@ -573,19 +551,8 @@ def send_exception_report_email(exception_details):
       </body>
     </html>
     """
-    
-    msg.attach(MIMEText(html, 'html'))
-    
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(smtp_email, smtp_password)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"SMTP erro ao enviar Exception Report: {e}")
-        return False
+    success, msg = _send_smtp_email("julionietto@gmail.com", "Exception capturada no App ControlValue", html)
+    return success
 
 def fetch_investidor10_proventos(tickers_with_types):
     """
