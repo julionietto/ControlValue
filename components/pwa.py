@@ -10,23 +10,26 @@ def inject_pwa():
     <script>
     const parentDoc = window.parent.document;
     
-    // 1. Injetar o link do Manifest
+    // 1. Injetar o link do Manifest se não existir
     if (!parentDoc.querySelector('link[rel="manifest"]')) {
         const manifestLink = parentDoc.createElement('link');
         manifestLink.rel = 'manifest';
         manifestLink.href = '/app/static/manifest.json';
         parentDoc.head.appendChild(manifestLink);
+        console.log('PWA: Manifest link injetado.');
     }
     
     // 2. Registrar o Service Worker
     if ('serviceWorker' in window.parent.navigator) {
-        window.parent.navigator.serviceWorker.register('/app/static/sw.js', { scope: '/' })
+        window.parent.navigator.serviceWorker.register('/app/static/sw.js')
             .then(function(registration) {
-                console.log('PWA: ServiceWorker registrado com sucesso:', registration.scope);
+                console.log('PWA: ServiceWorker registrado com sucesso no escopo:', registration.scope);
             })
             .catch(function(err) {
-                console.log('PWA: Falha ao registrar o ServiceWorker:', err);
+                console.error('PWA: Falha ao registrar o ServiceWorker:', err);
             });
+    } else {
+        console.log('PWA: Service Worker não é suportado neste navegador.');
     }
     </script>
     """
