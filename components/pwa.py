@@ -8,57 +8,68 @@ def inject_pwa():
     """
     pwa_js = """
     <script>
-    const parentDoc = window.parent.document;
-    
-    // 1. Função para remover tags existentes que conflitam
-    function removeDefaultTags() {
+    function forceIdentity() {
+        const parentDoc = window.parent.document;
+        if (!parentDoc) return;
+
+        // 1. Sobrescrever o Título (Remove o "- Streamlit")
+        if (parentDoc.title.includes("Streamlit")) {
+            parentDoc.title = "ControlValue";
+        }
+
+        // 2. Limpar tags conflitantes
         const selectors = [
-            'link[rel="manifest"]',
-            'link[rel="icon"]',
+            'link[rel="manifest"]', 
+            'link[rel="icon"]', 
             'link[rel="apple-touch-icon"]',
-            'meta[name="apple-mobile-web-app-title"]'
+            'meta[name="apple-mobile-web-app-title"]',
+            'meta[name="application-name"]'
         ];
+        
         selectors.forEach(sel => {
-            const tags = parentDoc.querySelectorAll(sel);
-            tags.forEach(t => t.remove());
+            parentDoc.querySelectorAll(sel).forEach(t => t.remove());
         });
+
+        // 3. Injetar nossas tags no TOPO (Prioridade)
+        const timestamp = Date.now();
+        
+        const manifest = parentDoc.createElement('link');
+        manifest.rel = 'manifest';
+        manifest.href = './app/static/manifest.json?v=' + timestamp;
+        parentDoc.head.prepend(manifest);
+
+        const appleIcon = parentDoc.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        appleIcon.href = './app/static/icon-192x192.png?v=' + timestamp;
+        parentDoc.head.prepend(appleIcon);
+
+        const favicon = parentDoc.createElement('link');
+        favicon.rel = 'icon';
+        favicon.href = './app/static/icon-192x192.png?v=' + timestamp;
+        parentDoc.head.prepend(favicon);
+        
+        const metaTitle = parentDoc.createElement('meta');
+        metaTitle.name = 'apple-mobile-web-app-title';
+        metaTitle.content = 'ControlValue';
+        parentDoc.head.prepend(metaTitle);
+
+        const appName = parentDoc.createElement('meta');
+        appName.name = 'application-name';
+        appName.content = 'ControlValue';
+        parentDoc.head.prepend(appName);
     }
 
-    removeDefaultTags();
+    // Executa imediatamente e repete para vencer o carregamento assíncrono do Streamlit
+    forceIdentity();
+    setTimeout(forceIdentity, 500);
+    setTimeout(forceIdentity, 1500);
+    setTimeout(forceIdentity, 3000);
 
-    // 2. Injetar Manifest Próprio (com versão para quebrar cache)
-    const manifestLink = parentDoc.createElement('link');
-    manifestLink.rel = 'manifest';
-    manifestLink.href = './app/static/manifest.json?v=2';
-    parentDoc.head.appendChild(manifestLink);
-    
-    // 3. Injetar Ícone para iPhone (Apple Touch Icon)
-    const appleIcon = parentDoc.createElement('link');
-    appleIcon.rel = 'apple-touch-icon';
-    appleIcon.href = './app/static/icon-192x192.png';
-    parentDoc.head.appendChild(appleIcon);
-
-    // 4. Injetar Favicon Padrão
-    const favicon = parentDoc.createElement('link');
-    favicon.rel = 'icon';
-    favicon.href = './app/static/icon-192x192.png';
-    parentDoc.head.appendChild(favicon);
-
-    // 5. Definir Título para Web App no iOS
-    const metaTitle = parentDoc.createElement('meta');
-    metaTitle.name = 'apple-mobile-web-app-title';
-    metaTitle.content = 'ControlValue';
-    parentDoc.head.appendChild(metaTitle);
-
-    // 6. Registrar o Service Worker
+    // Registrar Service Worker
     if ('serviceWorker' in window.parent.navigator) {
-        window.parent.navigator.serviceWorker.register('./app/static/sw.js')
-            .then(function(registration) {
-                console.log('PWA: ServiceWorker registrado com sucesso.');
-            })
-            .catch(function(err) {
-                console.error('PWA: Falha ao registrar o ServiceWorker:', err);
-            });
+        window.parent.navigator.serviceWorker.register('./app/static/sw.js?v=2')
+            .then(function(reg) { console.log('PWA: OK'); })
+            .catch(function(err) { console.log('PWA: Erro SW'); });
     }
     </script>
     """
