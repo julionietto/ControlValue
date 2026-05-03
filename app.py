@@ -8,12 +8,11 @@ from utils.refresh_manager import get_market_status
 import services as svc
 import traceback
 
-db.init_db()
-
 st.set_page_config(page_title="ControlValue", page_icon="📈", layout="wide")
-inject_pwa()
 
 try:
+    db.init_db()
+    inject_pwa()
 
     # Injeção de CSS personalizado
     import os
@@ -153,17 +152,24 @@ try:
 
 except Exception as e:
     error_details = traceback.format_exc()
+    
     # Enviar email (silenciosamente no background)
+    email_sent = False
     try:
-        svc.send_exception_report_email(error_details)
+        email_sent = svc.send_exception_report_email(error_details)
     except:
         pass
         
     # Mostrar erro amigável na UI
     st.error("### ⚠️ Ocorreu um erro inesperado")
-    st.write("Uma notificação foi enviada automaticamente ao administrador para correção.")
+    st.write("O erro foi capturado para análise técnica.")
     
-    with st.expander("Ver detalhes técnicos"):
+    if email_sent:
+        st.success("📩 O administrador foi notificado automaticamente por e-mail.")
+    else:
+        st.warning("⚠️ Falha ao enviar notificação por e-mail (Verifique as credenciais SMTP).")
+    
+    with st.expander("Ver detalhes técnicos do erro"):
         st.code(error_details, language="python")
     
     if st.button("Recarregar Aplicação"):
