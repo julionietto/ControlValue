@@ -1274,7 +1274,7 @@ def render_visao_geral_view():
                         text_auto='.1f'
                     )
                     fig_fii_class.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Classe", yaxis_title="Percentual (%)")
-                    fig_fii_class.update_traces(textsuffix='%', textposition='outside')
+                    fig_fii_class.update_traces(texttemplate='%{y:.1f}%', textposition='outside')
                     event_fii_class = st.plotly_chart(fig_fii_class, use_container_width=True, on_select="rerun", key="bar_fii_class")
                     
                     if event_fii_class and event_fii_class.selection and event_fii_class.selection.points:
