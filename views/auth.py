@@ -229,57 +229,6 @@ def render_auth_view():
             if user_count > 0:
                 st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
                 
-                # --- Lógica de Biometria (Face ID) ---
-                from components.biometric_bridge import listen_webauthn_events, biometric_authenticate_component
-                from utils import webauthn_utils
-                import json
-                
-                listen_webauthn_events()
-                
-                # Detecta o RP_ID (Domínio) automaticamente
-                try:
-                    rp_id = st.context.headers.get("Host", "controlvalue.streamlit.app").split(":")[0]
-                except:
-                    rp_id = "controlvalue.streamlit.app"
-
-                # Verifica se há dados de autenticação na URL (retorno do JS)
-                auth_data_json = st.query_params.get("webauthn_auth_data")
-                if auth_data_json:
-                    try:
-                        auth_response = json.loads(auth_data_json)
-                        # Busca o desafio esperado que salvamos no registro anterior ou fixo (idealmente via cache/session)
-                        expected_challenge = st.session_state.get("webauthn_challenge")
-                        
-                        if expected_challenge:
-                            # Busca a credencial no banco para validar
-                            cred = db.get_credential_by_id(auth_response['id'])
-                            if cred:
-                                new_count = webauthn_utils.verify_authentication(
-                                    auth_data_json,
-                                    expected_challenge,
-                                    cred['public_key'],
-                                    cred['sign_count'],
-                                    rp_id
-                                )
-                                
-                                if new_count is not None:
-                                    # SUCESSO! Login realizado.
-                                    db.update_credential_sign_count(cred['credential_id'], new_count)
-                                    user = db.get_user_details(cred['user_id'])
-                                    if user:
-                                        st.session_state.authenticated = True
-                                        st.session_state.user_id = user['id']
-                                        st.session_state.username = user['username']
-                                        st.session_state.is_admin = (user['username'] == 'admin')
-                                        st.query_params.clear()
-                                        st.rerun()
-                                else:
-                                    st.error("Falha na autenticação biométrica.")
-                            else:
-                                st.error("Dispositivo não reconhecido. Cadastre a biometria no perfil primeiro.")
-                    except Exception as e:
-                        st.error(f"Erro ao processar biometria: {e}")
-
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
                     if st.button("Não tem conta? Criar", use_container_width=True):
@@ -287,14 +236,5 @@ def render_auth_view():
                 with col_btn2:
                     if st.button("Esqueci minha senha", use_container_width=True):
                         dialog_recuperar_senha()
-                
-                # Botão de Face ID / Biometria
-                st.divider()
-                if st.button("👤 Entrar com Face ID / Biometria", use_container_width=True, type="secondary"):
-                    # Gera as opções e injeta o componente de captura
-                    options_json = webauthn_utils.get_authentication_options(rp_id)
-                    options_dict = json.loads(options_json)
-                    st.session_state.webauthn_challenge = options_dict['challenge']
-                    biometric_authenticate_component(options_json)
-                    st.info("Aguardando biometria do dispositivo...")
+    st.stop()
     st.stop()

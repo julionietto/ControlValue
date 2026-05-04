@@ -305,22 +305,6 @@ def init_db():
         import logging
         logging.warning(f"Aviso na migração de datas do proventos_provisionados: {e}")
         
-    # Tabela para Biometria / Face ID (WebAuthn)
-    try:
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_credentials (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                credential_id TEXT NOT NULL UNIQUE,
-                public_key BYTEA NOT NULL,
-                sign_count INTEGER NOT NULL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        ''')
-    except Exception as e:
-        import logging
-        logging.warning(f"Aviso ao criar tabela de biometria: {e}")
         
     conn.commit()
     db_pool = init_connection_pool()
@@ -1385,45 +1369,3 @@ def save_user_allocations(user_id, allocations_dict):
             """, (user_id, asset_class, percent))
         conn.commit()
 
-# ==============================
-# FUNÇÕES DE BIOMETRIA (WebAuthn)
-# ==============================
-
-def add_user_credential(user_id, credential_id, public_key, sign_count):
-    """Salva uma nova credencial biométrica para o usuário."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO user_credentials (user_id, credential_id, public_key, sign_count)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (credential_id) DO UPDATE SET public_key = EXCLUDED.public_key, sign_count = EXCLUDED.sign_count
-        """, (user_id, credential_id, public_key, sign_count))
-        conn.commit()
-
-def get_user_credentials(user_id):
-    """Retorna todas as credenciais biométricas cadastradas para um usuário."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SELECT credential_id, public_key, sign_count FROM user_credentials WHERE user_id = %s", (user_id,))
-        return cursor.fetchall()
-
-def get_credential_by_id(credential_id):
-    """Busca uma credencial específica pelo seu ID."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SELECT user_id, credential_id, public_key, sign_count FROM user_credentials WHERE credential_id = %s", (credential_id,))
-        return cursor.fetchone()
-
-def update_credential_sign_count(credential_id, new_sign_count):
-    """Atualiza o contador de assinaturas de uma credencial."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE user_credentials SET sign_count = %s WHERE credential_id = %s", (new_sign_count, credential_id))
-        conn.commit()
-
-def delete_user_credential(user_id, credential_id):
-    """Remove uma credencial biométrica de um usuário."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM user_credentials WHERE user_id = %s AND credential_id = %s", (user_id, credential_id))
-        conn.commit()
