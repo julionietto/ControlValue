@@ -34,7 +34,8 @@ def get_all_assets(user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute("SELECT * FROM assets WHERE user_id = %s ORDER BY ticker ASC", (user_id,))
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 def add_empty_asset(ticker, asset_type, user_id, currency='BRL'):
     ticker = ticker.upper()
