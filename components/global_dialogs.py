@@ -29,6 +29,44 @@ def dialog_user_profile():
         new_pwd = st.text_input("Nova Senha", type="password", placeholder="Deixe vazio para manter atual")
         confirm_pwd = st.text_input("Confirmar Nova Senha", type="password")
         
+        # --- Lógica de Biometria (Registro) ---
+        from components.biometric_bridge import listen_webauthn_events, biometric_register_component
+        from utils import webauthn_utils
+        import json
+        
+        listen_webauthn_events()
+        
+        # Verifica se há dados de registro na URL (retorno do JS)
+        reg_data_json = st.query_params.get("webauthn_reg_data")
+        if reg_data_json:
+            try:
+                reg_response = json.loads(reg_data_json)
+                expected_challenge = st.session_state.get("webauthn_reg_challenge")
+                
+                if expected_challenge:
+                    cred_data = webauthn_utils.verify_registration(
+                        st.session_state.user_id,
+                        reg_data_json,
+                        expected_challenge
+                    )
+                    
+                    if cred_data:
+                        db.add_user_credential(
+                            st.session_state.user_id,
+                            cred_data['credential_id'],
+                            cred_data['public_key'],
+                            cred_data['sign_count']
+                        )
+                        st.success("✅ Face ID / Biometria ativada com sucesso neste dispositivo!")
+                        st.query_params.clear()
+                        # Pequeno delay para o usuário ver o sucesso antes de fechar/recarregar
+                        time.sleep(1.5)
+                        st.rerun()
+                    else:
+                        st.error("Falha ao validar biometria. Tente novamente.")
+            except Exception as e:
+                st.error(f"Erro ao processar registro biométrico: {e}")
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Salvar Alterações", type="primary", use_container_width=True):
@@ -52,13 +90,19 @@ def dialog_user_profile():
                     st.rerun()
                 else:
                     st.error("O Email é obrigatório.")
-        close_perfil_dialog = False
+        
         with col2:
             if st.button("Fechar", use_container_width=True):
-                close_perfil_dialog = True
-                
-        if close_perfil_dialog:
-            st.rerun()
+                st.rerun()
+
+        st.divider()
+        if st.button("🔗 Ativar Face ID / Biometria neste dispositivo", use_container_width=True, type="secondary"):
+            # Gera as opções de registro e injeta o componente
+            options_json = webauthn_utils.get_registration_options(st.session_state.user_id, u_details['username'])
+            options_dict = json.loads(options_json)
+            st.session_state.webauthn_reg_challenge = options_dict['challenge']
+            biometric_register_component(options_json)
+            st.info("Aguardando confirmação biométrica do dispositivo...")
             
     else:
         st.error("Erro ao carregar dados do perfil.")
