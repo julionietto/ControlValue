@@ -69,9 +69,17 @@ def render_proventos_view():
                     hide_index=True
                 )
                 
-            if st.button("Fechar Tabela", use_container_width=True):
-                st.session_state.show_statusinvest_results = False
-                st.rerun()
+                # Totalizador
+                total_provisionado = prov_df['Total a Receber'].sum()
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_f1, col_f2 = st.columns([1, 1])
+                with col_f1:
+                    if st.button("Fechar Tabela", use_container_width=True):
+                        st.session_state.show_statusinvest_results = False
+                        st.rerun()
+                with col_f2:
+                    total_fmt = f"R$ {total_provisionado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    st.markdown(f"<div style='text-align: right; font-size: 1.2rem; font-weight: bold; color: #00CC96; padding-top: 5px;'>Total: {total_fmt}</div>", unsafe_allow_html=True)
         st.markdown("---")
 
     proventos_df = db.get_proventos(st.session_state.user_id)
