@@ -1154,7 +1154,7 @@ def render_visao_geral_view():
                     fig_us.update_traces(textposition='outside')
                     st.plotly_chart(fig_us, use_container_width=True)
                 
-                    all_prov_db = db.get_all_proventos(st.session_state.user_id)
+                    all_prov_db = db.get_proventos(st.session_state.user_id)
                     if not all_prov_db.empty:
                         with db.get_db_connection() as conn:
                             full_assets_map_all = {row['ticker']: row['asset_type'] for _, row in pd.read_sql_query("SELECT ticker, asset_type FROM assets", conn).iterrows()}
@@ -1351,7 +1351,7 @@ def render_visao_geral_view():
     
         with tab_passiva:
             # Gráficos de Renda Passiva
-            all_prov_db = db.get_all_proventos(st.session_state.user_id)
+            all_prov_db = db.get_proventos(st.session_state.user_id)
             if not all_prov_db.empty:
                 anos_prov = sorted(all_prov_db['ano'].unique().tolist())
                 resumo_graph = get_annual_proventos_summary(all_prov_db, anos_prov)
