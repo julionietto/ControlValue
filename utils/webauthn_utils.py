@@ -17,14 +17,13 @@ from webauthn.helpers.structs import (
 )
 from webauthn.helpers import bytes_to_base64url, base64url_to_bytes
 
-# RP = Relying Party (O seu App)
-RP_ID = "controlvalue.streamlit.app"
+# RP_NAME (Nome que aparece no prompt do Face ID)
 RP_NAME = "ControlValue"
 
-def get_registration_options(user_id, username):
+def get_registration_options(user_id, username, rp_id):
     """Gera as opções para o navegador iniciar o registro biométrico."""
     options = generate_registration_options(
-        rp_id=RP_ID,
+        rp_id=rp_id,
         rp_name=RP_NAME,
         user_id=str(user_id).encode(),
         user_name=username,
@@ -36,14 +35,14 @@ def get_registration_options(user_id, username):
     )
     return options_to_json(options)
 
-def verify_registration(user_id, response_json, expected_challenge):
+def verify_registration(user_id, response_json, expected_challenge, rp_id):
     """Verifica a resposta do navegador e retorna os dados da credencial para salvar."""
     try:
         registration_verification = verify_registration_response(
             credential=RegistrationCredential.parse_raw(response_json),
             expected_challenge=base64url_to_bytes(expected_challenge),
-            expected_origin=f"https://{RP_ID}",
-            expected_rp_id=RP_ID,
+            expected_origin=f"https://{rp_id}",
+            expected_rp_id=rp_id,
         )
         
         return {
@@ -55,23 +54,23 @@ def verify_registration(user_id, response_json, expected_challenge):
         print(f"Erro na verificação de registro: {e}")
         return None
 
-def get_authentication_options(allowed_credentials=None):
+def get_authentication_options(rp_id, allowed_credentials=None):
     """Gera as opções para o navegador iniciar o login biométrico."""
     options = generate_authentication_options(
-        rp_id=RP_ID,
+        rp_id=rp_id,
         allow_credentials=allowed_credentials,
         user_verification=UserVerificationRequirement.REQUIRED,
     )
     return options_to_json(options)
 
-def verify_authentication(response_json, expected_challenge, credential_public_key, credential_current_sign_count):
+def verify_authentication(response_json, expected_challenge, credential_public_key, credential_current_sign_count, rp_id):
     """Verifica a resposta de login e retorna o novo sign_count."""
     try:
         auth_verification = verify_authentication_response(
             credential=AuthenticationCredential.parse_raw(response_json),
             expected_challenge=base64url_to_bytes(expected_challenge),
-            expected_origin=f"https://{RP_ID}",
-            expected_rp_id=RP_ID,
+            expected_origin=f"https://{rp_id}",
+            expected_rp_id=rp_id,
             credential_public_key=credential_public_key,
             credential_current_sign_count=credential_current_sign_count,
         )

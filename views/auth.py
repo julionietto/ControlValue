@@ -236,6 +236,12 @@ def render_auth_view():
                 
                 listen_webauthn_events()
                 
+                # Detecta o RP_ID (Domínio) automaticamente
+                try:
+                    rp_id = st.context.headers.get("Host", "controlvalue.streamlit.app").split(":")[0]
+                except:
+                    rp_id = "controlvalue.streamlit.app"
+
                 # Verifica se há dados de autenticação na URL (retorno do JS)
                 auth_data_json = st.query_params.get("webauthn_auth_data")
                 if auth_data_json:
@@ -252,7 +258,8 @@ def render_auth_view():
                                     auth_data_json,
                                     expected_challenge,
                                     cred['public_key'],
-                                    cred['sign_count']
+                                    cred['sign_count'],
+                                    rp_id
                                 )
                                 
                                 if new_count is not None:
@@ -285,7 +292,7 @@ def render_auth_view():
                 st.divider()
                 if st.button("👤 Entrar com Face ID / Biometria", use_container_width=True, type="secondary"):
                     # Gera as opções e injeta o componente de captura
-                    options_json = webauthn_utils.get_authentication_options()
+                    options_json = webauthn_utils.get_authentication_options(rp_id)
                     options_dict = json.loads(options_json)
                     st.session_state.webauthn_challenge = options_dict['challenge']
                     biometric_authenticate_component(options_json)

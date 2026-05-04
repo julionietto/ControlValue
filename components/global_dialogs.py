@@ -36,6 +36,12 @@ def dialog_user_profile():
         
         listen_webauthn_events()
         
+        # Detecta o RP_ID (Domínio) automaticamente
+        try:
+            rp_id = st.context.headers.get("Host", "controlvalue.streamlit.app").split(":")[0]
+        except:
+            rp_id = "controlvalue.streamlit.app"
+
         # Verifica se há dados de registro na URL (retorno do JS)
         reg_data_json = st.query_params.get("webauthn_reg_data")
         if reg_data_json:
@@ -47,7 +53,8 @@ def dialog_user_profile():
                     cred_data = webauthn_utils.verify_registration(
                         st.session_state.user_id,
                         reg_data_json,
-                        expected_challenge
+                        expected_challenge,
+                        rp_id
                     )
                     
                     if cred_data:
@@ -66,7 +73,7 @@ def dialog_user_profile():
                         st.error("Falha ao validar biometria. Tente novamente.")
             except Exception as e:
                 st.error(f"Erro ao processar registro biométrico: {e}")
-
+                
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Salvar Alterações", type="primary", use_container_width=True):
@@ -98,7 +105,7 @@ def dialog_user_profile():
         st.divider()
         if st.button("🔗 Ativar Face ID / Biometria neste dispositivo", use_container_width=True, type="secondary"):
             # Gera as opções de registro e injeta o componente
-            options_json = webauthn_utils.get_registration_options(st.session_state.user_id, u_details['username'])
+            options_json = webauthn_utils.get_registration_options(st.session_state.user_id, u_details['username'], rp_id)
             options_dict = json.loads(options_json)
             st.session_state.webauthn_reg_challenge = options_dict['challenge']
             biometric_register_component(options_json)
