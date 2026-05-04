@@ -104,7 +104,22 @@ def get_asset_history(asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute("SELECT id, date, quantity, unit_price FROM asset_history WHERE asset_id = %s ORDER BY date DESC", (asset_id,))
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+def get_all_asset_histories(user_id):
+    """Busca o histórico de operações de TODOS os ativos do usuário em um único Round-Trip."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        query = '''
+            SELECT h.* FROM asset_history h 
+            JOIN assets a ON h.asset_id = a.id 
+            WHERE a.user_id = %s 
+            ORDER BY h.date ASC
+        '''
+        cursor.execute(query, (user_id,))
+        rows = cursor.fetchall()
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 def add_or_update_fixed_income_asset(ticker, saldo, user_id):
     ticker = ticker.upper()

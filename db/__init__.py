@@ -35,6 +35,7 @@ from db.assets import (
     delete_asset_operation,
     delete_asset,
     get_asset_history,
+    get_all_asset_histories,
     add_or_update_fixed_income_asset,
     update_asset_valuation,
     get_user_allocations,
