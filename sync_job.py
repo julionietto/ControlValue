@@ -74,10 +74,23 @@ def run_sync():
                 data_pagamento = row['Data Pagamento']
                 valor = float(row['Valor'])
                 
-                # Aplica o desconto de IR na fonte (x 0.8252) para JCP, gravando o valor líquido no banco
-                # Investidor10 retorna 'JSCP'
+                # Aplica o desconto de IR na fonte conforme a data com (Regra 2026)
                 if 'juros' in str(tipo).lower() or 'jscp' in str(tipo).lower():
-                    valor = valor * 0.8252
+                    from datetime import date
+                    # Se data_com for string, converter para date (o scraper costuma retornar objetos date)
+                    if isinstance(data_com, str):
+                        try:
+                            d_com_obj = datetime.strptime(data_com, '%Y-%m-%d').date()
+                        except:
+                            d_com_obj = date(2026, 1, 1) # Fallback seguro
+                    else:
+                        d_com_obj = data_com
+                        
+                    cutoff_date = date(2026, 1, 1)
+                    if d_com_obj < cutoff_date:
+                        valor = valor * 0.85      # 15% de IR
+                    else:
+                        valor = valor * 0.8252    # 17.48% de IR (Regra 2026)
                     
                 ticker_sa = f"{ticker_base}.SA"
                 
