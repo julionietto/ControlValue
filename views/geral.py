@@ -1261,16 +1261,20 @@ def render_visao_geral_view():
                             dialog_assets_by_sector(selected_sector, fii_assets)
                 with col_fii3:
                     class_df = chart_df.groupby('classe')['current_value'].sum().reset_index()
+                    total_fii_value = class_df['current_value'].sum()
+                    class_df['percent'] = (class_df['current_value'] / total_fii_value) * 100 if total_fii_value > 0 else 0
+                    
                     fig_fii_class = px.bar(
                         class_df, 
                         x='classe',
-                        y='current_value', 
-                        title='Recebíveis x Tijolos', 
+                        y='percent', 
+                        title='Recebíveis x Tijolos (%)', 
                         color='classe',
                         color_discrete_map={'Tijolo': '#00CC96', 'Recebíveis': '#636EFA'},
-                        text_auto='.2s'
+                        text_auto='.1f'
                     )
-                    fig_fii_class.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Classe", yaxis_title="")
+                    fig_fii_class.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Classe", yaxis_title="Percentual (%)")
+                    fig_fii_class.update_traces(textsuffix='%', textposition='outside')
                     event_fii_class = st.plotly_chart(fig_fii_class, use_container_width=True, on_select="rerun", key="bar_fii_class")
                     
                     if event_fii_class and event_fii_class.selection and event_fii_class.selection.points:
