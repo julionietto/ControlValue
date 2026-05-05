@@ -1,12 +1,5 @@
-from db.connection import get_db_connection
+from db.connection import get_db_connection, _query_to_df
 import pandas as pd
-
-def _query_to_df(query, conn, params=None):
-    cursor = conn.cursor()
-    cursor.execute(query, params) if params else cursor.execute(query)
-    data = cursor.fetchall()
-    cols = [desc[0] for desc in cursor.description] if cursor.description else []
-    return pd.DataFrame(data, columns=cols)
 
 def get_opcoes(user_id):
     with get_db_connection() as conn:

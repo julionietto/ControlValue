@@ -24,3 +24,7 @@ def check_sync_today(sync_date):
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM sync_logs WHERE sync_date = %s AND status = 'SUCCESS'", (sync_date,))
         return cursor.fetchone() is not None
+
+# Aliases para compatibilidade com o antigo 'database.py' e 'sync_job.py'
+check_sync_completed_today = check_sync_today
+log_sync_execution = save_sync_log

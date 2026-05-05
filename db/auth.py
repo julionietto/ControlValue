@@ -206,3 +206,24 @@ def reset_password_with_token(token, new_password):
         cursor.execute("UPDATE password_resets SET used = TRUE WHERE token = %s", (token,))
         conn.commit()
     return True, "Senha redefinida com sucesso."
+
+def admin_delete_user(user_id):
+    """Remove um usuário e todos os seus dados vinculados de todas as tabelas."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 1. Histórico de Ativos
+        cursor.execute("DELETE FROM asset_history WHERE asset_id IN (SELECT id FROM assets WHERE user_id = %s)", (user_id,))
+        # 2. Ativos
+        cursor.execute("DELETE FROM assets WHERE user_id = %s", (user_id,))
+        # 3. Proventos (Recebidos e Provisionados)
+        cursor.execute("DELETE FROM proventos WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM proventos_provisionados WHERE user_id = %s", (user_id,))
+        # 4. Opções
+        cursor.execute("DELETE FROM opcoes WHERE user_id = %s", (user_id,))
+        # 5. Alocações de Ativos
+        cursor.execute("DELETE FROM user_allocations WHERE user_id = %s", (user_id,))
+        # 6. Resets de Senha
+        cursor.execute("DELETE FROM password_resets WHERE user_id = %s", (user_id,))
+        # 7. O Usuário
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()

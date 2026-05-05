@@ -209,3 +209,12 @@ def init_db():
 
     conn.commit()
     db_pool.putconn(conn)
+
+def _query_to_df(query, conn, params=None):
+    """Helper para converter uma query SQL em DataFrame Pandas."""
+    import pandas as pd
+    cursor = conn.cursor()
+    cursor.execute(query, params) if params else cursor.execute(query)
+    data = cursor.fetchall()
+    cols = [desc[0] for desc in cursor.description] if cursor.description else []
+    return pd.DataFrame(data, columns=cols)

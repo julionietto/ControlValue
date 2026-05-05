@@ -1,5 +1,7 @@
 import psycopg2.extras
-from db.connection import get_db_connection
+from db.connection import get_db_connection, _query_to_df
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
 
 def get_proventos(user_id):
@@ -175,3 +177,118 @@ def get_all_total_proventos(user_id):
         cursor.execute("SELECT SUM(valor) FROM proventos WHERE user_id = %s", (user_id,))
         res = cursor.fetchone()
         return res[0] if res[0] is not None else 0.0
+
+def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, user_id):
+    """Insere ou atualiza um provento provisionado (upsert)."""
+    ticker = str(ticker).strip().upper()
+    valor = float(valor)
+    
+    # Normalização de datas conforme esperado pelo banco (DATE)
+    # O scraper pode retornar objetos date ou strings DD/MM/YYYY
+    try:
+        if isinstance(data_com, str):
+            dt_com_db = datetime.strptime(data_com, '%d/%m/%Y').strftime('%Y-%m-%d')
+        else:
+            dt_com_db = data_com
+            
+        if isinstance(data_pagamento, str):
+            dt_pag_db = datetime.strptime(data_pagamento, '%d/%m/%Y').strftime('%Y-%m-%d')
+        else:
+            dt_pag_db = data_pagamento
+    except Exception as e:
+        import logging
+        logging.warning(f"Erro ao formatar data no upsert_provento: {e}")
+        return
+        
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Verifica se já existe um provento idêntico (mesmo ticker e data de pagamento) para atualizar o valor
+        cursor.execute(
+            "SELECT id FROM proventos_provisionados WHERE ticker = %s AND data_pagamento = %s AND user_id = %s",
+            (ticker, dt_pag_db, user_id)
+        )
+        res = cursor.fetchone()
+        
+        if res:
+            cursor.execute(
+                "UPDATE proventos_provisionados SET valor = %s, tipo = %s, data_com = %s WHERE id = %s AND user_id = %s",
+                (valor, tipo, dt_com_db, res[0], user_id)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO proventos_provisionados (ticker, tipo, data_com, data_pagamento, valor, user_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                (ticker, tipo, dt_com_db, dt_pag_db, valor, user_id)
+            )
+        conn.commit()
+
+def sync_proventos_from_provisionados(user_id):
+    """
+    Sincroniza a tabela proventos com os valores proventos_provisionados calculados,
+    respeitando a regra do mês de Dezembro para pagamentos do ano seguinte.
+    """
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+    now = datetime.now(sp_tz)
+    current_year = now.year
+    current_month = now.month
+    
+    with get_db_connection() as conn:
+        # Busca todos os proventos provisionados calculando a quantidade elegível
+        # A quantidade elegível é a quantidade que o usuário tinha na 'data_com'
+        query = '''
+            SELECT
+                p.ticker,
+                p.data_pagamento,
+                p.valor,
+                COALESCE(SUM(h.quantity), 0) as quantidade_elegivel
+            FROM proventos_provisionados p
+            JOIN assets a ON a.ticker = p.ticker AND a.user_id = p.user_id
+            LEFT JOIN asset_history h ON h.asset_id = a.id AND CAST(h.date AS DATE) <= p.data_com
+            WHERE p.user_id = %s
+            GROUP BY p.id, p.ticker, p.data_pagamento, p.valor
+        '''
+        df = _query_to_df(query, conn, params=(user_id,))
+        
+    if df.empty:
+        return
+
+    # Converte data_pagamento para datetime para extrair ano e mês
+    df['data_pagamento'] = pd.to_datetime(df['data_pagamento'])
+    df['ano_pag'] = df['data_pagamento'].dt.year
+    df['mes_pag_num'] = df['data_pagamento'].dt.month
+    
+    # Calcula total a receber por evento (quantidade acumulada * valor por cota)
+    df['total_receber'] = df['valor'] * df['quantidade_elegivel']
+    
+    # Agrupa por ticker, ano, mes
+    grouped = df.groupby(['ticker', 'ano_pag', 'mes_pag_num'])['total_receber'].sum().reset_index()
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        for index, row in grouped.iterrows():
+            ticker = row['ticker']
+            ano = int(row['ano_pag'])
+            mes_num = int(row['mes_pag_num'])
+            total_valor = float(row['total_receber'])
+                
+            # Regra de negócio: Para proventos provisionados para o ano seguinte, 
+            # os valores somente serão atualizados depois do dia 01 de Dezembro do ano corrente.
+            if ano > current_year and current_month < 12:
+                continue
+                
+            # Verifica se já existe na tabela proventos
+            cursor.execute("SELECT id FROM proventos WHERE ano = %s AND mes = %s AND ticker = %s AND user_id = %s", (ano, mes_num, ticker, user_id))
+            res = cursor.fetchone()
+            
+            if res:
+                # Atualiza com o valor exato (sobrepondo valor anterior/manual)
+                cursor.execute("UPDATE proventos SET valor = %s WHERE id = %s AND user_id = %s", (total_valor, res[0], user_id))
+            else:
+                # Insere
+                cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, %s, %s, %s, %s)", (ano, mes_num, ticker, total_valor, user_id))
+                
+        # Rotina de Limpeza: Remove registros da tabela de provisionados onde a data de pagamento já passou
+        hoje_sp = now.date()
+        cursor.execute("DELETE FROM proventos_provisionados WHERE user_id = %s AND data_pagamento < %s", (user_id, hoje_sp))
+        
+        conn.commit()

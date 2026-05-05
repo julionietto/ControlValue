@@ -17,6 +17,7 @@ from db.auth import (
     admin_create_user,
     admin_update_user,
     admin_unlock_user,
+    admin_delete_user,
     get_user_details,
     update_user_profile,
     update_user_password,
@@ -56,7 +57,9 @@ from db.dividends import (
     import_proventos_csv,
     get_total_proventos_by_ticker,
     check_and_create_next_year_dashboard,
-    get_all_total_proventos
+    get_all_total_proventos,
+    upsert_provento_provisionado,
+    sync_proventos_from_provisionados
 )
 
 from db.options import (
@@ -70,5 +73,7 @@ from db.options import (
 from db.utils import (
     save_sync_log,
     get_last_sync_log,
-    check_sync_today
+    check_sync_today,
+    check_sync_completed_today,
+    log_sync_execution
 )
