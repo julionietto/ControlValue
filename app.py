@@ -1,5 +1,5 @@
 import streamlit as st
-import database as db
+import db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile, dialog_alocacao_ativos

@@ -35,13 +35,20 @@ def delete_proventos_ativo_ano(ano, ticker, user_id):
         conn.commit()
 
 def get_proventos_provisionados_calculados(user_id):
-    """Retorna os proventos provisionados cruzados com a quantidade de ativos do usuário na data com."""
+    """
+    Retorna os proventos provisionados cruzados com a quantidade de ativos do usuário na data com,
+    respeitando a posição histórica até aquela data.
+    """
     query = """
-        SELECT pp.*, a.quantity as quantidade_elegivel
-        FROM proventos_provisionados pp
-        JOIN assets a ON pp.ticker = a.ticker AND pp.user_id = a.user_id
-        WHERE pp.user_id = %s
-        ORDER BY pp.data_pagamento ASC
+        SELECT 
+            p.*, 
+            COALESCE(SUM(h.quantity), 0) as quantidade_elegivel
+        FROM proventos_provisionados p
+        JOIN assets a ON p.ticker = a.ticker AND p.user_id = a.user_id
+        LEFT JOIN asset_history h ON h.asset_id = a.id AND h.date <= p.data_com
+        WHERE p.user_id = %s
+        GROUP BY p.id, p.ticker, p.data_pagamento, p.valor
+        ORDER BY p.data_pagamento ASC
     """
     with get_db_connection() as conn:
         return pd.read_sql_query(query, conn, params=(user_id,))

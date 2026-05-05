@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import database as db
+import db
 import services as svc
 import plotly.express as px
 import numpy as np
@@ -91,7 +91,7 @@ def get_crypto_ticker(ticker):
 
 @st.dialog("Histórico de Proventos", dismissible=False)
 def dialog_consultar_proventos(ticker):
-    import database as db
+    import db
     st.markdown(f"**Proventos de:** `{ticker}`")
     prov_df = db.get_proventos(st.session_state.user_id)
     prov_df = prov_df[prov_df['ticker'] == ticker].copy()

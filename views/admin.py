@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
-import database as db
+import db
 from components.ui import render_top_header
 from zoneinfo import ZoneInfo
 from datetime import datetime

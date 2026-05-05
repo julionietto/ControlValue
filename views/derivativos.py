@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import database as db
+import db
 import services as svc
 from utils.formatters import format_ticker_for_display, format_brl
 from components.ui import render_top_header

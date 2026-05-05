@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import database as db
+import db
 import os
 import secrets
 import services as svc

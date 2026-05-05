@@ -103,7 +103,7 @@ def delete_asset(asset_id, user_id):
 def get_asset_history(asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SELECT id, date, quantity, unit_price FROM asset_history WHERE asset_id = %s ORDER BY date DESC", (asset_id,))
+        cursor.execute("SELECT id, date, quantity, unit_price FROM asset_history WHERE asset_id = %s ORDER BY date ASC", (asset_id,))
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 

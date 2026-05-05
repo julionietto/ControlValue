@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
-import database as db
+import db
 from utils.formatters import escape_html
 
 @st.dialog("Seu Perfil", dismissible=False)
@@ -175,7 +175,7 @@ def dialog_importar_ativos():
 
 @st.dialog("Alocação de Ativos")
 def dialog_alocacao_ativos():
-    import database as db
+    import db
     
     st.markdown("Defina o percentual de capital que deseja alocar em cada classe de ativos. A soma deve fechar em **100%**.")
     

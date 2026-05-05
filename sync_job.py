@@ -3,7 +3,7 @@ import sys
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import database as db
+import db
 import services as svc
 
 def run_sync():
