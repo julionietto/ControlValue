@@ -80,7 +80,7 @@ def run_sync():
                     # Se data_com for string, converter para date (o scraper costuma retornar objetos date)
                     if isinstance(data_com, str):
                         try:
-                            d_com_obj = datetime.strptime(data_com, '%Y-%m-%d').date()
+                            d_com_obj = datetime.strptime(data_com, '%d/%m/%Y').date()
                         except:
                             d_com_obj = date(2026, 1, 1) # Fallback seguro
                     else:
