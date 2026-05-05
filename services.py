@@ -695,7 +695,14 @@ def fetch_investidor10_proventos(tickers_with_types):
         return pd.DataFrame(), "", full_raw_response
         
     df = pd.DataFrame(all_dividends)
-    df = df.drop_duplicates()
+    
+    # Agrupa por chaves únicas e soma o valor para evitar duplicidades no mesmo evento (Ex: TAEE11)
+    # Isso resolve o problema de múltiplos lançamentos para o mesmo provento no Investidor10
+    df = df.groupby(['Ativo', 'Tipo', 'Data Com', 'Data Pagamento'], as_index=False).agg({
+        'Valor': 'sum',
+        'dt_pag_raw': 'first'
+    })
+    
     df = df.sort_values(by=['dt_pag_raw', 'Ativo'], ascending=[True, True])
     df = df.drop(columns=['dt_pag_raw'])
     

@@ -209,10 +209,11 @@ def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, 
         
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        # Verifica se já existe um provento idêntico (mesmo ticker e data de pagamento) para atualizar o valor
+        # Verifica se já existe um provento idêntico para atualizar o valor
+        # Incluímos tipo e data_com na busca para evitar que proventos diferentes na mesma data se sobreponham
         cursor.execute(
-            "SELECT id FROM proventos_provisionados WHERE ticker = %s AND data_pagamento = %s AND user_id = %s",
-            (ticker, dt_pag_db, user_id)
+            "SELECT id FROM proventos_provisionados WHERE ticker = %s AND tipo = %s AND data_com = %s AND data_pagamento = %s AND user_id = %s",
+            (ticker, tipo, dt_com_db, dt_pag_db, user_id)
         )
         res = cursor.fetchone()
         
