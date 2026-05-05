@@ -558,8 +558,10 @@ def render_asset_detail_view(asset_data):
                         # Normalização da Base (v1.2.1) - Garante que o gráfico comece em 0%
                         # Ajustando o preço de mercado inicial para coincidir com o preço de custo nominal do usuário
                         if not df_chart.empty and not history_df.empty:
+                            # [v1.2.6] Garantir que pegamos a PRIMEIRA compra cronológica para normalização
+                            temp_hist_sorted = history_df.sort_values('date', ascending=True)
                             first_market_price = df_chart['price_brl'].iloc[0]
-                            first_purchase_price = history_df.iloc[0]['unit_price']
+                            first_purchase_price = temp_hist_sorted.iloc[0]['unit_price']
                             
                             # Se for ativo em USD, converte o preço nominal da primeira compra para BRL usando a taxa do primeiro dia
                             if asset_data['currency'] == 'USD' and 'usd_rate' in df_chart.columns:
