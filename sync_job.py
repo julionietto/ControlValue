@@ -22,14 +22,18 @@ def run_sync():
         return
 
     try:
-        # 3. Busca todos os ativos únicos elegíveis de todos os usuários
+        # 3. Busca todos os ativos únicos elegíveis (da carteira ativa OU com histórico de proventos no ano)
         with db.get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT DISTINCT ticker, asset_type 
                 FROM assets 
                 WHERE asset_type IN ('Ações', 'Fiis', 'ETF', 'Stocks', 'Reits')
-            """)
+                UNION
+                SELECT DISTINCT ticker, NULL as asset_type
+                FROM proventos
+                WHERE ano = %s
+            """, (now.year,))
             rows = cursor.fetchall()
             
         if not rows:
@@ -37,7 +41,14 @@ def run_sync():
             db.log_sync_execution(today_str, 'SUCCESS', 'Nenhum ativo elegível para sincronizar.')
             return
 
-        tickers_with_types = [{'ticker': r[0], 'type': r[1]} for r in rows]
+        tickers_with_types = []
+        for r in rows:
+            ticker = r[0]
+            a_type = r[1]
+            if a_type is None:
+                # Se o ativo não está na tabela de assets (ex: foi excluído), inferimos o tipo
+                a_type = db.infer_asset_type(ticker)
+            tickers_with_types.append({'ticker': ticker, 'type': a_type})
         print(f"Encontrados {len(tickers_with_types)} ativos únicos para buscar. Iniciando Web Scraper...")
 
         # 4. Executa a extração (usando a função existente robusta do services.py)
@@ -94,8 +105,13 @@ def run_sync():
                     
                 ticker_sa = f"{ticker_base}.SA"
                 
-                # Descobre quem tem esse ativo (com ou sem .SA) e pega o ticker exato e o tipo do banco
-                cursor.execute("SELECT DISTINCT ticker, user_id, asset_type FROM assets WHERE ticker IN (%s, %s)", (ticker_base, ticker_sa))
+                # Descobre quem tem esse ativo (ativos atuais OU histórico de proventos do ano corrente)
+                # Isso permite que ativos vendidos e excluídos da lista continuem sendo monitorados
+                cursor.execute("""
+                    SELECT DISTINCT ticker, user_id, asset_type FROM assets WHERE ticker IN (%s, %s)
+                    UNION
+                    SELECT DISTINCT ticker, user_id, NULL as asset_type FROM proventos WHERE ticker IN (%s, %s) AND ano = %s
+                """, (ticker_base, ticker_sa, ticker_base, ticker_sa, now.year))
                 users_with_asset = cursor.fetchall()
                 
                 for u in users_with_asset:
@@ -103,10 +119,13 @@ def run_sync():
                     user_id = u[1]
                     asset_type = u[2]
                     
-                    # Converte para BRL se for ativo internacionalizado
+                    if asset_type is None:
+                        asset_type = db.infer_asset_type(db_ticker)
+                    
+                    # Converte para BRL se for ativo internacionalizado e aplica retenção de 30% de IR (USA)
                     user_valor = valor
                     if asset_type in ['Stocks', 'Reits']:
-                        user_valor = valor * usd_rate
+                        user_valor = valor * usd_rate * 0.70
                         
                     # Salva (upsert) respeitando o sufixo original do banco
                     db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, user_valor, user_id)

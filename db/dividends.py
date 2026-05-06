@@ -249,8 +249,8 @@ def sync_proventos_from_provisionados(user_id):
                 p.valor,
                 COALESCE(SUM(h.quantity), 0) as quantidade_elegivel
             FROM proventos_provisionados p
-            JOIN assets a ON a.ticker = p.ticker AND a.user_id = p.user_id
-            LEFT JOIN asset_history h ON h.asset_id = a.id AND CAST(h.date AS DATE) <= p.data_com
+            LEFT JOIN assets a ON a.ticker = p.ticker AND a.user_id = p.user_id
+            LEFT JOIN asset_history h ON a.id IS NOT NULL AND h.asset_id = a.id AND CAST(h.date AS DATE) <= p.data_com
             WHERE p.user_id = %s
             GROUP BY p.id, p.ticker, p.data_pagamento, p.valor
         '''
@@ -283,7 +283,12 @@ def sync_proventos_from_provisionados(user_id):
             # os valores somente serão atualizados depois do dia 01 de Dezembro do ano corrente.
             if ano > current_year and current_month < 12:
                 continue
-                
+
+            # Regra de negócio: Se o valor calculado for 0 (provavelmente por falta de histórico/ativo excluído),
+            # não sobrescrevemos a tabela de proventos para preservar possíveis lançamentos manuais do usuário.
+            if total_valor <= 0:
+                continue
+
             # Verifica se já existe na tabela proventos
             cursor.execute("SELECT id FROM proventos WHERE ano = %s AND mes = %s AND ticker = %s AND user_id = %s", (ano, mes_num, ticker, user_id))
             res = cursor.fetchone()
