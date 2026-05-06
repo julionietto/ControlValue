@@ -45,12 +45,17 @@ def run_sync():
             db.log_sync_execution(today_str, 'SUCCESS', 'Nenhum ativo elegível para sincronizar.')
             return
 
-        tickers_with_types = []
+        # Consolida para garantir que cada ticker seja buscado apenas UMA vez
+        # Dicionário para garantir unicidade, priorizando o asset_type não-nulo
+        unique_tickers = {}
         for r in rows:
-            ticker = r[0]
-            a_type = r[1]
+            ticker, a_type = r[0], r[1]
+            if ticker not in unique_tickers or unique_tickers[ticker] is None:
+                unique_tickers[ticker] = a_type
+
+        tickers_with_types = []
+        for ticker, a_type in unique_tickers.items():
             if a_type is None:
-                # Se o ativo não está na tabela de assets (ex: foi excluído), inferimos o tipo
                 a_type = db.infer_asset_type(ticker)
             tickers_with_types.append({'ticker': ticker, 'type': a_type})
         print(f"Encontrados {len(tickers_with_types)} ativos únicos para buscar. Iniciando Web Scraper...")
@@ -112,18 +117,22 @@ def run_sync():
                 ticker_sa = f"{ticker_base}.SA"
                 
                 # Descobre quem tem esse ativo (ativos atuais OU histórico de proventos do ano corrente)
-                # Isso permite que ativos vendidos e excluídos da lista continuem sendo monitorados
                 cursor.execute("""
                     SELECT DISTINCT ticker, user_id, asset_type FROM assets WHERE ticker IN (%s, %s)
                     UNION
                     SELECT DISTINCT ticker, user_id, NULL as asset_type FROM proventos WHERE ticker IN (%s, %s) AND ano = %s
                 """, (ticker_base, ticker_sa, ticker_base, ticker_sa, now.year))
-                users_with_asset = cursor.fetchall()
+                raw_users = cursor.fetchall()
                 
-                for u in users_with_asset:
-                    db_ticker = u[0]
-                    user_id = u[1]
-                    asset_type = u[2]
+                # Consolida usuários únicos para este ativo para evitar iterações duplicadas
+                unique_users = {}
+                for u_ticker, u_id, u_type in raw_users:
+                    if u_id not in unique_users or unique_users[u_id]['asset_type'] is None:
+                        unique_users[u_id] = {'ticker': u_ticker, 'asset_type': u_type}
+                
+                for user_id, u_info in unique_users.items():
+                    db_ticker = u_info['ticker']
+                    asset_type = u_info['asset_type']
                     
                     if asset_type is None:
                         asset_type = db.infer_asset_type(db_ticker)
