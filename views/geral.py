@@ -1145,11 +1145,11 @@ def render_visao_geral_view():
                     us_df['ticker_display'] = us_df['ticker'].apply(format_ticker_for_display)
                     fig_us = px.bar(
                         us_df, 
-                        x='Ativo', 
+                        x='ticker_display', 
                         y='current_value', 
                         title='Valor Total por Ativo Norte-Americano (R$)',
                         text='current_value_formatted',
-                        labels={'ticker': 'Ticker', 'current_value': 'Valor Atual (R$)'}
+                        labels={'ticker_display': 'Ativo', 'current_value': 'Valor Atual (R$)'}
                     )
                     fig_us.update_traces(textposition='outside')
                     st.plotly_chart(fig_us, use_container_width=True)
