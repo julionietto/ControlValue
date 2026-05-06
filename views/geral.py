@@ -1145,7 +1145,7 @@ def render_visao_geral_view():
                     us_df['ticker_display'] = us_df['ticker'].apply(format_ticker_for_display)
                     fig_us = px.bar(
                         us_df, 
-                        x='ticker_display', 
+                        x='Ativo', 
                         y='current_value', 
                         title='Valor Total por Ativo Norte-Americano (R$)',
                         text='current_value_formatted',
