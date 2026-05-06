@@ -21,6 +21,10 @@ def run_sync():
         print(f"A sincronização já foi concluída com sucesso hoje ({today_str}). Abortando.")
         return
 
+    # Limpa a tabela de proventos provisionados antes de iniciar a nova coleta (Full Sync)
+    print("Limpando registros antigos de proventos provisionados...")
+    db.clear_all_proventos_provisionados()
+
     try:
         # 3. Busca todos os ativos únicos elegíveis (da carteira ativa OU com histórico de proventos no ano)
         with db.get_db_connection() as conn:
@@ -102,6 +106,8 @@ def run_sync():
                         valor = valor * 0.85      # 15% de IR
                     else:
                         valor = valor * 0.8252    # 17.48% de IR (Regra 2026)
+                elif 'rend. trib.' in str(tipo).lower():
+                    valor = valor * 0.775        # 22.5% de IR (Rendimento Tributado)
                     
                 ticker_sa = f"{ticker_base}.SA"
                 

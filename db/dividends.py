@@ -60,6 +60,13 @@ def clear_proventos_provisionados(user_id):
         cursor.execute("DELETE FROM proventos_provisionados WHERE user_id = %s", (user_id,))
         conn.commit()
 
+def clear_all_proventos_provisionados():
+    """Limpa a tabela de proventos futuros de TODOS os usuários."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM proventos_provisionados")
+        conn.commit()
+
 def add_provento_provisionado(user_id, ticker, tipo, data_com, data_pagamento, valor):
     """Adiciona um novo provento futuro mapeado."""
     with get_db_connection() as conn:

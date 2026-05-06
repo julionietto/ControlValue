@@ -53,6 +53,7 @@ from db.dividends import (
     delete_proventos_ativo_ano,
     get_proventos_provisionados_calculados,
     clear_proventos_provisionados,
+    clear_all_proventos_provisionados,
     add_provento_provisionado,
     import_proventos_csv,
     get_total_proventos_by_ticker,
