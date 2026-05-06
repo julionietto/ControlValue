@@ -10,8 +10,8 @@ def render_admin_view():
     render_top_header("🛡️ Painel de Administração", "Gestão de usuários do sistema.")
     
     # 1. Metricas
-    users_df = db.get_all_users()
-    if 'created_at' in users_df.columns:
+    users_df = pd.DataFrame(db.get_all_users())
+    if not users_df.empty and 'created_at' in users_df.columns:
         users_df['created_at_dt'] = pd.to_datetime(users_df['created_at'], errors='coerce')
         users_df['created_at'] = users_df['created_at_dt'].dt.strftime('%d/%m/%Y')
     total_users = len(users_df)
