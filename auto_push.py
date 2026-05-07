@@ -45,7 +45,9 @@ def run_git_command(command, check=True, capture_output=True):
             text=True,
             encoding='utf-8'
         )
-        return result.stdout.strip()
+        if result.stdout:
+            return result.stdout.strip()
+        return ""
     except subprocess.CalledProcessError as e:
         print(f"[ERRO] Erro ao executar: {command}")
         print(e.stderr)

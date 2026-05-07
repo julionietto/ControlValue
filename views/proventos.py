@@ -269,7 +269,7 @@ def render_proventos_view():
                 """, unsafe_allow_html=True)
 
                 footer_rows = []
-                tm_row = {'Mês': '<div style="text-align: center;">TOTAL</div>'}
+                tm_row = {'MÊS': '<div style="text-align: center;">TOTAL</div>'}
                 style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
                 for col in col_order:
                     color_total = ''
@@ -299,7 +299,7 @@ def render_proventos_view():
                     totais_prev_full['Valor Mensal'] = media_prev
                     totais_prev_full['Valor Anual'] = res_final_prev
                     
-                    growth_row = {'Mês': f'<div style="text-align: center;">{growth_icon_tag}</div>'}
+                    growth_row = {'MÊS': f'<div style="text-align: center;">{growth_icon_tag}</div>'}
                     for col in col_order:
                         val_curr = totais_row[col]
                         val_prev = totais_prev_full[col]
@@ -318,7 +318,7 @@ def render_proventos_view():
                     now = pd.Timestamp.now()
                     mes_atual_idx = now.month
                     
-                    avg_ytd_row = {'Mês': f'<div style="text-align: center; font-size: 0.8rem; white-space: nowrap;">Média acumulada</div>'}
+                    avg_ytd_row = {'MÊS': f'<div style="text-align: center; font-size: 0.8rem; white-space: nowrap;">MÉDIA ACUMULADA</div>'}
                     
                     # Para cada mês até o atual, calcula a média acumulada (Jan, Jan+Fev/2, Jan+Fev+Mar/3...)
                     # Os valores são exibidos em verde (#00CC96)
@@ -339,7 +339,7 @@ def render_proventos_view():
                     footer_rows.append(avg_ytd_row)
 
                 df_footer = pd.DataFrame(footer_rows)
-                df_footer['Mês'] = df_footer['Mês'].replace('Valor Mensal', '<span style="font-size: 0.8rem;">Valor Mensal</span>')
+                df_footer['MÊS'] = df_footer['MÊS'].replace('Valor Mensal', '<span style="font-size: 0.8rem;">Valor Mensal</span>')
                 
                 st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
                 
