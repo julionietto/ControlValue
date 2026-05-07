@@ -112,7 +112,14 @@ def dialog_consultar_proventos(ticker):
         
         total_prov = display_df['Valor'].sum()
         
-        st.dataframe(display_df, hide_index=True, use_container_width=True)
+        display_df['Ano'] = display_df['Ano'].astype(str)
+        display_df['Valor'] = display_df['Valor'].apply(lambda val: f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        
+        styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Mês', 'Ano']) \
+                                    .set_properties(**{'text-align': 'right'}, subset=['Valor']) \
+                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+        
+        st.dataframe(styled_df, hide_index=True, use_container_width=True)
         st.markdown(f"**Total Recebido:** R$ {total_prov:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         
     if st.button("Fechar", use_container_width=True):
