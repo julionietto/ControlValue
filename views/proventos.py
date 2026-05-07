@@ -263,12 +263,13 @@ def render_proventos_view():
                     .growth-positive { color: #00CC96 !important; }
                     .growth-negative { color: #EF553B !important; }
                     th { font-weight: normal !important; font-size: 0.85rem; }
+                    th:first-child { text-align: center !important; }
                     td { font-size: 0.85rem; }
                     </style>
                 """, unsafe_allow_html=True)
 
                 footer_rows = []
-                tm_row = {'Mês': 'TOTAL'}
+                tm_row = {'Mês': '<div style="text-align: center;">TOTAL</div>'}
                 style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
                 for col in col_order:
                     color_total = ''
@@ -298,7 +299,7 @@ def render_proventos_view():
                     totais_prev_full['Valor Mensal'] = media_prev
                     totais_prev_full['Valor Anual'] = res_final_prev
                     
-                    growth_row = {'Mês': growth_icon_tag}
+                    growth_row = {'Mês': f'<div style="text-align: center;">{growth_icon_tag}</div>'}
                     for col in col_order:
                         val_curr = totais_row[col]
                         val_prev = totais_prev_full[col]
@@ -317,7 +318,7 @@ def render_proventos_view():
                     now = pd.Timestamp.now()
                     mes_atual_idx = now.month
                     
-                    avg_ytd_row = {'Mês': f'<div style="font-size: 0.8rem; white-space: nowrap;">Média acumulada</div>'}
+                    avg_ytd_row = {'Mês': f'<div style="text-align: center; font-size: 0.8rem; white-space: nowrap;">Média acumulada</div>'}
                     
                     # Para cada mês até o atual, calcula a média acumulada (Jan, Jan+Fev/2, Jan+Fev+Mar/3...)
                     # Os valores são exibidos em verde (#00CC96)

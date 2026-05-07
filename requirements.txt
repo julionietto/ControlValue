@@ -13,3 +13,4 @@ numpy==2.4.3
 requests>=2.33.0
 curl-cffi>=0.15.0
 cloudscraper>=1.2.71
+google-genai>=0.1.0
