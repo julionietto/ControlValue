@@ -2,8 +2,8 @@ name: Sincronização Diária de Proventos Provisionados
 
 on:
   schedule:
-    # 22:05 UTC equivale a 19:05 no Horário de Brasília (BRT)
-    - cron: '5 22 * * *'
+    # 22:00 UTC equivale a 19:00 no Horário de Brasília (BRT)
+    - cron: '0 22 * * *'
   workflow_dispatch:
     # Permite rodar manualmente clicando no botão "Run workflow" na aba Actions
 

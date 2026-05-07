@@ -16,7 +16,13 @@ def render_proventos_view():
         sync_msg = "Ainda não sincronizado."
         if last_sync:
             # last_sync['execution_time'] is a datetime object
-            sync_dt = last_sync['execution_time'].strftime('%d/%m/%Y às %H:%M')
+            # Garantindo a conversão para o fuso horário de São Paulo
+            sync_dt_obj = pd.to_datetime(last_sync['execution_time'])
+            if sync_dt_obj.tzinfo is None:
+                sync_dt_obj = sync_dt_obj.tz_localize('UTC')
+            sync_dt_sp = sync_dt_obj.tz_convert('America/Sao_Paulo')
+            
+            sync_dt = sync_dt_sp.strftime('%d/%m/%Y às %H:%M')
             status_text = "sucesso" if last_sync['status'] == 'SUCCESS' else "com erro"
             sync_msg = f"Última sincronização diária: {sync_dt} ({status_text})"
             
@@ -310,21 +316,26 @@ def render_proventos_view():
                 if ano == ano_atual:
                     now = pd.Timestamp.now()
                     mes_atual_idx = now.month
-                    mes_atual_nome = meses_ordem[mes_atual_idx-1]
                     
-                    avg_ytd_row = {'Mês': f'<div style="font-size: 0.8rem; white-space: nowrap;">Média até {mes_atual_nome}</div>'}
+                    avg_ytd_row = {'Mês': f'<div style="font-size: 0.8rem; white-space: nowrap;">Média Mensal Acumulada</div>'}
                     
+                    # Para cada mês até o atual, calcula a média acumulada (Jan, Jan+Fev/2, Jan+Fev+Mar/3...)
+                    for i, mes_nome in enumerate(meses_ordem):
+                        if i < mes_atual_idx:
+                            num_meses = i + 1
+                            soma_acumulada = totais_row[meses_ordem[:num_meses]].sum()
+                            media_mes = soma_acumulada / num_meses
+                            val_fmt = format_provento(media_mes)
+                            avg_ytd_row[mes_nome] = f'<div style="font-size: 0.85rem; text-align: right;">{val_fmt}</div>'
+                        else:
+                            avg_ytd_row[mes_nome] = ''
+                    
+                    # Coluna Valor Mensal (Média YTD geral)
                     proventos_ytd = totais_row[meses_ordem[:mes_atual_idx]].sum()
                     media_ytd = proventos_ytd / mes_atual_idx
+                    avg_ytd_row['Valor Mensal'] = f'<div style="font-weight: bold; font-size: 0.85rem; text-align: right; color: #00CC96;">{format_provento(media_ytd)}</div>'
+                    avg_ytd_row['Valor Anual'] = ''
                     
-                    for col in col_order:
-                        if col == 'Valor Mensal':
-                            val_fmt = format_provento(media_ytd)
-                            avg_ytd_row[col] = f'<div style="font-weight: bold; font-size: 0.85rem; text-align: right; color: #00CC96;">{val_fmt}</div>'
-                        elif col == 'Valor Anual':
-                            avg_ytd_row[col] = ''
-                        else:
-                            avg_ytd_row[col] = ''
                     footer_rows.append(avg_ytd_row)
 
                 df_footer = pd.DataFrame(footer_rows)
