@@ -317,7 +317,7 @@ def render_proventos_view():
                     now = pd.Timestamp.now()
                     mes_atual_idx = now.month
                     
-                    avg_ytd_row = {'Mês': f'<div style="font-size: 0.8rem; white-space: nowrap;">Média até</div>'}
+                    avg_ytd_row = {'Mês': f'<div style="font-size: 0.8rem; white-space: nowrap;">Média acumulada</div>'}
                     
                     # Para cada mês até o atual, calcula a média acumulada (Jan, Jan+Fev/2, Jan+Fev+Mar/3...)
                     # Os valores são exibidos em verde (#00CC96)
