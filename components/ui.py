@@ -1,5 +1,5 @@
-# pyrefly: ignore [missing-import]
-import streamlit as st
+# pyrefly: ignore[missing-import]
+import streamlit as st  # type: ignore
 import base64
 import os
 from utils.formatters import escape_html

@@ -1,6 +1,7 @@
-import streamlit as st
+# pyrefly: ignore[missing-import]
+import streamlit as st  # type: ignore
 import db
-from streamlit_autorefresh import st_autorefresh
+from streamlit_autorefresh import st_autorefresh  # type: ignore # pyrefly: ignore[missing-import]
 from components.ui import render_top_header
 from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile, dialog_alocacao_ativos, dialog_preferencias
 from components.pwa import inject_pwa

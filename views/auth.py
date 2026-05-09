@@ -1,4 +1,5 @@
-import streamlit as st
+# pyrefly: ignore[missing-import]
+import streamlit as st  # type: ignore
 import pandas as pd
 import db
 import os
@@ -238,5 +239,4 @@ def render_auth_view():
                 with col_btn2:
                     if st.button("Esqueci minha senha", use_container_width=True):
                         dialog_recuperar_senha()
-    st.stop()
     st.stop()

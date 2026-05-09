@@ -1,4 +1,5 @@
-import streamlit as st
+# pyrefly: ignore[missing-import]
+import streamlit as st  # type: ignore
 import streamlit.components.v1 as components
 
 def inject_pwa():

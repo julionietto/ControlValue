@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
-import streamlit as st
+# pyrefly: ignore[missing-import]
+import streamlit as st  # type: ignore
 from utils.refresh_manager import is_market_open
 import socket
 from zoneinfo import ZoneInfo

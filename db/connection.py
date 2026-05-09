@@ -5,7 +5,8 @@ import numpy as np
 from psycopg2.extensions import register_adapter, AsIs
 from psycopg2 import pool
 from contextlib import contextmanager
-import streamlit as st
+# pyrefly: ignore[missing-import]
+import streamlit as st  # type: ignore
 from dotenv import load_dotenv
 
 # Carrega variáveis de ambiente se não estiver no Streamlit
