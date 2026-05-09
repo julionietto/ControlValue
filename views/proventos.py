@@ -1,8 +1,8 @@
 # pyrefly: ignore[missing-import]
 import streamlit as st  # type: ignore
-import pandas as pd
+import pandas as pd  # type: ignore
 import db
-import plotly.express as px
+import plotly.express as px  # type: ignore # pyrefly: ignore[missing-import]
 import services as svc
 from utils.formatters import format_ticker_for_display, get_annual_proventos_summary, infer_asset_type
 from components.ui import render_top_header

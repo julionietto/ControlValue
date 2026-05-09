@@ -1,10 +1,10 @@
 # pyrefly: ignore[missing-import]
 import streamlit as st  # type: ignore
-import pandas as pd
+import pandas as pd  # type: ignore
 import db
 import services as svc
-import plotly.express as px
-import numpy as np
+import plotly.express as px  # type: ignore # pyrefly: ignore[missing-import]
+import numpy as np  # type: ignore
 import time
 from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type
 from components.ui import create_card, render_top_header

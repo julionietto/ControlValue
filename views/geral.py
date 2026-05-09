@@ -1,13 +1,13 @@
 # pyrefly: ignore[missing-import]
 import streamlit as st  # type: ignore
 import base64
-import pandas as pd
-import yfinance as yf
+import pandas as pd  # type: ignore
+import yfinance as yf  # type: ignore # pyrefly: ignore[missing-import]
 import db
 import time
 import services as svc
-import plotly.express as px
-import numpy as np
+import plotly.express as px  # type: ignore # pyrefly: ignore[missing-import]
+import numpy as np  # type: ignore
 from streamlit_autorefresh import st_autorefresh  # type: ignore # pyrefly: ignore[missing-import]
 from contextlib import contextmanager
 from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type, get_annual_proventos_summary

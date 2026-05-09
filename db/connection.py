@@ -1,7 +1,7 @@
-import psycopg2
-import psycopg2.extras
+import psycopg2  # type: ignore # pyrefly: ignore[missing-import]
+import psycopg2.extras  # type: ignore
 import os
-import numpy as np
+import numpy as np  # type: ignore
 from psycopg2.extensions import register_adapter, AsIs
 from psycopg2 import pool
 from contextlib import contextmanager

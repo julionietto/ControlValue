@@ -1,5 +1,5 @@
-import yfinance as yf
-import pandas as pd
+import yfinance as yf  # type: ignore # pyrefly: ignore[missing-import]
+import pandas as pd  # type: ignore
 # pyrefly: ignore[missing-import]
 import streamlit as st  # type: ignore
 from utils.refresh_manager import is_market_open
