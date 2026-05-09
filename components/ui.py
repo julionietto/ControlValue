@@ -84,10 +84,6 @@ def render_profile_popover():
                 st.session_state.trigger_dialog_alocacao = True
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
-            if st.button("Preferências", use_container_width=True):
-                st.session_state.trigger_dialog_preferencias = True
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
             if st.button("Sair", type="primary", use_container_width=True):
                 st.session_state.clear()
                 st.rerun()
@@ -106,8 +102,8 @@ def render_profile_popover():
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
     
-    # Colunas: Logo (15%), Título (65%), Ações/Login (20%)
-    col_logo, col_title, col_logout = st.columns([0.15, 0.65, 0.20], gap="small", vertical_alignment="center")
+    # Colunas: Logo (15%), Prefs (5%), Eye (5%), Título (55%), Ações/Login (20%)
+    col_logo, col_prefs, col_eye, col_title, col_logout = st.columns([0.15, 0.05, 0.05, 0.55, 0.20], gap="small", vertical_alignment="center")
     with col_logo:
         # Resolve o caminho da imagem de forma robusta
         image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoHome.png")
@@ -154,11 +150,56 @@ def render_top_header(title, subtitle):
                 st.session_state.viewing_history = None
                 st.rerun()
                 
+    with col_prefs:
+        if st.button("⚙️", key="btn_prefs_header", help="Preferências de Tema"):
+            st.session_state.trigger_dialog_preferencias = True
+            st.rerun()
+            
+    with col_eye:
+        is_hidden = st.session_state.get('hide_values', False)
+        eye_img_name = "logoClosedEye.png" if is_hidden else "logoOpenEye.png"
+        eye_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", eye_img_name)
+        eye_b64 = get_base64_image(eye_path)
+        if eye_b64:
+            st.markdown(
+                f"""
+                <style>
+                .st-key-eye_btn button {{
+                    background-image: url('data:image/png;base64,{eye_b64}');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    background-color: transparent !important;
+                    border: none !important;
+                    width: 28px !important;
+                    height: 28px !important;
+                    box-shadow: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    transition: transform 0.2s ease, filter 0.2s ease;
+                }}
+                .st-key-eye_btn button:hover {{
+                    transform: scale(1.1);
+                    filter: brightness(1.2);
+                    background-color: transparent !important;
+                    border: none !important;
+                }}
+                .st-key-eye_btn button p {{
+                    display: none !important;
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+            if st.button("eye", key="eye_btn", help="Ocultar/Mostrar Valores"):
+                st.session_state.hide_values = not is_hidden
+                st.rerun()
+
     with col_title:
         safe_title = escape_html(title)
         safe_subtitle = escape_html(subtitle)
         st.markdown(f'''
-            <div style="display: flex; flex-direction: column; justify-content: center;">
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
                 <h1 style="color: #ffffff; font-size: 2.25rem; margin: 0; padding: 0; line-height: 1.1;">{safe_title}</h1>
                 <p style="color: #a1a1aa; font-size: 1rem; margin: 0; padding: 0; line-height: 1.2; margin-top: 4px;">{safe_subtitle}</p>
             </div>
