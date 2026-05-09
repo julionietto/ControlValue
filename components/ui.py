@@ -193,6 +193,7 @@ def render_top_header(title, subtitle):
                     box-shadow: none !important;
                     padding: 0 !important;
                     margin: 0 !important;
+                    margin-top: 18px !important;
                     transition: transform 0.2s ease, filter 0.2s ease;
                 }}
                 .st-key-eye_btn button:hover {{
