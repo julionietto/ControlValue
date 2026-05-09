@@ -2,7 +2,7 @@ import streamlit as st
 import db
 from streamlit_autorefresh import st_autorefresh
 from components.ui import render_top_header
-from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile, dialog_alocacao_ativos
+from components.global_dialogs import dialog_importar_ativos, dialog_importar_proventos, dialog_user_profile, dialog_alocacao_ativos, dialog_preferencias
 from components.pwa import inject_pwa
 from utils.refresh_manager import get_market_status
 import services as svc
@@ -16,7 +16,17 @@ try:
 
     # Injeção de CSS personalizado
     import os
-    style_path = os.path.join(os.path.dirname(__file__), "style.css")
+    theme_pref = st.session_state.get('theme_preference', 'cyberpunk')
+    if theme_pref == 'cyberpunk':
+        css_file = "style_opt2.css"
+    elif theme_pref == 'glassmorphism':
+        css_file = "style_opt3.css"
+    elif theme_pref == 'minimalista':
+        css_file = "style_opt4.css"
+    else:
+        css_file = "style.css"
+        
+    style_path = os.path.join(os.path.dirname(__file__), css_file)
     if os.path.exists(style_path):
         with open(style_path, encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -119,6 +129,8 @@ try:
         dialog_user_profile()
     if st.session_state.pop('trigger_dialog_alocacao', False):
         dialog_alocacao_ativos()
+    if st.session_state.pop('trigger_dialog_preferencias', False):
+        dialog_preferencias()
 
     # ==============================
     # ADMIN DASHBOARD

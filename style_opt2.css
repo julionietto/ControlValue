@@ -1,0 +1,411 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
+
+:root {
+    --bg-main: #000000;
+    --bg-card: #050505;
+    --bg-sidebar: #020202;
+    --border-color: #1f2937;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --accent-primary: #00f0ff; /* Neon Cyan */
+    --accent-primary-hover: #00c3cf;
+    --accent-secondary: #ff003c; /* Neon Magenta/Red */
+    --accent-success: #39ff14; /* Neon Green */
+    --accent-error: #ff003c; /* Neon Red */
+    --table-header-bg: #0a0a0a;
+    --table-row-hover: #111111;
+    --neon-glow-primary: rgba(0, 240, 255, 0.5);
+    --neon-glow-secondary: rgba(255, 0, 60, 0.5);
+}
+
+/* Reset and base styles */
+html,
+body,
+[data-testid="stAppViewContainer"] {
+    font-family: 'Space Grotesk', monospace, sans-serif;
+    background-color: var(--bg-main) !important;
+    color: var(--text-primary);
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.03), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(255, 0, 60, 0.03), transparent 25%) !important;
+}
+
+.block-container {
+    padding-top: 0rem !important;
+}
+
+/* Typography for titles */
+h1,
+h2,
+h3,
+[data-testid="stHeader"] {
+    font-family: 'Rajdhani', sans-serif !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: var(--bg-sidebar) !important;
+    border-right: 1px solid var(--border-color) !important;
+    box-shadow: inset -5px 0 15px -10px var(--accent-primary) !important;
+}
+
+/* Custom Metric Card (Cyberpunk) */
+.metric-card {
+    background: linear-gradient(180deg, rgba(10,10,10,1) 0%, rgba(0,0,0,1) 100%);
+    border: 1px solid #111;
+    border-left: 2px solid var(--accent-primary);
+    border-radius: 4px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.2s ease;
+    height: 100%;
+    box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.metric-card:hover {
+    border-color: rgba(0, 240, 255, 0.3);
+    border-left: 3px solid var(--accent-primary);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 240, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+.metric-card:hover::before {
+    opacity: 1;
+}
+
+.metric-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+}
+
+.metric-label-small {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem !important;
+    font-weight: 600;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.metric-value-small {
+    font-size: 1.45rem !important;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+.metric-delta {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-top: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    display: inline-block;
+    width: fit-content;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.delta-positive {
+    color: var(--bg-main);
+    background-color: var(--accent-success);
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+}
+
+.delta-negative {
+    color: var(--bg-main);
+    background-color: var(--accent-error);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
+}
+
+/* Custom Table Design */
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    background-color: transparent;
+}
+
+.custom-table th {
+    background-color: rgba(0, 240, 255, 0.05);
+    color: var(--accent-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.custom-table td {
+    background-color: rgba(10, 10, 10, 0.5);
+    color: var(--text-primary);
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #111;
+    transition: all 0.2s ease;
+}
+
+.custom-table tr:last-child td {
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+}
+
+.custom-table tr:hover td {
+    background-color: rgba(0, 240, 255, 0.05);
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+}
+
+.ticker-badge {
+    background-color: transparent;
+    color: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-weight: 700;
+    font-family: monospace;
+    box-shadow: inset 0 0 5px rgba(0, 240, 255, 0.2);
+}
+
+/* Button Customization */
+.stButton>button {
+    background-color: transparent !important;
+    color: var(--accent-primary) !important;
+    border: 1px solid var(--accent-primary) !important;
+    border-radius: 0px !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    padding: 0.6rem 1.2rem !important;
+    transition: all 0.2s ease !important;
+    box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.1) !important;
+}
+
+.stButton>button:hover {
+    background-color: var(--accent-primary) !important;
+    color: #000 !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.6) !important;
+    transform: scale(1.02);
+}
+
+/* Logout Button Special Style */
+.logout-btn button {
+    color: var(--accent-secondary) !important;
+    border-color: var(--accent-secondary) !important;
+    box-shadow: inset 0 0 10px rgba(255, 0, 60, 0.1) !important;
+}
+
+.logout-btn button:hover {
+    background-color: var(--accent-secondary) !important;
+    color: #000 !important;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.6) !important;
+}
+
+/* Tabs styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 32px;
+    border-bottom: 1px solid #222;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    padding-bottom: 16px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+}
+
+.stTabs [aria-selected="true"] {
+    color: var(--accent-primary) !important;
+    border-bottom: 2px solid var(--accent-primary) !important;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+/* Top Header Bar */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0px 0 10px 0;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+}
+
+/* Streamlit specific cleanups */
+[data-testid="stHeader"] {
+    display: none !important;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+/* Fix for dataframe headers contrast and centering */
+[data-testid="stDataFrame"] th {
+    background-color: rgba(0, 240, 255, 0.05) !important;
+    color: var(--accent-primary) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    text-align: center !important;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2) !important;
+}
+
+[data-testid="stDataFrame"] [role="columnheader"] {
+    text-align: center !important;
+    display: flex;
+    justify-content: center;
+}
+
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 0;
+}
+
+/* Login Card Refinement */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: rgba(5, 5, 5, 0.8) !important;
+    border: 1px solid var(--accent-primary) !important;
+    border-radius: 0 !important;
+    padding: 2.5rem !important;
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 240, 255, 0.05) !important;
+    backdrop-filter: blur(10px);
+}
+
+.login-card h1 {
+    text-align: left;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+[data-testid="stForm"] .stButton>button {
+    background: transparent !important;
+    color: var(--accent-primary) !important;
+    border: 1px solid var(--accent-primary) !important;
+    height: 3rem !important;
+    font-size: 1.1rem !important;
+    margin-top: 1rem;
+    transition: all 0.3s ease !important;
+}
+
+[data-testid="stForm"] .stButton>button:hover {
+    background: var(--accent-primary) !important;
+    color: #000 !important;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6) !important;
+}
+
+/* Botão Logo Home */
+[data-testid="column"] .stButton button[key*="home_logo"] {
+    background-image: url("data:image/png;base64,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lwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE0fTWtADGVqrSGEK5CYII=") !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-color: transparent !important;
+    border: none !important;
+    height: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+    margin-right: 1rem !important;
+    filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.5));
+}
+
+[data-testid="column"] .stButton button[key*="home_logo"]:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.8));
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+[data-testid="column"] .stButton button[key*="home_logo"] p {
+    display: none !important;
+}
+
+/* Social Icons Overlay */
+.social-header-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.social-link {
+    color: var(--accent-primary);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0px;
+    border-radius: 0;
+    background-color: transparent;
+    border: 1px solid var(--accent-primary);
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    overflow: hidden;
+    box-shadow: inset 0 0 5px rgba(0, 240, 255, 0.2);
+}
+
+.social-link img {
+    width: 28px !important;
+    height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
+    object-fit: contain;
+    filter: sepia(1) hue-rotate(150deg) saturate(300%) brightness(1.2); /* Make images match neon cyan */
+}
+
+.instagram-link:hover {
+    color: #ff003c;
+    border-color: #ff003c;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.6), inset 0 0 10px rgba(255, 0, 60, 0.2);
+    transform: scale(1.05);
+}
+.instagram-link:hover img {
+    filter: sepia(1) hue-rotate(300deg) saturate(500%) brightness(1.2); /* Neon pink/red */
+}

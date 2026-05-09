@@ -64,20 +64,20 @@ def verify_user(login_identifier, password):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if login_identifier == 'admin':
-            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until FROM users WHERE username = %s", (login_identifier,))
+            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until, theme_preference FROM users WHERE username = %s", (login_identifier,))
         else:
-            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until FROM users WHERE email = %s", (login_identifier,))
+            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until, theme_preference FROM users WHERE email = %s", (login_identifier,))
         
         row = cursor.fetchone()
         if not row:
-            return False, None, None, False, 'NOT_FOUND', None
+            return False, None, None, False, 'NOT_FOUND', None, None
             
-        user_id, username, hashed_password, email, birth_date, failed_attempts, locked_until = row
+        user_id, username, hashed_password, email, birth_date, failed_attempts, locked_until, theme_preference = row
         
         if locked_until:
             sp_tz = ZoneInfo("America/Sao_Paulo")
             if datetime.now(sp_tz).replace(tzinfo=None) < locked_until:
-                return False, user_id, username, False, 'LOCKED', locked_until
+                return False, user_id, username, False, 'LOCKED', locked_until, None
             else:
                 cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = %s", (user_id,))
                 conn.commit()
@@ -92,7 +92,7 @@ def verify_user(login_identifier, password):
                 cursor.execute("UPDATE users SET password = %s WHERE id = %s", (new_hash, user_id))
             conn.commit()
             is_admin_flag = (username == 'admin' and (not email or email.strip() == "") and (not birth_date or birth_date.strip() == ""))
-            return True, user_id, username, is_admin_flag, 'SUCCESS', None
+            return True, user_id, username, is_admin_flag, 'SUCCESS', None, theme_preference
         else:
             new_failed = failed_attempts + 1
             new_locked_until = None
@@ -102,7 +102,7 @@ def verify_user(login_identifier, password):
                 trigger_unblock_thread()
             cursor.execute("UPDATE users SET failed_attempts = %s, locked_until = %s WHERE id = %s", (new_failed, new_locked_until, user_id))
             conn.commit()
-            return False, user_id, username, False, 'WRONG_PASS', new_locked_until
+            return False, user_id, username, False, 'WRONG_PASS', new_locked_until, None
 
 def get_user_count():
     with get_db_connection() as conn:
@@ -160,9 +160,15 @@ def admin_unlock_user(user_id):
 def get_user_details(user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SELECT id, username, email, birth_date, created_at FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT id, username, email, birth_date, created_at, theme_preference FROM users WHERE id = %s", (user_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
+
+def update_user_theme(user_id, theme_name):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET theme_preference = %s WHERE id = %s", (theme_name, user_id))
+        conn.commit()
 
 def update_user_profile(user_id, username, email, birth_date, password=None):
     admin_update_user(user_id, username, email, birth_date, password)

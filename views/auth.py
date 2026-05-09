@@ -190,12 +190,13 @@ def render_auth_view():
                         if new_user and new_email and new_pass:
                             if new_pass == confirm_pass:
                                 db.create_user(new_user, "admin@system", "1900-01-01", new_pass) # Placeholder for first-time admin setup if needed
-                                success, uid, uname, is_admin = db.verify_user(new_user, new_pass)
+                                success, uid, uname, is_admin, status, extra, theme_pref = db.verify_user(new_user, new_pass)
                                 if success:
                                     st.session_state.authenticated = True
                                     st.session_state.user_id = uid
                                     st.session_state.username = uname
                                     st.session_state.is_admin = is_admin
+                                    st.session_state.theme_preference = theme_pref
                                     st.success("Administrador cadastrado!")
                                     st.rerun()
                             else:
@@ -209,12 +210,13 @@ def render_auth_view():
                         submit_login = st.form_submit_button("Entrar", use_container_width=True)
                     
                     if submit_login:
-                        success, uid, uname, is_admin, status, extra = db.verify_user(user_input, password)
+                        success, uid, uname, is_admin, status, extra, theme_pref = db.verify_user(user_input, password)
                         if success:
                             st.session_state.authenticated = True
                             st.session_state.user_id = uid
                             st.session_state.username = uname
                             st.session_state.is_admin = is_admin
+                            st.session_state.theme_preference = theme_pref
                             st.rerun()
                         else:
                             if status == 'LOCKED':

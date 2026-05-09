@@ -19,6 +19,7 @@ from db.auth import (
     admin_unlock_user,
     admin_delete_user,
     get_user_details,
+    update_user_theme,
     update_user_profile,
     update_user_password,
     trigger_unblock_thread,

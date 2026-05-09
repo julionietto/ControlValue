@@ -1,0 +1,397 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --bg-main: #0f172a; /* Slate 900 */
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-sidebar: rgba(15, 23, 42, 0.6);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --accent-primary: #a78bfa; /* Pastel Purple */
+    --accent-primary-hover: #c4b5fd;
+    --accent-secondary: #60a5fa; /* Pastel Blue */
+    --accent-success: #34d399; /* Pastel Green */
+    --accent-error: #fb7185; /* Pastel Rose */
+    --table-header-bg: rgba(255, 255, 255, 0.05);
+    --table-row-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* Reset and base styles */
+html,
+body,
+[data-testid="stAppViewContainer"] {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-main) !important;
+    color: var(--text-primary);
+    /* Soft mesh gradient background */
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(167, 139, 250, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(96, 165, 250, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(52, 211, 153, 0.1) 0px, transparent 50%) !important;
+    background-attachment: fixed !important;
+}
+
+.block-container {
+    padding-top: 0rem !important;
+}
+
+/* Typography for titles */
+h1,
+h2,
+h3,
+[data-testid="stHeader"] {
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 600 !important;
+    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: var(--bg-sidebar) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+/* Custom Metric Card (Glassmorphism) */
+.metric-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    height: 100%;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 20px;
+    padding: 2px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.metric-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.3), 0 0 20px rgba(167, 139, 250, 0.2);
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.metric-label-small {
+    font-size: 0.75rem !important;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+.metric-value-small {
+    font-size: 1.4rem !important;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+.metric-delta {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-block;
+    width: fit-content;
+    backdrop-filter: blur(4px);
+}
+
+.delta-positive {
+    color: var(--accent-success);
+    background-color: rgba(52, 211, 153, 0.15);
+    border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.delta-negative {
+    color: var(--accent-error);
+    background-color: rgba(251, 113, 133, 0.15);
+    border: 1px solid rgba(251, 113, 133, 0.2);
+}
+
+/* Custom Table Design */
+.custom-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.custom-table th {
+    background-color: var(--table-header-bg);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: left;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.custom-table td {
+    background-color: transparent;
+    color: var(--text-primary);
+    padding: 16px;
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.3s ease;
+}
+
+.custom-table tr:last-child td {
+    border-bottom: none;
+}
+
+.custom-table tr:hover td {
+    background-color: var(--table-row-hover);
+}
+
+.ticker-badge {
+    background-color: rgba(167, 139, 250, 0.2);
+    color: var(--accent-primary-hover);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+/* Button Customization */
+.stButton>button {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.8), rgba(96, 165, 250, 0.8)) !important;
+    backdrop-filter: blur(5px) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 30px !important;
+    font-weight: 500 !important;
+    padding: 0.6rem 1.5rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(167, 139, 250, 0.2) !important;
+}
+
+.stButton>button:hover {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 1), rgba(96, 165, 250, 1)) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(167, 139, 250, 0.4) !important;
+}
+
+/* Logout Button Special Style */
+.logout-btn button {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: none !important;
+}
+
+.logout-btn button:hover {
+    color: var(--accent-error) !important;
+    border-color: var(--accent-error) !important;
+    background: rgba(251, 113, 133, 0.1) !important;
+}
+
+/* Tabs styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 32px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    padding-bottom: 16px !important;
+    font-weight: 500 !important;
+    font-size: 1.05rem !important;
+}
+
+.stTabs [aria-selected="true"] {
+    color: var(--accent-primary) !important;
+    border-bottom: 3px solid var(--accent-primary) !important;
+    background: linear-gradient(to top, rgba(167, 139, 250, 0.1), transparent) !important;
+}
+
+/* Top Header Bar */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0px 0 10px 0;
+    margin-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Streamlit specific cleanups */
+[data-testid="stHeader"] {
+    display: none !important;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 1.8rem !important;
+    font-weight: 600 !important;
+}
+
+/* Fix for dataframe headers contrast and centering */
+[data-testid="stDataFrame"] th {
+    background-color: var(--table-header-bg) !important;
+    color: var(--text-secondary) !important;
+    text-align: center !important;
+    font-weight: 500 !important;
+}
+
+[data-testid="stDataFrame"] [role="columnheader"] {
+    text-align: center !important;
+    display: flex;
+    justify-content: center;
+}
+
+[data-testid="stDataFrame"] {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+}
+
+/* Login Card Refinement */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 24px !important;
+    padding: 3rem !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.login-card h1 {
+    text-align: left;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+    font-weight: 600;
+    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+[data-testid="stForm"] .stButton>button {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
+    color: #ffffff !important;
+    border: none !important;
+    height: 3.5rem !important;
+    font-size: 1.1rem !important;
+    border-radius: 30px !important;
+    box-shadow: 0 10px 20px rgba(167, 139, 250, 0.3) !important;
+    margin-top: 1rem;
+}
+
+[data-testid="stForm"] .stButton>button:hover {
+    box-shadow: 0 15px 25px rgba(167, 139, 250, 0.5) !important;
+    transform: translateY(-2px);
+}
+
+/* Botão Logo Home */
+[data-testid="column"] .stButton button[key*="home_logo"] {
+    background-image: url("data:image/png;base64,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lwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE+MahlwQu5KF+3VqRAYGxSXlry1NtcZE0fTWtADGVqrSGEK5CYII=") !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-color: transparent !important;
+    border: none !important;
+    height: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    transition: all 0.3s ease !important;
+    margin-right: 1rem !important;
+}
+
+[data-testid="column"] .stButton button[key*="home_logo"]:hover {
+    transform: scale(1.1) rotate(-5deg);
+    background-color: transparent !important;
+}
+
+[data-testid="column"] .stButton button[key*="home_logo"] p {
+    display: none !important;
+}
+
+/* Social Icons Overlay */
+.social-header-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.social-link {
+    color: var(--text-secondary);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0px;
+    border-radius: 50%; /* Circle shape for glassmorphism */
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    overflow: hidden;
+}
+
+.social-link img {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
+    object-fit: contain;
+}
+
+.instagram-link:hover {
+    background: linear-gradient(45deg, rgba(253, 29, 29, 0.2), rgba(131, 58, 180, 0.2));
+    border-color: rgba(253, 29, 29, 0.4);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(253, 29, 29, 0.2);
+}

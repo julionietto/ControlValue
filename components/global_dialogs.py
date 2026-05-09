@@ -25,6 +25,8 @@ def dialog_user_profile():
             
         edit_birth = st.date_input("Data de Nascimento", value=default_birth, min_value=pd.to_datetime('1900-01-01').date(), max_value=pd.to_datetime('today').date(), format="DD/MM/YYYY", disabled=is_admin)
         
+
+        
         st.markdown("**🔐 Alterar Senha** (opcional)")
         new_pwd = st.text_input("Nova Senha", type="password", placeholder="Deixe vazio para manter atual")
         confirm_pwd = st.text_input("Confirmar Nova Senha", type="password")
@@ -255,4 +257,55 @@ def dialog_alocacao_ativos():
     with col_btn2:
         if st.button("Cancelar", use_container_width=True):
             st.session_state.pop('current_allocations', None)
+            st.rerun()
+
+@st.dialog("Preferências")
+def dialog_preferencias():
+    st.markdown("### 🎨 Preferências Visuais")
+    st.write("Escolha o tema que mais lhe agrada. O sistema será atualizado automaticamente com a sua escolha.")
+    
+    theme_options = {
+        'original': 'Original',
+        'cyberpunk': 'Cyberpunk / Neon',
+        'glassmorphism': 'Glassmorphism Pastel',
+        'minimalista': 'Minimalista'
+    }
+    
+    # Usa o tema default 'cyberpunk' caso não encontre
+    current_theme = st.session_state.get('theme_preference', 'cyberpunk')
+    
+    theme_keys = list(theme_options.keys())
+    try:
+        current_idx = theme_keys.index(current_theme)
+    except ValueError:
+        current_idx = 1 # cyberpunk default index
+        
+    selected_theme_label = st.radio(
+        "Temas Disponíveis:",
+        options=list(theme_options.values()),
+        index=current_idx
+    )
+    
+    selected_theme_key = next(k for k, v in theme_options.items() if v == selected_theme_label)
+    
+    # Se o usuário escolheu e clicou em Salvar
+    status_placeholder = st.empty()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Salvar", type="primary", use_container_width=True):
+            status_placeholder.info("⏳ Aguarde enquanto estamos atualizando o tema...")
+            
+            # O st.spinner força o Streamlit a enviar a mensagem acima imediatamente para o navegador
+            with st.spinner(""):
+                time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
+                db.update_user_theme(st.session_state.user_id, selected_theme_key)
+                st.session_state.theme_preference = selected_theme_key
+            
+            status_placeholder.empty()
+            status_placeholder.success("Alteração realizada com sucesso!")
+            time.sleep(1.5)
+            st.rerun()
+            
+    with col2:
+        if st.button("Cancelar", use_container_width=True):
             st.rerun()
