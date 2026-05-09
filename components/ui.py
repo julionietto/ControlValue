@@ -158,6 +158,16 @@ def render_top_header(title, subtitle):
                 st.rerun()
                 
     with col_prefs:
+        st.markdown(
+            """
+            <style>
+            .st-key-btn_prefs_header button {
+                margin-top: 12px !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         if st.button("Preferências", key="btn_prefs_header", help="Preferências de Tema"):
             st.session_state.trigger_dialog_preferencias = True
             st.rerun()
