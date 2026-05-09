@@ -294,9 +294,8 @@ def dialog_preferencias():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Salvar", type="primary", use_container_width=True):
-            status_placeholder.info("⏳ Aguarde enquanto estamos atualizando o tema...")
+            # status_placeholder.info("⏳ Aguarde enquanto estamos atualizando o tema...")
             
-            # O st.spinner força o Streamlit a enviar a mensagem acima imediatamente para o navegador
             with st.spinner(""):
                 # time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
                 db.update_user_theme(st.session_state.user_id, selected_theme_key)
