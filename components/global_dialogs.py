@@ -298,7 +298,7 @@ def dialog_preferencias():
             
             # O st.spinner força o Streamlit a enviar a mensagem acima imediatamente para o navegador
             with st.spinner(""):
-                time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
+                # time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
                 db.update_user_theme(st.session_state.user_id, selected_theme_key)
                 st.session_state.theme_preference = selected_theme_key
             
