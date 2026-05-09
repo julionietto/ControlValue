@@ -296,10 +296,10 @@ def dialog_preferencias():
         if st.button("Salvar", type="primary", use_container_width=True):
             # status_placeholder.info("⏳ Aguarde enquanto estamos atualizando o tema...")
             
-            with st.spinner(""):
-                # time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
-                db.update_user_theme(st.session_state.user_id, selected_theme_key)
-                st.session_state.theme_preference = selected_theme_key
+            # with st.spinner(""):
+            # time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
+            db.update_user_theme(st.session_state.user_id, selected_theme_key)
+            st.session_state.theme_preference = selected_theme_key
             
             status_placeholder.empty()
             status_placeholder.success("Alteração realizada com sucesso!")
