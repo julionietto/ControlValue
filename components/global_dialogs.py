@@ -291,21 +291,34 @@ def dialog_preferencias():
     
     # Se o usuário escolheu e clicou em Salvar
     status_placeholder = st.empty()
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Salvar", type="primary", use_container_width=True):
-            # status_placeholder.info("⏳ Aguarde enquanto estamos atualizando o tema...")
+    btn_placeholder = st.empty()
+
+    with btn_placeholder.container():
+        col1, col2 = st.columns(2)
+        with col1:
+            save_clicked = st.button("Salvar", type="primary", use_container_width=True)
+        with col2:
+            cancel_clicked = st.button("Cancelar", use_container_width=True)
+
+    if save_clicked:
+        # Desabilita os botões visualmente de imediato
+        with btn_placeholder.container():
+            c1, c2 = st.columns(2)
+            c1.button("Salvar", type="primary", use_container_width=True, disabled=True, key="save_dis")
+            c2.button("Cancelar", use_container_width=True, disabled=True, key="cancel_dis")
+        
+        # Executa a lógica de atualização
+        db.update_user_theme(st.session_state.user_id, selected_theme_key)
+        st.session_state.theme_preference = selected_theme_key
+        
+        status_placeholder.success("Alteração realizada com sucesso!")
+        time.sleep(1.5)
+        st.rerun()
             
-            # with st.spinner(""):
-            # time.sleep(1.0) # Pausa para dar tempo da mensagem ser lida
-            db.update_user_theme(st.session_state.user_id, selected_theme_key)
-            st.session_state.theme_preference = selected_theme_key
-            
-            status_placeholder.empty()
-            status_placeholder.success("Alteração realizada com sucesso!")
-            time.sleep(1.5)
-            st.rerun()
-            
-    with col2:
-        if st.button("Cancelar", use_container_width=True):
-            st.rerun()
+    if cancel_clicked:
+        # Desabilita os botões visualmente de imediato ao cancelar
+        with btn_placeholder.container():
+            c1, c2 = st.columns(2)
+            c1.button("Salvar", type="primary", use_container_width=True, disabled=True, key="save_dis_c")
+            c2.button("Cancelar", use_container_width=True, disabled=True, key="cancel_dis_c")
+        st.rerun()
