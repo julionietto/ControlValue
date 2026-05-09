@@ -7,6 +7,7 @@ from psycopg2 import pool
 from contextlib import contextmanager
 # pyrefly: ignore[missing-import]
 import streamlit as st  # type: ignore
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 # Carrega variáveis de ambiente se não estiver no Streamlit

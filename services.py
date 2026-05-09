@@ -475,6 +475,7 @@ def _send_smtp_email(to_email, subject, html_content):
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
     import os
+    # pyrefly: ignore [missing-import]
     import streamlit as st
     
     # Busca credenciais de forma idêntica ao que funciona na recuperação de senha
@@ -533,6 +534,7 @@ def send_password_reset_email(to_email, reset_link):
     return _send_smtp_email(to_email, "Recuperação de Senha - ControlValue", html)
 
 def send_exception_report_email(exception_details):
+    # pyrefly: ignore [missing-import]
     import streamlit as st
     user_info = ""
     if 'user_id' in st.session_state:
@@ -565,6 +567,7 @@ def fetch_investidor10_proventos(tickers_with_types):
     import time
     from datetime import datetime
     import pandas as pd
+    # pyrefly: ignore [missing-import]
     from bs4 import BeautifulSoup
     
     if not tickers_with_types:
@@ -584,6 +587,7 @@ def fetch_investidor10_proventos(tickers_with_types):
     hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     
     try:
+        # pyrefly: ignore [missing-import]
         from curl_cffi import requests as cffi_requests
         
         custom_headers = {
