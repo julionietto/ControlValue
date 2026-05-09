@@ -270,13 +270,21 @@ def render_derivativos_view():
         total_vl_premio = display_df['Vl Prêmio'].sum()
         
         display_df['diff_num'] = display_df['Diferença']
+        
+        is_hidden = st.session_state.get('hide_values', False)
+        def safe_format_brl(val):
+            return "R$ ••••••" if is_hidden else format_brl(val)
             
-        display_df['Cotação Atual'] = display_df['Cotação Atual'].apply(format_brl)
-        display_df['Diferença'] = display_df['Diferença'].apply(format_brl)
-        display_df['Strike'] = display_df['Strike'].apply(format_brl)
-        display_df['Vl Opção'] = display_df['Vl Opção'].apply(format_brl)
-        display_df['Cobertura PUT'] = display_df['Cobertura PUT'].apply(format_brl)
-        display_df['Vl Prêmio'] = display_df['Vl Prêmio'].apply(format_brl)
+        display_df['Cotação Atual'] = display_df['Cotação Atual'].apply(safe_format_brl)
+        display_df['Diferença'] = display_df['Diferença'].apply(safe_format_brl)
+        display_df['Strike'] = display_df['Strike'].apply(safe_format_brl)
+        display_df['Vl Opção'] = display_df['Vl Opção'].apply(safe_format_brl)
+        display_df['Cobertura PUT'] = display_df['Cobertura PUT'].apply(safe_format_brl)
+        display_df['Vl Prêmio'] = display_df['Vl Prêmio'].apply(safe_format_brl)
+        
+        if is_hidden:
+            display_df['Quantidade'] = "••••••"
+            display_df['Taxa'] = "••••••"
         
         def color_tp_opcao(val):
             if val == "CALL":
@@ -306,9 +314,12 @@ def render_derivativos_view():
             
         styled_df = display_df.style \
             .apply(highlight_cols_by_rules, axis=1) \
-            .map(color_tp_opcao, subset=['Tp Opção']) \
-            .format({'Taxa': '{:.2%}'}) \
-            .set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tp Opção', 'Dt Operação', 'Dt Vencimento', 'Status']) \
+            .map(color_tp_opcao, subset=['Tp Opção'])
+            
+        if not is_hidden:
+            styled_df = styled_df.format({'Taxa': '{:.2%}'})
+            
+        styled_df = styled_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tp Opção', 'Dt Operação', 'Dt Vencimento', 'Status']) \
             .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Diferença', 'Strike', 'Quantidade', 'Vl Opção', 'Vl Prêmio', 'Cobertura PUT', 'Taxa'])
         
         selected_opcao = st.dataframe(
@@ -324,7 +335,8 @@ def render_derivativos_view():
             key=f"opcoes_table_{st.session_state.refresh_id}"
         )
         
-        st.markdown(f"<div style='text-align: right; font-size: 1.25rem; font-weight: bold;'>Total Vl Prêmio: <span style='color: #00CC96;'>{format_brl(total_vl_premio)}</span></div>", unsafe_allow_html=True)
+        total_fmt = "R$ ••••••" if is_hidden else format_brl(total_vl_premio)
+        st.markdown(f"<div style='text-align: right; font-size: 1.25rem; font-weight: bold;'>Total Vl Prêmio: <span style='color: #00CC96;'>{total_fmt}</span></div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         if selected_opcao.selection.rows:

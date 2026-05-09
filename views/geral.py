@@ -642,6 +642,7 @@ def render_visao_geral_view():
         
         # Função de formatação de quantidade (8 casas para Cripto, 0 para outros)
         def format_qty_unified(row):
+            if st.session_state.get('hide_values', False): return "••••••"
             if row['Tipo'] == 'Cripto':
                 formatted = f"{row['Quantidade']:,.8f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 if "," in formatted:
@@ -654,6 +655,8 @@ def render_visao_geral_view():
         display_unified['Qtd'] = display_unified.apply(format_qty_unified, axis=1)
         
         def format_usage_currency(row):
+            if st.session_state.get('hide_values', False):
+                return "$ ••••••" if row['currency'] == 'USD' else "R$ ••••••"
             val = row['Cotação Atual']
             if row['currency'] == 'USD':
                 return f"$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -663,10 +666,17 @@ def render_visao_geral_view():
                 return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     
         display_unified['Cotação Atual Display'] = display_unified.apply(format_usage_currency, axis=1)
-        display_unified['Preço Unit.'] = display_unified['Preço'].apply(format_brl_custom)
-        display_unified['Vlr. Operação'] = display_unified['Valor da operação'].apply(format_brl_custom)
-        display_unified['Vlr. Atualizado'] = display_unified['Valor atualizado'].apply(format_brl_custom)
-        display_unified['Peso %'] = display_unified['Peso %'].apply(lambda x: f"{x:,.2f}%".replace(".", ","))
+        
+        is_hidden = st.session_state.get('hide_values', False)
+        def safe_format_brl(val):
+            return "R$ ••••••" if is_hidden else format_brl_custom(val)
+        def safe_format_peso(val):
+            return "••••••" if is_hidden else f"{val:,.2f}%".replace(".", ",")
+
+        display_unified['Preço Unit.'] = display_unified['Preço'].apply(safe_format_brl)
+        display_unified['Vlr. Operação'] = display_unified['Valor da operação'].apply(safe_format_brl)
+        display_unified['Vlr. Atualizado'] = display_unified['Valor atualizado'].apply(safe_format_brl)
+        display_unified['Peso %'] = display_unified['Peso %'].apply(safe_format_peso)
         
         final_cols = ['ticker', 'Tipo', 'Qtd', 'Cotação Atual Display', 'Vlr. Atualizado', 'Orientação', 'Peso %']
         final_df = display_unified[final_cols]
@@ -771,7 +781,9 @@ def render_visao_geral_view():
                 # Prepara o dataframe de exibição
                 display_radar = pd.DataFrame()
                 display_radar['Ticker'] = radar_df['ticker'].apply(format_ticker_for_display)
-                display_radar['Valor do Ativo'] = radar_df['current_value'].apply(format_brl_custom)
+                
+                is_hidden = st.session_state.get('hide_values', False)
+                display_radar['Valor do Ativo'] = radar_df['current_value'].apply(lambda x: "R$ ••••••" if is_hidden else format_brl_custom(x))
                 display_radar['Indicação de Compra'] = radar_df['Indicação de Compra']
                 
                 # Estilização
@@ -808,6 +820,10 @@ def render_visao_geral_view():
         st.markdown("---")
         st.markdown('<h2 style="color: #ffffff; font-size: 1.5rem; margin-bottom: 1.5rem;">Análise de Gráficos</h2>', unsafe_allow_html=True)
         
+        if st.session_state.get('hide_values', False):
+            st.info("📊 Informações e Gráficos ocultos para privacidade. Desative a opção de ocultar valores no cabeçalho.")
+            return
+
         # Verifica se há opções para exibir a aba de Dividendos Sintéticos
         has_options_data = not db.get_opcoes(st.session_state.user_id).empty
     

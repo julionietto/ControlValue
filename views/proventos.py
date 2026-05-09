@@ -60,14 +60,27 @@ def render_proventos_view():
                 cols_to_drop = [c for c in ['id', 'user_id'] if c in prov_df.columns]
                 prov_df = prov_df.drop(columns=cols_to_drop)
                 
+                is_hidden = st.session_state.get('hide_values', False)
+                # Calcula o Total a Receber original
+                total_provisionado = prov_df['Total a Receber'].sum()
+                
+                if is_hidden:
+                    prov_df['Valor Cota (R$)'] = "R$ ••••••"
+                    prov_df['Qtd (Data Com)'] = "••••••"
+                    prov_df['Total a Receber'] = "R$ ••••••"
+                    
                 st.success("Estes são os valores futuros mapeados com base na sua posição até a Data Com:")
                 
-                styled_prov = prov_df.style.format({
-                        'Valor Cota (R$)': 'R$ {:.4f}',
-                        'Qtd (Data Com)': '{:,.0f}',
-                        'Total a Receber': 'R$ {:.2f}'
-                    }).set_properties(**{'text-align': 'center'}) \
-                      .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+                if is_hidden:
+                    styled_prov = prov_df.style.set_properties(**{'text-align': 'center'}) \
+                          .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+                else:
+                    styled_prov = prov_df.style.format({
+                            'Valor Cota (R$)': 'R$ {:.4f}',
+                            'Qtd (Data Com)': '{:,.0f}',
+                            'Total a Receber': 'R$ {:.2f}'
+                        }).set_properties(**{'text-align': 'center'}) \
+                          .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
                     
                 st.dataframe(
                     styled_prov,
@@ -76,7 +89,6 @@ def render_proventos_view():
                 )
                 
                 # Totalizador
-                total_provisionado = prov_df['Total a Receber'].sum()
                 st.markdown("<br>", unsafe_allow_html=True)
                 col_f1, col_f2 = st.columns([1, 1])
                 with col_f1:
@@ -84,7 +96,7 @@ def render_proventos_view():
                         st.session_state.show_statusinvest_results = False
                         st.rerun()
                 with col_f2:
-                    total_fmt = f"R$ {total_provisionado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    total_fmt = "R$ ••••••" if is_hidden else f"R$ {total_provisionado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                     st.markdown(f"<div style='text-align: right; font-size: 1.2rem; font-weight: bold; color: #00CC96; padding-top: 5px;'>Total: {total_fmt}</div>", unsafe_allow_html=True)
         st.markdown("---")
 
@@ -186,6 +198,7 @@ def render_proventos_view():
         tab_mensal, tab_ranking = st.tabs(["Histórico Mensal", "🏆 Ranking de Pagadores"])
         with tab_mensal:
             def format_provento(val):
+                if st.session_state.get('hide_values', False): return "••••••"
                 if pd.isna(val) or val == 0:
                     return "0,00"
                 return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -306,7 +319,9 @@ def render_proventos_view():
                         
                         style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
                         
-                        if val_prev > 0:
+                        if st.session_state.get('hide_values', False):
+                            growth_row[col] = f'<div style="{style_val}">••••••</div>'
+                        elif val_prev > 0:
                             pct = ((val_curr / val_prev) - 1) * 100
                             color = "#00CC96" if pct >= 0 else "red"
                             growth_row[col] = f'<div style="color: {color}; {style_val}">{pct:,.2f}%</div>'.replace('.', ',')
@@ -477,11 +492,15 @@ def render_proventos_view():
                     hovermode="x unified"
                 )
                 
-                st.plotly_chart(fig, use_container_width=True)
+                if st.session_state.get('hide_values', False):
+                    st.info("📊 Gráfico oculto para privacidade.")
+                else:
+                    st.plotly_chart(fig, use_container_width=True)
                 
                 ranking_display = ranking_df.copy()
                 ranking_display['Posição'] = ranking_display['Posição'].apply(lambda x: f"#{x}")
-                ranking_display['Valor Anual'] = ranking_display['Valor Anual'].apply(lambda val: f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                is_hidden = st.session_state.get('hide_values', False)
+                ranking_display['Valor Anual'] = ranking_display['Valor Anual'].apply(lambda val: "R$ ••••••" if is_hidden else f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 
                 styled_rank = ranking_display.style.set_properties(**{'text-align': 'center'}, subset=['Posição', 'Ativo'])\
                                                  .set_properties(**{'text-align': 'right'}, subset=['Valor Anual'])

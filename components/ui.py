@@ -1,4 +1,4 @@
-# pyrefly: ignore [missing-import]
+
 import streamlit as st
 import base64
 import os
@@ -6,6 +6,12 @@ from utils.formatters import escape_html
 
 def create_card(label, value, delta=None, small_font=False):
     """Cria um card premium usando HTML/CSS personalizado."""
+    is_hidden = st.session_state.get('hide_values', False)
+    if is_hidden:
+        value = "R$ ••••••" if isinstance(value, str) and "R$" in value else "••••••"
+        if delta:
+            delta = "••••••"
+            
     safe_label = escape_html(label)
     safe_value = escape_html(value)
     
@@ -103,8 +109,8 @@ def render_profile_popover():
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
     
-    # Colunas: Logo (15%), Prefs (5%), Eye (5%), Título (55%), Ações/Login (20%)
-    col_logo, col_prefs, col_eye, col_title, col_logout = st.columns([0.15, 0.05, 0.05, 0.55, 0.20], gap="small", vertical_alignment="center")
+    # Colunas: Logo (15%), Prefs (12%), Eye (5%), Título (48%), Ações/Login (20%)
+    col_logo, col_prefs, col_eye, col_title, col_logout = st.columns([0.15, 0.12, 0.05, 0.48, 0.20], gap="small", vertical_alignment="center")
     with col_logo:
         # Resolve o caminho da imagem de forma robusta
         image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", "logoHome.png")
@@ -152,7 +158,7 @@ def render_top_header(title, subtitle):
                 st.rerun()
                 
     with col_prefs:
-        if st.button("⚙️", key="btn_prefs_header", help="Preferências de Tema"):
+        if st.button("Preferências", key="btn_prefs_header", help="Preferências de Tema"):
             st.session_state.trigger_dialog_preferencias = True
             st.rerun()
             
