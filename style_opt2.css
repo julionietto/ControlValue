@@ -397,7 +397,6 @@ h3,
     max-width: 28px !important;
     max-height: 28px !important;
     object-fit: contain;
-    filter: sepia(1) hue-rotate(150deg) saturate(300%) brightness(1.2); /* Make images match neon cyan */
 }
 
 .instagram-link:hover {
@@ -405,7 +404,4 @@ h3,
     border-color: #ff003c;
     box-shadow: 0 0 15px rgba(255, 0, 60, 0.6), inset 0 0 10px rgba(255, 0, 60, 0.2);
     transform: scale(1.05);
-}
-.instagram-link:hover img {
-    filter: sepia(1) hue-rotate(300deg) saturate(500%) brightness(1.2); /* Neon pink/red */
 }

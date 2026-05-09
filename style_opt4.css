@@ -370,13 +370,9 @@ h3,
     max-width: 24px !important;
     max-height: 24px !important;
     object-fit: contain;
-    filter: grayscale(1) brightness(1.5); /* Monochromatic icons */
 }
 
 .instagram-link:hover {
     border-color: var(--text-primary);
     color: var(--text-primary);
-}
-.instagram-link:hover img {
-    filter: grayscale(1) brightness(2);
 }
