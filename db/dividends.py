@@ -162,6 +162,14 @@ def get_total_proventos_by_ticker(ticker, user_id):
         res = cursor.fetchone()
         return res[0] if res[0] is not None else 0.0
 
+def get_total_proventos_all_tickers(user_id):
+    """Retorna um dicionário com o total de proventos acumulado por ticker."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT ticker, SUM(valor) FROM proventos WHERE user_id = %s GROUP BY ticker", (user_id,))
+        rows = cursor.fetchall()
+        return {row[0]: float(row[1]) for row in rows if row[1] is not None}
+
 def check_and_create_next_year_dashboard(user_id):
     from datetime import datetime
     from zoneinfo import ZoneInfo

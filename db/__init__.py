@@ -58,6 +58,7 @@ from db.dividends import (
     add_provento_provisionado,
     import_proventos_csv,
     get_total_proventos_by_ticker,
+    get_total_proventos_all_tickers,
     check_and_create_next_year_dashboard,
     get_all_total_proventos,
     upsert_provento_provisionado,

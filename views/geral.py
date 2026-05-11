@@ -511,6 +511,7 @@ def render_visao_geral_view():
         
         # Busca todos os proventos globais
         global_total_proventos = db.get_all_total_proventos(st.session_state.user_id)
+        df_prov_dict = db.get_total_proventos_all_tickers(st.session_state.user_id)
         
         # Retorno Total = Lucro/Prejuízo + Proventos Globais
         total_profit_loss = assets_df['profit_loss'].sum() + global_total_proventos
@@ -1308,7 +1309,7 @@ def render_visao_geral_view():
                 current_fii_tickers = fii_assets['ticker'].unique()
                 fii_prov_data = []
                 for t in current_fii_tickers:
-                    total_p = db.get_total_proventos_by_ticker(t, st.session_state.user_id)
+                    total_p = df_prov_dict.get(t, 0.0)
                     fii_prov_data.append({'Ativo': t, 'Total Proventos': total_p})
                 
                 fii_prov_df = pd.DataFrame(fii_prov_data).sort_values(by='Total Proventos', ascending=True)
@@ -1337,7 +1338,7 @@ def render_visao_geral_view():
                     profit_loss = asset_row['profit_loss'].sum() if not asset_row.empty else 0.0
                     
                     # Get total proventos
-                    total_p = df_prov_dict.get(t, db.get_total_proventos_by_ticker(t, st.session_state.user_id)) if 'df_prov_dict' in locals() else db.get_total_proventos_by_ticker(t, st.session_state.user_id)
+                    total_p = df_prov_dict.get(t, 0.0)
                     
                     # Retorno Total = (Cotação Atual * Qtd - Preço Médio * Qtd) + Proventos Recebidos
                     total_return = profit_loss + total_p

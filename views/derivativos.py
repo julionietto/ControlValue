@@ -60,7 +60,7 @@ def render_derivativos_view():
                 if st.button("Sim, salvar zerado", type="primary", use_container_width=True):
                     dt_op_str = dt_operacao.strftime("%Y-%m-%d")
                     dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
-                    db.update_opcao(op_data['id'], st.session_state.user_id, ativo, strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status)
+                    db.update_opcao(op_data['id'], st.session_state.user_id, op_data['ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status)
                     st.session_state['confirm_zero_qtd_edit'] = False
                     st.session_state.refresh_id += 1
                     st.success("Opção atualizada!")
@@ -79,7 +79,7 @@ def render_derivativos_view():
                     else:
                         dt_op_str = dt_operacao.strftime("%Y-%m-%d")
                         dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
-                        db.update_opcao(op_data['id'], st.session_state.user_id, ativo, strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status)
+                        db.update_opcao(op_data['id'], st.session_state.user_id, op_data['ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status)
                         st.session_state.refresh_id += 1
                         st.success("Opção atualizada!")
                         st.rerun()
