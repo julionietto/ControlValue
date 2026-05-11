@@ -64,3 +64,16 @@ def get_opcoes_import(arquivo, user_id):
         return True, "Importação de Opções concluída com sucesso."
     except Exception as e:
         return False, f"Erro ao importar Opções: {str(e)}"
+
+def get_all_open_opcoes():
+    """Busca todos os derivativos com status 'Aberta' de todos os usuários."""
+    with get_db_connection() as conn:
+        df = _query_to_df("SELECT id, derivativo, strike FROM opcoes WHERE status = 'Aberta'", conn)
+    return df
+
+def update_opcao_strike(opcao_id, new_strike):
+    """Atualiza apenas o valor do strike de um derivativo específico."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE opcoes SET strike = %s WHERE id = %s", (new_strike, opcao_id))
+        conn.commit()

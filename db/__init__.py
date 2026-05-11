@@ -70,7 +70,9 @@ from db.options import (
     insert_opcao,
     update_opcao,
     delete_opcao,
-    get_opcoes_import
+    get_opcoes_import,
+    get_all_open_opcoes,
+    update_opcao_strike
 )
 
 from db.utils import (

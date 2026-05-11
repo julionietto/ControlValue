@@ -154,6 +154,34 @@ def run_sync():
         print("Sincronização gravada no banco de dados com sucesso!")
         db.log_sync_execution(today_str, 'SUCCESS', f"Sincronizados {len(df)} proventos para {len(tickers_with_types)} ativos.")
 
+        # --- NOVA ROTINA: Atualização de Strike de Derivativos ---
+        print("\nIniciando atualização de strikes de derivativos abertos...")
+        df_opcoes = db.get_all_open_opcoes()
+        if not df_opcoes.empty:
+            updates_count = 0
+            for _, op in df_opcoes.iterrows():
+                op_id = op['id']
+                ticker = op['derivativo']
+                strike_atual = float(op['strike'])
+                
+                print(f"Verificando {ticker} (Strike atual: R$ {strike_atual:.2f})...")
+                new_strike = svc.fetch_option_strike_opcoes_net(ticker)
+                
+                if new_strike and abs(new_strike - strike_atual) > 0.001:
+                    print(f"  [UPDATE] Strike ajustado detectado: R$ {strike_atual:.2f} -> R$ {new_strike:.2f}")
+                    db.update_opcao_strike(op_id, new_strike)
+                    updates_count += 1
+                else:
+                    print(f"  [OK] Strike sem alterações.")
+                
+                # Pequeno delay para evitar bloqueio por excesso de requisições
+                import random
+                time.sleep(random.uniform(1.0, 2.5))
+            
+            print(f"Finalizada atualização de strikes. {updates_count} registros alterados.")
+        else:
+            print("Nenhum derivativo em aberto encontrado para atualização.")
+
     except Exception as e:
         error_msg = f"Erro crítico na execução do job: {str(e)}"
         print(error_msg)

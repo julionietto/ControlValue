@@ -712,3 +712,30 @@ def fetch_investidor10_proventos(tickers_with_types):
     df = df.drop(columns=['dt_pag_raw'])
     
     return df, "", full_raw_response
+
+def fetch_option_strike_opcoes_net(ticker):
+    """
+    Busca o valor atualizado do strike de uma opção no portal opcoes.net.br.
+    Retorna o valor como float ou None se não encontrado.
+    """
+    import requests
+    import re
+    
+    url = f"https://opcoes.net.br/{ticker}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            # Tenta extrair do título da página via regex
+            # Ex: <title>EGIEE407 - Strike R$ 40,25 - Vencimento 15/05/2026</title>
+            match = re.search(r"Strike R\$ ([\d,.]+)", response.text)
+            if match:
+                val_str = match.group(1).replace('.', '').replace(',', '.')
+                return float(val_str)
+    except Exception as e:
+        print(f"Erro ao buscar strike de {ticker}: {e}")
+        
+    return None
