@@ -1,4 +1,5 @@
-import holidays
+# pyrefly: ignore[missing-import]
+import holidays  # type: ignore
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
