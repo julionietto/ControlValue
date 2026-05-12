@@ -257,7 +257,7 @@ def render_proventos_view():
                 
                 def style_row(row):
                     is_active = row['OriginalTicker'] in active_tickers
-                    if not is_active:
+                    if not is_active and ano == ano_atual:
                         return ['color: #EF553B'] * len(row)
                     
                     # Cores para ativos ativos
