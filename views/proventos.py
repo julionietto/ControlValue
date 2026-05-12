@@ -103,6 +103,10 @@ def render_proventos_view():
 
     proventos_df = db.get_proventos(st.session_state.user_id)
     
+    # Busca ativos ativos (quantidade > 0) para destacar os inativos
+    assets_df = db.get_all_assets(st.session_state.user_id)
+    active_tickers = set(assets_df[assets_df['quantity'] > 0]['ticker'].unique()) if not assets_df.empty else set()
+    
     meses_nomes_dict = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
     meses_ordem = list(meses_nomes_dict.values())
     meses_nums = list(meses_nomes_dict.keys())
@@ -250,10 +254,26 @@ def render_proventos_view():
                 key_df = f"prov_df_{ano}_{st.session_state.refresh_id}"
                 
                 cols_right = [col for col in col_order]
-                styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
-                                           .set_properties(**{'text-align': 'right'}, subset=cols_right) \
-                                           .set_properties(**{'color': '#00CC96'}, subset=['Valor Mensal']) \
-                                           .set_properties(**{'color': '#3d9df3'}, subset=['Valor Anual'])
+                
+                def style_row(row):
+                    is_active = row['OriginalTicker'] in active_tickers
+                    if not is_active:
+                        return ['color: #EF553B'] * len(row)
+                    
+                    # Cores para ativos ativos
+                    colors = []
+                    for col in row.index:
+                        if col == 'Valor Mensal':
+                            colors.append('color: #00CC96')
+                        elif col == 'Valor Anual':
+                            colors.append('color: #3d9df3')
+                        else:
+                            colors.append('')
+                    return colors
+
+                styled_df = display_df.style.apply(style_row, axis=1) \
+                                           .set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
+                                           .set_properties(**{'text-align': 'right'}, subset=cols_right)
 
                 selected = st.dataframe(
                     styled_df,
