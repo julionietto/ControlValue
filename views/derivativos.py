@@ -16,8 +16,8 @@ def render_derivativos_view():
         st.markdown("#### 📊 Dados do Ativo")
         c1, c2, c3 = st.columns(3)
         with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['ativo']), disabled=True)
-        with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual', 0.0)), disabled=True, format="%.2f")
-        with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data['strike']), format="%.2f")
+        with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual') or 0.0), disabled=True, format="%.2f")
+        with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data.get('strike') or 0.01), format="%.2f")
         
         st.markdown("#### 📅 Prazos e Detalhes")
         c4, c5, c6, c7 = st.columns(4)
@@ -39,11 +39,11 @@ def render_derivativos_view():
         with c_i1:
             tipo_operacao = st.selectbox("Tipo (Início)", ["VENDA", "COMPRA"], index=0 if op_data.get('tipo_operacao') != 'COMPRA' else 1)
         with c_i2:
-            qtd_inicial = st.number_input("Qtd Inicial", value=float(op_data.get('qtd_inicial', op_data['quantidade'])), step=100.0)
+            qtd_inicial = st.number_input("Qtd Inicial", value=float(op_data.get('qtd_inicial') or op_data.get('quantidade') or 0), step=100.0)
         with c_i3:
-            vl_op_ini = st.number_input("Vl Opção Ini", value=float(op_data.get('vl_opcao_inicial', op_data['vl_opcao'])), step=0.01, format="%.2f")
+            vl_op_ini = st.number_input("Vl Opção Ini", value=float(op_data.get('vl_opcao_inicial') or op_data.get('vl_opcao') or 0), step=0.01, format="%.2f")
         with c_i4:
-            vl_premio_ini = st.number_input("Vl Prêmio Ini", value=float(op_data.get('vl_premio_inicial', op_data.get('vl_premio', 0))), step=0.01, format="%.2f")
+            vl_premio_ini = st.number_input("Vl Prêmio Ini", value=float(op_data.get('vl_premio_inicial') or op_data.get('vl_premio') or 0), step=0.01, format="%.2f")
 
         st.markdown("#### 🏁 Finalização da Operação")
         c_f1, c_f2, c_f3, c_f4 = st.columns(4)
@@ -51,11 +51,11 @@ def render_derivativos_view():
             status_opts = ["Aberta", "Encerrada", "Exercida"]
             status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['status']) if op_data['status'] in status_opts else 0)
         with c_f2:
-            qtd_final = st.number_input("Qtd Final", value=float(op_data.get('qtd_final', 0)), step=100.0)
+            qtd_final = st.number_input("Qtd Final", value=float(op_data.get('qtd_final') or 0), step=100.0)
         with c_f3:
-            vl_op_fin = st.number_input("Vl Opção Fin", value=float(op_data.get('vl_opcao_final', 0)), step=0.01, format="%.2f")
+            vl_op_fin = st.number_input("Vl Opção Fin", value=float(op_data.get('vl_opcao_final') or 0), step=0.01, format="%.2f")
         with c_f4:
-            vl_premio_fin = st.number_input("Vl Prêmio Fin", value=float(op_data.get('vl_premio_final', 0)), step=0.01, format="%.2f")
+            vl_premio_fin = st.number_input("Vl Prêmio Fin", value=float(op_data.get('vl_premio_final') or 0), step=0.01, format="%.2f")
             
         # Cálculo de Saldo e Resultado
         saldo_qtd = qtd_inicial - qtd_final
