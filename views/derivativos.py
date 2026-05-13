@@ -35,12 +35,11 @@ def render_derivativos_view():
             status_opts = ["Aberta", "Encerrada", "Exercida"]
             status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['status']) if op_data['status'] in status_opts else 0)
             
-        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>🚀 Operação</h4>", unsafe_allow_html=True)
         c_h1, c_h2, c_h3 = st.columns([1, 3, 3])
         with c_h2:
-            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Início</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-top: 15px; margin-bottom: 10px; font-weight: bold;'>Início da Operação</div>", unsafe_allow_html=True)
         with c_h3:
-            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Final</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-top: 15px; margin-bottom: 10px; font-weight: bold;'>Fim da Operação</div>", unsafe_allow_html=True)
             
         c_o1, c_o2, c_o3, c_o4, c_o5, c_o6, c_o7 = st.columns(7)
         with c_o1:
@@ -149,10 +148,9 @@ def render_derivativos_view():
         with c7:
             derivativo = st.text_input("Derivativo")
             
-        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>🚀 Operação</h4>", unsafe_allow_html=True)
         c_h1, c_h2 = st.columns([1, 3])
         with c_h2:
-            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Início</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-top: 15px; margin-bottom: 10px; font-weight: bold;'>Início da Operação</div>", unsafe_allow_html=True)
             
         c_i1, c_i2, c_i3, c_i4 = st.columns(4)
         with c_i1:
