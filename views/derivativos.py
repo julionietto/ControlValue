@@ -41,9 +41,9 @@ def render_derivativos_view():
         with c_i2:
             qtd_inicial = st.number_input("Qtd Inicial", value=float(op_data.get('qtd_inicial') or op_data.get('quantidade') or 0), step=100.0)
         with c_i3:
-            vl_op_ini = st.number_input("Vl Opção Ini", value=float(op_data.get('vl_opcao_inicial') or op_data.get('vl_opcao') or 0), step=0.01, format="%.2f")
+            vl_op_ini = st.number_input("Vl Opção Inicial", value=float(op_data.get('vl_opcao_inicial') or op_data.get('vl_opcao') or 0), step=0.01, format="%.2f")
         with c_i4:
-            vl_premio_ini = st.number_input("Vl Prêmio Ini", value=float(op_data.get('vl_premio_inicial') or op_data.get('vl_premio') or 0), step=0.01, format="%.2f")
+            vl_premio_ini = st.number_input("Vl Prêmio Inicial", value=float(op_data.get('vl_premio_inicial') or op_data.get('vl_premio') or 0), step=0.01, format="%.2f")
 
         st.markdown("#### 🏁 Finalização da Operação")
         c_f1, c_f2, c_f3, c_f4 = st.columns(4)
@@ -53,9 +53,10 @@ def render_derivativos_view():
         with c_f2:
             qtd_final = st.number_input("Qtd Final", value=float(op_data.get('qtd_final') or 0), step=100.0)
         with c_f3:
-            vl_op_fin = st.number_input("Vl Opção Fin", value=float(op_data.get('vl_opcao_final') or 0), step=0.01, format="%.2f")
+            vl_op_fin = st.number_input("Vl Opção Final", value=float(op_data.get('vl_opcao_final') or 0), step=0.01, format="%.2f")
         with c_f4:
-            vl_premio_fin = st.number_input("Vl Prêmio Fin", value=float(op_data.get('vl_premio_final') or 0), step=0.01, format="%.2f")
+            vl_premio_fin_calc = qtd_final * vl_op_fin
+            vl_premio_fin = st.number_input("Vl Prêmio Final", value=float(vl_premio_fin_calc), step=0.01, format="%.2f")
             
         # Cálculo de Saldo e Resultado
         saldo_qtd = qtd_inicial - qtd_final
@@ -150,10 +151,10 @@ def render_derivativos_view():
         with c_i2:
             qtd_ini = st.number_input("Qtd Inicial", value=100.0, step=100.0)
         with c_i3:
-            vl_op_ini = st.number_input("Vl Opção Ini", min_value=0.00, step=0.01, format="%.2f")
+            vl_op_ini = st.number_input("Vl Opção Inicial", min_value=0.00, step=0.01, format="%.2f")
         with c_i4:
             vl_prem_ini_calc = vl_op_ini * qtd_ini
-            vl_prem_ini = st.number_input("Vl Prêmio Ini", value=float(vl_prem_ini_calc), step=0.01, format="%.2f")
+            vl_prem_ini = st.number_input("Vl Prêmio Inicial", value=float(vl_prem_ini_calc), step=0.01, format="%.2f")
 
         status = "Aberta"
         
