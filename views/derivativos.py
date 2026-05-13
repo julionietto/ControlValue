@@ -11,7 +11,7 @@ def render_derivativos_view():
     
     @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
-        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px; margin-top: -20px;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['ativo']), disabled=True)
         with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual') or 0.0), disabled=True, format="%.2f")
@@ -119,9 +119,10 @@ def render_derivativos_view():
 
     @st.dialog("Adicionar Opção", width="large", dismissible=False)
     def dialog_add_opcao():
-        st.markdown("<h3 style='text-align: center;'>🆕 Adicionar Nova Operação de Derivativo</h3>", unsafe_allow_html=True)
-        
-        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
+        st.markdown("""
+        <h3 style='text-align: center; margin-top: -20px; margin-bottom: 5px;'>🆕 Adicionar Nova Operação de Derivativo</h3>
+        <h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px; margin-top: 0;'>📊 Dados do Ativo</h4>
+        """, unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1:
             ativo_input = st.text_input("Ativo (ex: PETR4)", key="add_opcao_ativo")
