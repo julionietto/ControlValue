@@ -11,13 +11,14 @@ def render_derivativos_view():
     
     @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
-        st.markdown("#### 📊 Dados do Ativo")
+        st.markdown(f"<h3 style='text-align: center;'>Editar Opção: {format_ticker_for_display(op_data['ativo'])}</h3>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['ativo']), disabled=True)
         with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual') or 0.0), disabled=True, format="%.2f")
         with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data.get('strike') or 0.01), format="%.2f")
         
-        st.markdown("#### 📅 Prazos e Detalhes")
+        st.markdown("<h4 style='text-align: center;'>📅 Prazos e Detalhes</h4>", unsafe_allow_html=True)
         c4, c5, c6, c7, c8 = st.columns(5)
         with c4:
             try: dt_op_obj = pd.to_datetime(op_data['dt_operacao']).date()
@@ -35,23 +36,29 @@ def render_derivativos_view():
             status_opts = ["Aberta", "Encerrada", "Exercida"]
             status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['status']) if op_data['status'] in status_opts else 0)
             
-        st.markdown("#### 🚀 Operação (Início e Fim)")
+        st.markdown("<h4 style='text-align: center;'>🚀 Operação</h4>", unsafe_allow_html=True)
+        c_h1, c_h2, c_h3 = st.columns([1, 3, 3])
+        with c_h2:
+            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Início</div>", unsafe_allow_html=True)
+        with c_h3:
+            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Final</div>", unsafe_allow_html=True)
+            
         c_o1, c_o2, c_o3, c_o4, c_o5, c_o6, c_o7 = st.columns(7)
         with c_o1:
             tipo_operacao = st.selectbox("Tipo", ["VENDA", "COMPRA"], index=0 if op_data.get('tipo_operacao') != 'COMPRA' else 1)
         with c_o2:
-            qtd_inicial = st.number_input("Qtd Ini", value=int(op_data.get('qtd_inicial') or op_data.get('quantidade') or 0), step=100)
+            qtd_inicial = st.number_input("Qtd Inicial", value=int(op_data.get('qtd_inicial') or op_data.get('quantidade') or 0), step=100)
         with c_o3:
-            vl_op_ini = st.number_input("Vl Opç Ini", value=float(op_data.get('vl_opcao_inicial') or op_data.get('vl_opcao') or 0), step=0.01, format="%.2f")
+            vl_op_ini = st.number_input("Vl Opção Inicial", value=float(op_data.get('vl_opcao_inicial') or op_data.get('vl_opcao') or 0), step=0.01, format="%.2f")
         with c_o4:
-            vl_premio_ini = st.number_input("Vl Prê Ini", value=float(op_data.get('vl_premio_inicial') or op_data.get('vl_premio') or 0), step=0.01, format="%.2f")
+            vl_premio_ini = st.number_input("Vl Prêmio Inicial", value=float(op_data.get('vl_premio_inicial') or op_data.get('vl_premio') or 0), step=0.01, format="%.2f")
         with c_o5:
-            qtd_final = st.number_input("Qtd Fin", value=int(op_data.get('qtd_final') or 0), step=100)
+            qtd_final = st.number_input("Qtd Final", value=int(op_data.get('qtd_final') or 0), step=100)
         with c_o6:
-            vl_op_fin = st.number_input("Vl Opç Fin", value=float(op_data.get('vl_opcao_final') or 0), step=0.01, format="%.2f")
+            vl_op_fin = st.number_input("Vl Opção Final", value=float(op_data.get('vl_opcao_final') or 0), step=0.01, format="%.2f")
         with c_o7:
             vl_premio_fin_calc = qtd_final * vl_op_fin
-            vl_premio_fin = st.number_input("Vl Prê Fin", value=float(vl_premio_fin_calc), step=0.01, format="%.2f")
+            vl_premio_fin = st.number_input("Vl Prêmio Final", value=float(vl_premio_fin_calc), step=0.01, format="%.2f")
             
         # Cálculo de Saldo e Resultado
         saldo_qtd = qtd_inicial - qtd_final
@@ -112,9 +119,9 @@ def render_derivativos_view():
 
     @st.dialog("Adicionar Opção", width="large", dismissible=False)
     def dialog_add_opcao():
-        st.markdown("### 🆕 Adicionar Nova Operação de Derivativo")
+        st.markdown("<h3 style='text-align: center;'>🆕 Adicionar Nova Operação de Derivativo</h3>", unsafe_allow_html=True)
         
-        st.markdown("#### 📊 Dados do Ativo")
+        st.markdown("<h4 style='text-align: center;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1:
             ativo_input = st.text_input("Ativo (ex: PETR4)", key="add_opcao_ativo")
@@ -130,7 +137,7 @@ def render_derivativos_view():
         with c3:
             strike = st.number_input("Strike", min_value=0.01, step=0.01, format="%.2f")
             
-        st.markdown("#### 📅 Prazos e Detalhes")
+        st.markdown("<h4 style='text-align: center;'>📅 Prazos e Detalhes</h4>", unsafe_allow_html=True)
         c4, c5, c6, c7 = st.columns(4)
         with c4:
             dt_operacao = st.date_input("Dt Operação", value=pd.Timestamp.now().date(), format="DD/MM/YYYY")
@@ -141,10 +148,14 @@ def render_derivativos_view():
         with c7:
             derivativo = st.text_input("Derivativo")
             
-        st.markdown("#### 🚀 Início da Operação")
+        st.markdown("<h4 style='text-align: center;'>🚀 Operação</h4>", unsafe_allow_html=True)
+        c_h1, c_h2 = st.columns([1, 3])
+        with c_h2:
+            st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Início</div>", unsafe_allow_html=True)
+            
         c_i1, c_i2, c_i3, c_i4 = st.columns(4)
         with c_i1:
-            tipo_op = st.selectbox("Tipo (Início)", ["VENDA", "COMPRA"])
+            tipo_op = st.selectbox("Tipo", ["VENDA", "COMPRA"])
         with c_i2:
             qtd_ini = st.number_input("Qtd Inicial", value=100, step=100)
         with c_i3:
