@@ -11,14 +11,13 @@ def render_derivativos_view():
     
     @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
-        st.markdown(f"<h3 style='text-align: center;'>Editar Opção: {format_ticker_for_display(op_data['ativo'])}</h3>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['ativo']), disabled=True)
         with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual') or 0.0), disabled=True, format="%.2f")
         with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data.get('strike') or 0.01), format="%.2f")
         
-        st.markdown("<h4 style='text-align: center;'>📅 Prazos e Detalhes</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>📅 Prazos e Detalhes</h4>", unsafe_allow_html=True)
         c4, c5, c6, c7, c8 = st.columns(5)
         with c4:
             try: dt_op_obj = pd.to_datetime(op_data['dt_operacao']).date()
@@ -36,7 +35,7 @@ def render_derivativos_view():
             status_opts = ["Aberta", "Encerrada", "Exercida"]
             status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['status']) if op_data['status'] in status_opts else 0)
             
-        st.markdown("<h4 style='text-align: center;'>🚀 Operação</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>🚀 Operação</h4>", unsafe_allow_html=True)
         c_h1, c_h2, c_h3 = st.columns([1, 3, 3])
         with c_h2:
             st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Início</div>", unsafe_allow_html=True)
@@ -99,6 +98,7 @@ def render_derivativos_view():
                 st.rerun()
         with col_c3:
             if st.button("Cancelar", use_container_width=True):
+                st.session_state.refresh_id += 1
                 st.rerun()
 
     @st.dialog("Confirmar Exclusão de Opção", dismissible=False)
@@ -121,7 +121,7 @@ def render_derivativos_view():
     def dialog_add_opcao():
         st.markdown("<h3 style='text-align: center;'>🆕 Adicionar Nova Operação de Derivativo</h3>", unsafe_allow_html=True)
         
-        st.markdown("<h4 style='text-align: center;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>📊 Dados do Ativo</h4>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         with c1:
             ativo_input = st.text_input("Ativo (ex: PETR4)", key="add_opcao_ativo")
@@ -137,7 +137,7 @@ def render_derivativos_view():
         with c3:
             strike = st.number_input("Strike", min_value=0.01, step=0.01, format="%.2f")
             
-        st.markdown("<h4 style='text-align: center;'>📅 Prazos e Detalhes</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>📅 Prazos e Detalhes</h4>", unsafe_allow_html=True)
         c4, c5, c6, c7 = st.columns(4)
         with c4:
             dt_operacao = st.date_input("Dt Operação", value=pd.Timestamp.now().date(), format="DD/MM/YYYY")
@@ -148,7 +148,7 @@ def render_derivativos_view():
         with c7:
             derivativo = st.text_input("Derivativo")
             
-        st.markdown("<h4 style='text-align: center;'>🚀 Operação</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; text-decoration: underline; text-underline-offset: 4px;'>🚀 Operação</h4>", unsafe_allow_html=True)
         c_h1, c_h2 = st.columns([1, 3])
         with c_h2:
             st.markdown("<div style='text-align: center; border-bottom: 2px solid #888; margin-bottom: 10px; font-weight: bold;'>Início</div>", unsafe_allow_html=True)
