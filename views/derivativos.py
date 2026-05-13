@@ -11,37 +11,37 @@ def render_derivativos_view():
     
     @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
-        st.markdown(f"### 📝 Editando Opção: `{format_ticker_for_display(op_data['Ativo'])}`")
+        st.markdown(f"### 📝 Editando Opção: `{format_ticker_for_display(op_data['ativo'])}`")
         
         st.markdown("#### 📊 Dados do Ativo")
         c1, c2, c3 = st.columns(3)
-        with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['Ativo']), disabled=True)
+        with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['ativo']), disabled=True)
         with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual', 0.0)), disabled=True, format="%.2f")
-        with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data['Strike']), format="%.2f")
+        with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data['strike']), format="%.2f")
         
         st.markdown("#### 📅 Prazos e Detalhes")
         c4, c5, c6, c7 = st.columns(4)
         with c4:
-            try: dt_op_obj = pd.to_datetime(op_data['Dt Operação']).date()
+            try: dt_op_obj = pd.to_datetime(op_data['dt_operacao']).date()
             except: dt_op_obj = pd.Timestamp.now().date()
             dt_operacao = st.date_input("Dt Operação", value=dt_op_obj, format="DD/MM/YYYY")
         with c5:
-            try: dt_venc_obj = pd.to_datetime(op_data['Dt Vencimento']).date()
+            try: dt_venc_obj = pd.to_datetime(op_data['dt_vencimento']).date()
             except: dt_venc_obj = pd.Timestamp.now().date()
             dt_vencimento = st.date_input("Dt Vencimento", value=dt_venc_obj, format="DD/MM/YYYY")
         with c6:
-            tp_opcao = st.selectbox("Tp Opção", ["CALL", "PUT"], index=0 if op_data['Tp Opção']=="CALL" else 1)
+            tp_opcao = st.selectbox("Tp Opção", ["CALL", "PUT"], index=0 if op_data['tp_opcao']=="CALL" else 1)
         with c7:
-            derivativo = st.text_input("Derivativo", value=op_data['Derivativo'])
+            derivativo = st.text_input("Derivativo", value=op_data['derivativo'])
             
         st.markdown("#### 🚀 Início da Operação")
         c_i1, c_i2, c_i3, c_i4 = st.columns(4)
         with c_i1:
             tipo_operacao = st.selectbox("Tipo (Início)", ["VENDA", "COMPRA"], index=0 if op_data.get('tipo_operacao') != 'COMPRA' else 1)
         with c_i2:
-            qtd_inicial = st.number_input("Qtd Inicial", value=float(op_data.get('qtd_inicial', op_data['Saldo Qtd'])), step=100.0)
+            qtd_inicial = st.number_input("Qtd Inicial", value=float(op_data.get('qtd_inicial', op_data['quantidade'])), step=100.0)
         with c_i3:
-            vl_op_ini = st.number_input("Vl Opção Ini", value=float(op_data.get('vl_opcao_inicial', op_data['Vl Opção'])), step=0.01, format="%.2f")
+            vl_op_ini = st.number_input("Vl Opção Ini", value=float(op_data.get('vl_opcao_inicial', op_data['vl_opcao'])), step=0.01, format="%.2f")
         with c_i4:
             vl_premio_ini = st.number_input("Vl Prêmio Ini", value=float(op_data.get('vl_premio_inicial', op_data.get('vl_premio', 0))), step=0.01, format="%.2f")
 
@@ -49,7 +49,7 @@ def render_derivativos_view():
         c_f1, c_f2, c_f3, c_f4 = st.columns(4)
         with c_f1:
             status_opts = ["Aberta", "Encerrada", "Exercida"]
-            status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['Status']) if op_data['Status'] in status_opts else 0)
+            status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['status']) if op_data['status'] in status_opts else 0)
         with c_f2:
             qtd_final = st.number_input("Qtd Final", value=float(op_data.get('qtd_final', 0)), step=100.0)
         with c_f3:
@@ -78,7 +78,7 @@ def render_derivativos_view():
                 dt_op_str = dt_operacao.strftime("%Y-%m-%d")
                 dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
                 db.update_opcao(
-                    op_data['id'], st.session_state.user_id, op_data['Ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, 
+                    op_data['id'], st.session_state.user_id, op_data['ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, 
                     saldo_qtd, vl_op_ini, vl_premio_ini, status,
                     tipo_operacao, qtd_inicial, vl_op_ini, vl_premio_ini,
                     qtd_final, vl_op_fin, vl_premio_fin, res_val
