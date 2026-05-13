@@ -7,92 +7,94 @@ from utils.formatters import format_ticker_for_display, format_brl
 from components.ui import render_top_header
 
 def render_derivativos_view():
-    render_top_header("Derivativos", "Controle de opções, travas e lançamentos cobertos.")
+    render_top_header("Derivativos", "Controle de operações, travas e lançamentos cobertos.")
     
     @st.dialog("Editar Opção", width="large", dismissible=False)
     def dialog_edit_opcao(op_data):
-        st.markdown(f"### 📝 Editando Opção: `{format_ticker_for_display(op_data['ativo'])}`")
+        st.markdown(f"### 📝 Editando Opção: `{format_ticker_for_display(op_data['Ativo'])}`")
         
         st.markdown("#### 📊 Dados do Ativo")
         c1, c2, c3 = st.columns(3)
-        with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['ativo']), disabled=True)
+        with c1: ativo = st.text_input("Ativo", value=format_ticker_for_display(op_data['Ativo']), disabled=True)
         with c2: cotacao_atual = st.number_input("Cotação Atual", value=float(op_data.get('Cotação Atual', 0.0)), disabled=True, format="%.2f")
-        with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data['strike']), format="%.2f")
+        with c3: strike = st.number_input("Strike", min_value=0.01, step=0.01, value=float(op_data['Strike']), format="%.2f")
         
         st.markdown("#### 📅 Prazos e Detalhes")
         c4, c5, c6, c7 = st.columns(4)
         with c4:
-            try:
-                dt_op_obj = pd.to_datetime(op_data['dt_operacao']).date()
-            except:
-                dt_op_obj = pd.Timestamp.now().date()
+            try: dt_op_obj = pd.to_datetime(op_data['Dt Operação']).date()
+            except: dt_op_obj = pd.Timestamp.now().date()
             dt_operacao = st.date_input("Dt Operação", value=dt_op_obj, format="DD/MM/YYYY")
         with c5:
-            try:
-                dt_venc_obj = pd.to_datetime(op_data['dt_vencimento']).date()
-            except:
-                dt_venc_obj = pd.Timestamp.now().date()
+            try: dt_venc_obj = pd.to_datetime(op_data['Dt Vencimento']).date()
+            except: dt_venc_obj = pd.Timestamp.now().date()
             dt_vencimento = st.date_input("Dt Vencimento", value=dt_venc_obj, format="DD/MM/YYYY")
         with c6:
-            tp_opcao = st.selectbox("Tp Opção", ["CALL", "PUT"], index=0 if op_data['tp_opcao']=="CALL" else 1)
+            tp_opcao = st.selectbox("Tp Opção", ["CALL", "PUT"], index=0 if op_data['Tp Opção']=="CALL" else 1)
         with c7:
-            derivativo = st.text_input("Derivativo", value=op_data['derivativo'])
+            derivativo = st.text_input("Derivativo", value=op_data['Derivativo'])
             
-        st.markdown("#### 💰 Valores e Posição")
-        c8, c9, c10, c11 = st.columns(4)
-        with c8:
-            quantidade = st.number_input("Quantidade", value=int(op_data['quantidade']), step=100)
-        with c9:
-            vl_opcao = st.number_input("Vl Opção", min_value=0.00, step=0.01, value=float(op_data['vl_opcao']), format="%.2f")
-        with c10:
-            vl_premio_calc = vl_opcao * quantidade
-            vl_premio = st.number_input("Vl Prêmio (Total)", value=float(vl_premio_calc), disabled=True, format="%.2f")
-        with c11:
-            status_opts = ["Aberta", "Encerrada", "Exercida"]
-            status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['status']) if op_data['status'] in status_opts else 0)
+        st.markdown("#### 🚀 Início da Operação")
+        c_i1, c_i2, c_i3, c_i4 = st.columns(4)
+        with c_i1:
+            tipo_operacao = st.selectbox("Tipo (Início)", ["VENDA", "COMPRA"], index=0 if op_data.get('tipo_operacao') != 'COMPRA' else 1)
+        with c_i2:
+            qtd_inicial = st.number_input("Qtd Inicial", value=float(op_data.get('qtd_inicial', op_data['Saldo Qtd'])), step=100.0)
+        with c_i3:
+            vl_op_ini = st.number_input("Vl Opção Ini", value=float(op_data.get('vl_opcao_inicial', op_data['Vl Opção'])), step=0.01, format="%.2f")
+        with c_i4:
+            vl_premio_ini = st.number_input("Vl Prêmio Ini", value=float(op_data.get('vl_premio_inicial', op_data.get('vl_premio', 0))), step=0.01, format="%.2f")
 
+        st.markdown("#### 🏁 Finalização da Operação")
+        c_f1, c_f2, c_f3, c_f4 = st.columns(4)
+        with c_f1:
+            status_opts = ["Aberta", "Encerrada", "Exercida"]
+            status = st.selectbox("Status", status_opts, index=status_opts.index(op_data['Status']) if op_data['Status'] in status_opts else 0)
+        with c_f2:
+            qtd_final = st.number_input("Qtd Final", value=float(op_data.get('qtd_final', 0)), step=100.0)
+        with c_f3:
+            vl_op_fin = st.number_input("Vl Opção Fin", value=float(op_data.get('vl_opcao_final', 0)), step=0.01, format="%.2f")
+        with c_f4:
+            vl_premio_fin = st.number_input("Vl Prêmio Fin", value=float(op_data.get('vl_premio_final', 0)), step=0.01, format="%.2f")
+            
+        # Cálculo de Saldo e Resultado
+        saldo_qtd = qtd_inicial - qtd_final
+        if tipo_operacao == "VENDA":
+            res_val = vl_premio_ini - vl_premio_fin
+        else:
+            res_val = vl_premio_fin - vl_premio_ini
+            
+        st.markdown(f"""
+        <div style='background-color: rgba(0, 204, 150, 0.1); padding: 15px; border-radius: 10px; border: 1px solid #00CC96;'>
+            <span style='font-size: 1rem;'>Saldo Quantidade: <b>{int(saldo_qtd)}</b></span> | 
+            <span style='font-size: 1rem;'>Vl Operação (Resultado): <b style='color: {"#00CC96" if res_val >= 0 else "#EF553B"};'>{format_brl(res_val)}</b></span>
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.session_state.get('confirm_zero_qtd_edit', False):
-            st.warning("⚠️ A Quantidade está definida como ZERO. Tem certeza que deseja salvar?")
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                if st.button("Sim, salvar zerado", type="primary", use_container_width=True):
-                    dt_op_str = dt_operacao.strftime("%Y-%m-%d")
-                    dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
-                    db.update_opcao(op_data['id'], st.session_state.user_id, op_data['ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status)
-                    st.session_state['confirm_zero_qtd_edit'] = False
-                    st.session_state.refresh_id += 1
-                    st.success("Opção atualizada!")
-                    st.rerun()
-            with cc2:
-                if st.button("Não, corrigir", use_container_width=True):
-                    st.session_state['confirm_zero_qtd_edit'] = False
-                    st.rerun()
-        else:
-            col_c1, col_c2, col_c3 = st.columns(3)
-            with col_c1:
-                if st.button("Salvar", type="primary", use_container_width=True):
-                    if quantidade == 0:
-                        st.session_state['confirm_zero_qtd_edit'] = True
-                        st.rerun()
-                    else:
-                        dt_op_str = dt_operacao.strftime("%Y-%m-%d")
-                        dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
-                        db.update_opcao(op_data['id'], st.session_state.user_id, op_data['ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status)
-                        st.session_state.refresh_id += 1
-                        st.success("Opção atualizada!")
-                        st.rerun()
-            with col_c2:
-                if st.button("Excluir", type="secondary", use_container_width=True):
-                    st.session_state.show_confirm_delete_opcao = True
-                    st.session_state.opcao_to_delete = op_data['id']
-                    st.session_state.refresh_id += 1
-                    st.rerun()
-            with col_c3:
-                if st.button("Cancelar", use_container_width=True):
-                    st.session_state.refresh_id += 1
-                    st.rerun()
+        col_c1, col_c2, col_c3 = st.columns(3)
+        with col_c1:
+            if st.button("Salvar Alterações", type="primary", use_container_width=True):
+                dt_op_str = dt_operacao.strftime("%Y-%m-%d")
+                dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
+                db.update_opcao(
+                    op_data['id'], st.session_state.user_id, op_data['Ativo'], strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, 
+                    saldo_qtd, vl_op_ini, vl_premio_ini, status,
+                    tipo_operacao, qtd_inicial, vl_op_ini, vl_premio_ini,
+                    qtd_final, vl_op_fin, vl_premio_fin, res_val
+                )
+                st.session_state.refresh_id += 1
+                st.success("Operação atualizada!")
+                st.rerun()
+        with col_c2:
+            if st.button("Excluir", type="secondary", use_container_width=True):
+                st.session_state.show_confirm_delete_opcao = True
+                st.session_state.opcao_to_delete = op_data['id']
+                st.session_state.refresh_id += 1
+                st.rerun()
+        with col_c3:
+            if st.button("Cancelar", use_container_width=True):
+                st.rerun()
 
     @st.dialog("Confirmar Exclusão de Opção", dismissible=False)
     def confirm_delete_opcao_dialog(opcao_id):
@@ -112,7 +114,7 @@ def render_derivativos_view():
 
     @st.dialog("Adicionar Opção", width="large", dismissible=False)
     def dialog_add_opcao():
-        st.markdown("### 🆕 Adicionar Nova Opção")
+        st.markdown("### 🆕 Adicionar Nova Operação de Derivativo")
         
         st.markdown("#### 📊 Dados do Ativo")
         c1, c2, c3 = st.columns(3)
@@ -141,56 +143,41 @@ def render_derivativos_view():
         with c7:
             derivativo = st.text_input("Derivativo")
             
-        st.markdown("#### 💰 Valores e Posição")
-        c8, c9, c10, c11 = st.columns(4)
-        with c8:
-            quantidade = st.number_input("Quantidade", value=100, step=100)
-        with c9:
-            vl_opcao = st.number_input("Vl Opção", min_value=0.00, step=0.01, format="%.2f")
-        with c10:
-            vl_premio_calc = vl_opcao * quantidade
-            vl_premio = st.number_input("Vl Prêmio (Total)", value=float(vl_premio_calc), disabled=True, format="%.2f")
-        with c11:
-            status = st.selectbox("Status", ["Aberta", "Encerrada", "Exercida"])
+        st.markdown("#### 🚀 Início da Operação")
+        c_i1, c_i2, c_i3, c_i4 = st.columns(4)
+        with c_i1:
+            tipo_op = st.selectbox("Tipo (Início)", ["VENDA", "COMPRA"])
+        with c_i2:
+            qtd_ini = st.number_input("Qtd Inicial", value=100.0, step=100.0)
+        with c_i3:
+            vl_op_ini = st.number_input("Vl Opção Ini", min_value=0.00, step=0.01, format="%.2f")
+        with c_i4:
+            vl_prem_ini_calc = vl_op_ini * qtd_ini
+            vl_prem_ini = st.number_input("Vl Prêmio Ini", value=float(vl_prem_ini_calc), step=0.01, format="%.2f")
 
+        status = "Aberta"
+        
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.session_state.get('confirm_zero_qtd_add', False):
-            st.warning("⚠️ A Quantidade está definida como ZERO. Tem certeza que deseja salvar?")
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                if st.button("Sim, salvar zerado", type="primary", use_container_width=True):
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Salvar Operação", type="primary", use_container_width=True):
+                if ativo_val:
                     dt_op_str = dt_operacao.strftime("%Y-%m-%d")
                     dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
-                    db.insert_opcao(ativo_val, strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status, st.session_state.user_id)
-                    st.session_state['confirm_zero_qtd_add'] = False
+                    db.insert_opcao(
+                        ativo_val, strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, 
+                        qtd_ini, vl_op_ini, vl_prem_ini, status, st.session_state.user_id,
+                        tipo_op, qtd_ini, vl_op_ini, vl_prem_ini, 0, 0, 0, vl_prem_ini if tipo_op == "VENDA" else -vl_prem_ini
+                    )
                     st.session_state.refresh_id += 1
-                    st.success("Opção adicionada!")
+                    st.success("Operação adicionada!")
                     st.rerun()
-            with cc2:
-                if st.button("Não, corrigir", use_container_width=True):
-                    st.session_state['confirm_zero_qtd_add'] = False
-                    st.rerun()
-        else:
-            col_c1, col_c2 = st.columns(2)
-            with col_c1:
-                if st.button("Salvar", type="primary", use_container_width=True):
-                    if ativo_val:
-                        if quantidade == 0:
-                            st.session_state['confirm_zero_qtd_add'] = True
-                            st.rerun()
-                        else:
-                            dt_op_str = dt_operacao.strftime("%Y-%m-%d")
-                            dt_venc_str = dt_vencimento.strftime("%Y-%m-%d")
-                            db.insert_opcao(ativo_val, strike, tp_opcao, dt_op_str, dt_venc_str, derivativo, quantidade, vl_opcao, vl_premio, status, st.session_state.user_id)
-                            st.session_state.refresh_id += 1
-                            st.success("Opção adicionada!")
-                            st.rerun()
-                    else:
-                        st.error("Informe o código do Ativo.")
-            with col_c2:
-                if st.button("Cancelar", use_container_width=True):
-                    st.rerun()
+                else:
+                    st.error("Informe o código do Ativo.")
+        with col_c2:
+            if st.button("Cancelar", use_container_width=True):
+                st.rerun()
 
     if st.session_state.get('show_confirm_delete_opcao', False):
         opcao_id_del = st.session_state.get('opcao_to_delete')
@@ -213,27 +200,33 @@ def render_derivativos_view():
         display_df['Taxa'] = display_df['vl_opcao'] / display_df['strike']
         display_df['Cobertura PUT'] = display_df['quantidade'] * display_df['strike']
         
-        display_df['dt_operacao'] = pd.to_datetime(display_df['dt_operacao']).dt.strftime('%d/%m/%Y')
-        display_df['dt_vencimento'] = pd.to_datetime(display_df['dt_vencimento']).dt.strftime('%d/%m/%Y')
+        # Lógica para tratar campos legados vs novos
+        display_df['Vl Operação'] = display_df['resultado'].fillna(display_df['vl_premio'])
+        display_df['Saldo Qtd'] = display_df['quantidade']
         
-        display_df['ativo'] = display_df['ativo'].apply(format_ticker_for_display)
+        display_df = display_df.sort_values(['dt_vencimento', 'ativo'])
+        
+        display_df['dt_operacao_fmt'] = pd.to_datetime(display_df['dt_operacao']).dt.strftime('%d/%m/%Y')
+        display_df['dt_vencimento_fmt'] = pd.to_datetime(display_df['dt_vencimento']).dt.strftime('%d/%m/%Y')
+        
+        display_df['ativo_display'] = display_df['ativo'].apply(format_ticker_for_display)
+        
+        # Renomear colunas para o display seguindo a nova lógica
         display_df.rename(columns={
-            'ativo': 'Ativo',
+            'ativo_display': 'Ativo',
             'strike': 'Strike',
             'tp_opcao': 'Tp Opção',
-            'dt_operacao': 'Dt Operação',
-            'dt_vencimento': 'Dt Vencimento',
+            'dt_operacao_fmt': 'Dt Operação',
+            'dt_vencimento_fmt': 'Dt Vencimento',
             'derivativo': 'Derivativo',
-            'quantidade': 'Quantidade',
             'vl_opcao': 'Vl Opção',
-            'vl_premio': 'Vl Prêmio',
             'status': 'Status'
         }, inplace=True)
         
         ordem_colunas = [
             'id', 'Ativo', 'Cotação Atual', 'Strike', 'Diferença', 'Tp Opção', 
-            'Dt Operação', 'Dt Vencimento', 'Derivativo', 'Quantidade', 
-            'Vl Opção', 'Vl Prêmio', 'Taxa', 'Cobertura PUT', 'Status'
+            'Dt Operação', 'Dt Vencimento', 'Derivativo', 'Saldo Qtd', 
+            'Vl Opção', 'Vl Operação', 'Taxa', 'Cobertura PUT', 'Status'
         ]
         display_df = display_df[ordem_colunas]
         
@@ -268,7 +261,7 @@ def render_derivativos_view():
             display_df = display_df[display_df['Status'] == filt_status]
         # ---------------
         
-        total_vl_premio = display_df['Vl Prêmio'].sum()
+        total_vl_operacao = display_df['Vl Operação'].sum()
         
         display_df['diff_num'] = display_df['Diferença']
         
@@ -281,10 +274,10 @@ def render_derivativos_view():
         display_df['Strike'] = display_df['Strike'].apply(safe_format_brl)
         display_df['Vl Opção'] = display_df['Vl Opção'].apply(safe_format_brl)
         display_df['Cobertura PUT'] = display_df['Cobertura PUT'].apply(safe_format_brl)
-        display_df['Vl Prêmio'] = display_df['Vl Prêmio'].apply(safe_format_brl)
+        display_df['Vl Operação'] = display_df['Vl Operação'].apply(safe_format_brl)
         
         if is_hidden:
-            display_df['Quantidade'] = "••••••"
+            display_df['Saldo Qtd'] = "••••••"
             display_df['Taxa'] = "••••••"
         
         def color_tp_opcao(val):
@@ -321,7 +314,7 @@ def render_derivativos_view():
             styled_df = styled_df.format({'Taxa': '{:.2%}'})
             
         styled_df = styled_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tp Opção', 'Dt Operação', 'Dt Vencimento', 'Status']) \
-            .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Diferença', 'Strike', 'Quantidade', 'Vl Opção', 'Vl Prêmio', 'Cobertura PUT', 'Taxa'])
+            .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Diferença', 'Strike', 'Saldo Qtd', 'Vl Opção', 'Vl Operação', 'Cobertura PUT', 'Taxa'])
         
         selected_opcao = st.dataframe(
             styled_df, 
@@ -336,8 +329,8 @@ def render_derivativos_view():
             key=f"opcoes_table_{st.session_state.refresh_id}"
         )
         
-        total_fmt = "R$ ••••••" if is_hidden else format_brl(total_vl_premio)
-        st.markdown(f"<div style='text-align: right; font-size: 1.25rem; font-weight: bold;'>Total Vl Prêmio: <span style='color: #00CC96;'>{total_fmt}</span></div>", unsafe_allow_html=True)
+        total_fmt = "R$ ••••••" if is_hidden else format_brl(total_vl_operacao)
+        st.markdown(f"<div style='text-align: right; font-size: 1.25rem; font-weight: bold;'>Total Vl Operação: <span style='color: {"#00CC96" if total_vl_operacao >= 0 else "#EF553B"};'>{total_fmt}</span></div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         if selected_opcao.selection.rows:

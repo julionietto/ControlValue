@@ -146,9 +146,36 @@ def init_db():
             ativo TEXT NOT NULL,
             strike REAL, tp_opcao TEXT, dt_operacao TEXT, dt_vencimento TEXT,
             derivativo TEXT, quantidade INTEGER, vl_opcao REAL, vl_premio REAL,
-            status TEXT, user_id INTEGER NOT NULL DEFAULT 1
+            status TEXT, user_id INTEGER NOT NULL DEFAULT 1,
+            tipo_operacao TEXT,
+            qtd_inicial REAL, vl_opcao_inicial REAL, vl_premio_inicial REAL,
+            qtd_final REAL, vl_opcao_final REAL, vl_premio_final REAL,
+            resultado REAL
         )
     ''')
+
+    try:
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS tipo_operacao TEXT")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS qtd_inicial REAL")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS vl_opcao_inicial REAL")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS vl_premio_inicial REAL")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS qtd_final REAL")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS vl_opcao_final REAL")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS vl_premio_final REAL")
+        cursor.execute("ALTER TABLE opcoes ADD COLUMN IF NOT EXISTS resultado REAL")
+        
+        # Migração de dados para registros abertos
+        cursor.execute("""
+            UPDATE opcoes 
+            SET qtd_inicial = quantidade, 
+                vl_opcao_inicial = vl_opcao, 
+                vl_premio_inicial = vl_premio,
+                tipo_operacao = 'VENDA'
+            WHERE status = 'Aberta' AND qtd_inicial IS NULL
+        """)
+    except Exception as e:
+        import logging
+        logging.warning(f"Aviso na migração da tabela opcoes: {e}")
 
     # Tabela de Password Resets
     cursor.execute('''

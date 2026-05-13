@@ -6,23 +6,33 @@ def get_opcoes(user_id):
         df = _query_to_df("SELECT * FROM opcoes WHERE user_id = %s ORDER BY dt_vencimento ASC, ativo ASC", conn, params=(user_id,))
     return df
 
-def insert_opcao(ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id):
+def insert_opcao(ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id, 
+                 tipo_operacao='VENDA', qtd_inicial=0, vl_opcao_inicial=0, vl_premio_inicial=0, 
+                 qtd_final=0, vl_opcao_final=0, vl_premio_final=0, resultado=0):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO opcoes (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id))
+            INSERT INTO opcoes (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id,
+                               tipo_operacao, qtd_inicial, vl_opcao_inicial, vl_premio_inicial, qtd_final, vl_opcao_final, vl_premio_final, resultado)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id,
+              tipo_operacao, qtd_inicial, vl_opcao_inicial, vl_premio_inicial, qtd_final, vl_opcao_final, vl_premio_final, resultado))
         conn.commit()
 
-def update_opcao(opcao_id, user_id, ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status):
+def update_opcao(opcao_id, user_id, ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status,
+                 tipo_operacao=None, qtd_inicial=None, vl_opcao_inicial=None, vl_premio_inicial=None, 
+                 qtd_final=None, vl_opcao_final=None, vl_premio_final=None, resultado=None):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE opcoes 
-            SET ativo=%s, strike=%s, tp_opcao=%s, dt_operacao=%s, dt_vencimento=%s, derivativo=%s, quantidade=%s, vl_opcao=%s, vl_premio=%s, status=%s
+            SET ativo=%s, strike=%s, tp_opcao=%s, dt_operacao=%s, dt_vencimento=%s, derivativo=%s, quantidade=%s, vl_opcao=%s, vl_premio=%s, status=%s,
+                tipo_operacao=%s, qtd_inicial=%s, vl_opcao_inicial=%s, vl_premio_inicial=%s, 
+                qtd_final=%s, vl_opcao_final=%s, vl_premio_final=%s, resultado=%s
             WHERE id=%s AND user_id=%s
-        ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, opcao_id, user_id))
+        ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status,
+              tipo_operacao, qtd_inicial, vl_opcao_inicial, vl_premio_inicial, qtd_final, vl_opcao_final, vl_premio_final, resultado,
+              opcao_id, user_id))
         conn.commit()
 
 def delete_opcao(opcao_id, user_id):
