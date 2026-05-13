@@ -339,6 +339,7 @@ def render_derivativos_view():
             selected_row = display_df.iloc[row_idx]
             
             op_raw = opcoes_df[opcoes_df['id'] == selected_row['id']].iloc[0].to_dict()
+            op_raw = {k: (v if pd.notna(v) else None) for k, v in op_raw.items()}
             op_raw['Cotação Atual'] = prices_dict.get(op_raw['ativo'], 0.0)
             dialog_edit_opcao(op_raw)
             
