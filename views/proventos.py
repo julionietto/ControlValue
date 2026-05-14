@@ -121,19 +121,17 @@ def render_proventos_view():
         val_key = f"val_edit_prov_{ano}_{ticker}"
         
         def on_month_change():
-            novo_mes_nome = st.session_state[mes_key]
-            novo_mes_num = {v: k for k, v in meses_nomes_dict.items()}[novo_mes_nome]
-            c_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == novo_mes_num)]
-            st.session_state[val_key] = float(c_val['valor'].iloc[0]) if not c_val.empty else 0.0
+            # Remove a chave do input numérico do session_state para forçar o Streamlit a usar o novo value
+            if val_key in st.session_state:
+                del st.session_state[val_key]
 
         selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key, on_change=on_month_change)
         selected_mes_num = {v: k for k, v in meses_nomes_dict.items()}[selected_mes_nome]
         
-        if val_key not in st.session_state:
-            current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
-            st.session_state[val_key] = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
+        current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
+        default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
             
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", key=val_key)
+        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=val_key)
         
         st.markdown("")
         st.markdown("")
