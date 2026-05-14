@@ -116,27 +116,47 @@ def render_proventos_view():
     def dialog_editar_provento(ano, ticker, df_prov):
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
         st.markdown("---")
-        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=f"mes_edit_prov_{ano}_{ticker}")
+        
+        mes_key = f"mes_edit_prov_{ano}_{ticker}"
+        val_key = f"val_edit_prov_{ano}_{ticker}"
+        
+        def on_month_change():
+            novo_mes_nome = st.session_state[mes_key]
+            novo_mes_num = {v: k for k, v in meses_nomes_dict.items()}[novo_mes_nome]
+            c_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == novo_mes_num)]
+            st.session_state[val_key] = float(c_val['valor'].iloc[0]) if not c_val.empty else 0.0
+
+        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key, on_change=on_month_change)
         selected_mes_num = {v: k for k, v in meses_nomes_dict.items()}[selected_mes_nome]
         
-        current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
-        default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
+        if val_key not in st.session_state:
+            current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
+            st.session_state[val_key] = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
+            
+        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", key=val_key)
         
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=f"val_edit_prov_{ano}_{ticker}_{selected_mes_num}")
         st.markdown("")
         st.markdown("")
+        
+        def clear_state():
+            if mes_key in st.session_state: del st.session_state[mes_key]
+            if val_key in st.session_state: del st.session_state[val_key]
+
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("💾 Salvar", type="primary", use_container_width=True):
                 db.save_provento(ano, selected_mes_num, ticker, novo_valor, st.session_state.user_id)
                 st.session_state.refresh_id += 1
+                clear_state()
                 st.rerun()
         with col2:
             if st.button("🗑️ Excluir Ativo", type="secondary", use_container_width=True):
                 st.session_state.confirming_delete_provento = {'ano': ano, 'ticker': ticker}
+                clear_state()
                 st.rerun()
         with col3:
             if st.button("Cancelar", use_container_width=True):
+                clear_state()
                 st.rerun()
 
     # ---- Popup: Confirmar Exclusão Provento ----
