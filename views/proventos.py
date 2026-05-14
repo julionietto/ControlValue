@@ -121,7 +121,6 @@ def render_proventos_view():
         val_key = f"val_edit_prov_{ano}_{ticker}"
         
         def on_month_change():
-            # Remove a chave do input numérico do session_state para forçar o Streamlit a usar o novo value
             if val_key in st.session_state:
                 del st.session_state[val_key]
 
@@ -131,28 +130,29 @@ def render_proventos_view():
         current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
             
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=val_key)
-        
-        st.markdown("")
-        st.markdown("")
-        
         def clear_state():
             if mes_key in st.session_state: del st.session_state[mes_key]
             if val_key in st.session_state: del st.session_state[val_key]
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("💾 Salvar", type="primary", use_container_width=True):
+        with st.form(key=f"form_edit_prov_{ano}_{ticker}"):
+            novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=val_key)
+            st.markdown("")
+            submitted = st.form_submit_button("💾 Salvar", type="primary", use_container_width=True)
+            
+            if submitted:
                 db.save_provento(ano, selected_mes_num, ticker, novo_valor, st.session_state.user_id)
                 st.session_state.refresh_id += 1
                 clear_state()
                 st.rerun()
-        with col2:
+
+        st.markdown("")
+        col1, col2 = st.columns(2)
+        with col1:
             if st.button("🗑️ Excluir Ativo", type="secondary", use_container_width=True):
                 st.session_state.confirming_delete_provento = {'ano': ano, 'ticker': ticker}
                 clear_state()
                 st.rerun()
-        with col3:
+        with col2:
             if st.button("Cancelar", use_container_width=True):
                 clear_state()
                 st.rerun()
