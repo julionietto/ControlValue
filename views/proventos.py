@@ -118,8 +118,10 @@ def render_proventos_view():
         st.markdown("---")
         
         mes_key = f"mes_edit_prov_{ano}_{ticker}"
+        if mes_key not in st.session_state:
+            st.session_state[mes_key] = meses_ordem[0]
+            
         val_id_key = f"val_id_edit_prov_{ano}_{ticker}"
-        
         if val_id_key not in st.session_state:
             st.session_state[val_id_key] = 0
             
