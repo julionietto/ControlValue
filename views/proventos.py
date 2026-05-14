@@ -116,12 +116,13 @@ def render_proventos_view():
     def dialog_editar_provento(ano, ticker, df_prov):
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
         st.markdown("---")
-        selected_mes_nome = st.selectbox("Mês", meses_ordem)
+        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=f"mes_edit_prov_{ano}_{ticker}")
         selected_mes_num = {v: k for k, v in meses_nomes_dict.items()}[selected_mes_nome]
         
         current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val)
+        
+        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=f"val_edit_prov_{ano}_{ticker}_{selected_mes_num}")
         st.markdown("")
         st.markdown("")
         col1, col2, col3 = st.columns(3)
