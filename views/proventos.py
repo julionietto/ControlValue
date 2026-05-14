@@ -145,6 +145,7 @@ def render_proventos_view():
         st.markdown("")
         
         def clear_state():
+            st.session_state.dialog_open = False
             if mes_key in st.session_state: del st.session_state[mes_key]
             if prev_mes_key in st.session_state: del st.session_state[prev_mes_key]
             if val_id_key in st.session_state: del st.session_state[val_id_key]
@@ -178,9 +179,11 @@ def render_proventos_view():
             if st.button("Sim, confirmar", type="primary", use_container_width=True):
                 db.delete_proventos_ativo_ano(ano, ticker, st.session_state.user_id)
                 st.session_state.refresh_id += 1
+                st.session_state.dialog_open = False
                 st.rerun()
         with c_no:
             if st.button("Não, cancelar", use_container_width=True):
+                st.session_state.dialog_open = False
                 st.rerun()
     
     # ---- Popup: Adicionar Ativo ----
@@ -206,6 +209,7 @@ def render_proventos_view():
                         
                     st.success(f"Novo ativo {ticker_novo} adicionado com sucesso !")
                     st.session_state.refresh_id += 1
+                    st.session_state.dialog_open = False
                     import time
                     time.sleep(1.5)
                     st.rerun()
@@ -213,21 +217,29 @@ def render_proventos_view():
                     st.warning("Informe o código do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
+                st.session_state.dialog_open = False
                 st.rerun()
     
     # ---- Aciona popups se houver estado ativo ----
     if st.session_state.get('confirming_delete_provento'):
         c_data = st.session_state.pop('confirming_delete_provento')
+        st.session_state.dialog_open = True
         dialog_confirmar_exclusao_provento(c_data['ano'], c_data['ticker'])
         
     if st.session_state.get('editing_provento'):
         edit_data = st.session_state.pop('editing_provento')
+        st.session_state.dialog_open = True
         if edit_data['ticker'] == '__NOVO__':
             dialog_adicionar_ativo(edit_data['ano'])
         else:
             dialog_editar_provento(edit_data['ano'], edit_data['ticker'], proventos_df)
     
     # ---- Dashboard principal ----
+    if st.session_state.get('dialog_open', False):
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.info("O painel de proventos está pausado em segundo plano para otimizar o desempenho do popup. Conclua a edição ou clique em Cancelar para voltar a visualizar a tabela.")
+        return
+        
     if proventos_df.empty:
         st.info("Nenhum dado de provento registrado. Por favor, importe o arquivo Proventos.csv na barra lateral.")
     else:
