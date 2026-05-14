@@ -114,10 +114,6 @@ def render_proventos_view():
     # ---- Popup: Editar Provento ----
     @st.dialog("✏️ Editar Provento", dismissible=False)
     def dialog_editar_provento(ano, ticker, df_prov):
-        ready_key = f"ready_edit_{ano}_{ticker}"
-        is_ready = st.session_state.get(ready_key, False)
-        disabled = not is_ready
-        
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
         st.markdown("---")
         
@@ -128,7 +124,7 @@ def render_proventos_view():
         if val_id_key not in st.session_state:
             st.session_state[val_id_key] = 0
 
-        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key, disabled=disabled)
+        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key)
         
         if prev_mes_key not in st.session_state:
             st.session_state[prev_mes_key] = selected_mes_nome
@@ -142,7 +138,7 @@ def render_proventos_view():
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
             
         dynamic_val_key = f"val_edit_prov_{ano}_{ticker}_{st.session_state[val_id_key]}"
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=dynamic_val_key, disabled=disabled)
+        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=dynamic_val_key)
         st.markdown("*<small style='color: #888;'>Pressione Enter ou Tab no teclado após digitar para aplicar o novo valor antes de salvar.</small>*", unsafe_allow_html=True)
         
         st.markdown("")
@@ -153,37 +149,26 @@ def render_proventos_view():
             if mes_key in st.session_state: del st.session_state[mes_key]
             if prev_mes_key in st.session_state: del st.session_state[prev_mes_key]
             if val_id_key in st.session_state: del st.session_state[val_id_key]
-            if ready_key in st.session_state: del st.session_state[ready_key]
             for k in list(st.session_state.keys()):
                 if k.startswith(f"val_edit_prov_{ano}_{ticker}_"):
                     del st.session_state[k]
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("💾 Salvar", use_container_width=True, disabled=disabled):
+            if st.button("💾 Salvar", use_container_width=True):
                 db.save_provento(ano, selected_mes_num, ticker, novo_valor, st.session_state.user_id)
                 st.session_state.refresh_id += 1
                 clear_state()
                 st.rerun()
         with col2:
-            if st.button("🗑️ Excluir Ativo", use_container_width=True, disabled=disabled):
+            if st.button("🗑️ Excluir Ativo", use_container_width=True):
                 st.session_state.confirming_delete_provento = {'ano': ano, 'ticker': ticker}
                 clear_state()
                 st.rerun()
         with col3:
-            if st.button("Cancelar", use_container_width=True, disabled=disabled):
+            if st.button("Cancelar", use_container_width=True):
                 clear_state()
                 st.rerun()
-
-        if not is_ready:
-            def delay_gen():
-                yield "⏳ Aguarde... sincronizando dados para edição."
-                import time
-                time.sleep(5.0)
-                yield ""
-            st.write_stream(delay_gen)
-            st.session_state[ready_key] = True
-            st.rerun()
 
     # ---- Popup: Confirmar Exclusão Provento ----
     @st.dialog("⚠️ Confirmar Exclusão", dismissible=False)
