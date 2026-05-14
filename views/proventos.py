@@ -114,14 +114,6 @@ def render_proventos_view():
     # ---- Popup: Editar Provento ----
     @st.dialog("✏️ Editar Provento", dismissible=False)
     def dialog_editar_provento(ano, ticker, df_prov):
-        ready_key = f"ready_edit_{ano}_{ticker}"
-        if not st.session_state.get(ready_key, False):
-            st.info("⏳ Aguarde, sincronizando dados...")
-            import time
-            time.sleep(1.0)
-            st.session_state[ready_key] = True
-            st.rerun()
-            
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
         st.markdown("---")
         
@@ -156,7 +148,6 @@ def render_proventos_view():
             if mes_key in st.session_state: del st.session_state[mes_key]
             if prev_mes_key in st.session_state: del st.session_state[prev_mes_key]
             if val_id_key in st.session_state: del st.session_state[val_id_key]
-            if ready_key in st.session_state: del st.session_state[ready_key]
             for k in list(st.session_state.keys()):
                 if k.startswith(f"val_edit_prov_{ano}_{ticker}_"):
                     del st.session_state[k]
@@ -181,38 +172,20 @@ def render_proventos_view():
     # ---- Popup: Confirmar Exclusão Provento ----
     @st.dialog("⚠️ Confirmar Exclusão", dismissible=False)
     def dialog_confirmar_exclusao_provento(ano, ticker):
-        ready_key = f"ready_del_{ano}_{ticker}"
-        if not st.session_state.get(ready_key, False):
-            st.info("⏳ Aguarde, sincronizando dados...")
-            import time
-            time.sleep(1.0)
-            st.session_state[ready_key] = True
-            st.rerun()
-            
         st.warning("Tem certeza que deseja excluir este ativo da tabela dos proventos deste ano?")
         c_yes, c_no = st.columns(2)
         with c_yes:
             if st.button("Sim, confirmar", type="primary", use_container_width=True):
                 db.delete_proventos_ativo_ano(ano, ticker, st.session_state.user_id)
                 st.session_state.refresh_id += 1
-                if ready_key in st.session_state: del st.session_state[ready_key]
                 st.rerun()
         with c_no:
             if st.button("Não, cancelar", use_container_width=True):
-                if ready_key in st.session_state: del st.session_state[ready_key]
                 st.rerun()
     
     # ---- Popup: Adicionar Ativo ----
     @st.dialog("➕ Adicionar Ativo", dismissible=False)
     def dialog_adicionar_ativo(ano):
-        ready_key = f"ready_add_{ano}"
-        if not st.session_state.get(ready_key, False):
-            st.info("⏳ Aguarde, sincronizando dados...")
-            import time
-            time.sleep(1.0)
-            st.session_state[ready_key] = True
-            st.rerun()
-            
         st.markdown(f"**Ano de referência:** `{ano}`")
         st.markdown("---")
         ticker_novo = st.text_input("Código do Ativo (ex: PETR4.SA)").upper().strip()
@@ -230,7 +203,6 @@ def render_proventos_view():
                         
                     st.success(f"Novo ativo {ticker_novo} adicionado com sucesso !")
                     st.session_state.refresh_id += 1
-                    if ready_key in st.session_state: del st.session_state[ready_key]
                     import time
                     time.sleep(1.5)
                     st.rerun()
@@ -238,7 +210,6 @@ def render_proventos_view():
                     st.warning("Informe o código do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
-                if ready_key in st.session_state: del st.session_state[ready_key]
                 st.rerun()
     
     # ---- Aciona popups se houver estado ativo ----
@@ -280,10 +251,11 @@ def render_proventos_view():
             else:
                 growth_icon_tag = f'<span title="{tooltip_text}">📈</span>'
             
-            for ano in anos_disponiveis:
-                st.markdown(f"**Ano:** {ano}")
-                
-                df_ano = proventos_df[proventos_df['ano'] == ano]
+            tabs_anos = st.tabs([str(a) for a in anos_disponiveis])
+            
+            for idx, ano in enumerate(anos_disponiveis):
+                with tabs_anos[idx]:
+                    df_ano = proventos_df[proventos_df['ano'] == ano]
                 pivot_df = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
                 pivot_df = pivot_df.rename(columns=meses_nomes_dict)
                 
