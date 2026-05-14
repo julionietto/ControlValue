@@ -118,17 +118,20 @@ def render_proventos_view():
         st.markdown("---")
         
         mes_key = f"mes_edit_prov_{ano}_{ticker}"
-        if mes_key not in st.session_state:
-            st.session_state[mes_key] = meses_ordem[0]
-            
         val_id_key = f"val_id_edit_prov_{ano}_{ticker}"
+        prev_mes_key = f"prev_mes_edit_prov_{ano}_{ticker}"
+        
         if val_id_key not in st.session_state:
             st.session_state[val_id_key] = 0
-            
-        def on_month_change():
-            st.session_state[val_id_key] += 1
 
-        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key, on_change=on_month_change)
+        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key)
+        
+        if prev_mes_key not in st.session_state:
+            st.session_state[prev_mes_key] = selected_mes_nome
+        elif st.session_state[prev_mes_key] != selected_mes_nome:
+            st.session_state[val_id_key] += 1
+            st.session_state[prev_mes_key] = selected_mes_nome
+            
         selected_mes_num = {v: k for k, v in meses_nomes_dict.items()}[selected_mes_nome]
         
         current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
@@ -143,6 +146,7 @@ def render_proventos_view():
         
         def clear_state():
             if mes_key in st.session_state: del st.session_state[mes_key]
+            if prev_mes_key in st.session_state: del st.session_state[prev_mes_key]
             if val_id_key in st.session_state: del st.session_state[val_id_key]
             for k in list(st.session_state.keys()):
                 if k.startswith(f"val_edit_prov_{ano}_{ticker}_"):
