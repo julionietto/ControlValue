@@ -118,11 +118,13 @@ def render_proventos_view():
         st.markdown("---")
         
         mes_key = f"mes_edit_prov_{ano}_{ticker}"
-        val_key = f"val_edit_prov_{ano}_{ticker}"
+        val_id_key = f"val_id_edit_prov_{ano}_{ticker}"
         
+        if val_id_key not in st.session_state:
+            st.session_state[val_id_key] = 0
+            
         def on_month_change():
-            if val_key in st.session_state:
-                del st.session_state[val_key]
+            st.session_state[val_id_key] += 1
 
         selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key, on_change=on_month_change)
         selected_mes_num = {v: k for k, v in meses_nomes_dict.items()}[selected_mes_nome]
@@ -130,7 +132,8 @@ def render_proventos_view():
         current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
             
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=val_key)
+        dynamic_val_key = f"val_edit_prov_{ano}_{ticker}_{st.session_state[val_id_key]}"
+        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=dynamic_val_key)
         st.markdown("*<small style='color: #888;'>Pressione Enter ou Tab no teclado após digitar para aplicar o novo valor antes de salvar.</small>*", unsafe_allow_html=True)
         
         st.markdown("")
@@ -138,7 +141,10 @@ def render_proventos_view():
         
         def clear_state():
             if mes_key in st.session_state: del st.session_state[mes_key]
-            if val_key in st.session_state: del st.session_state[val_key]
+            if val_id_key in st.session_state: del st.session_state[val_id_key]
+            for k in list(st.session_state.keys()):
+                if k.startswith(f"val_edit_prov_{ano}_{ticker}_"):
+                    del st.session_state[k]
 
         col1, col2, col3 = st.columns(3)
         with col1:
