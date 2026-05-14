@@ -130,29 +130,29 @@ def render_proventos_view():
         current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
             
+        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=val_key)
+        st.markdown("*<small style='color: #888;'>Pressione Enter ou Tab no teclado após digitar para aplicar o novo valor antes de salvar.</small>*", unsafe_allow_html=True)
+        
+        st.markdown("")
+        st.markdown("")
+        
         def clear_state():
             if mes_key in st.session_state: del st.session_state[mes_key]
             if val_key in st.session_state: del st.session_state[val_key]
 
-        with st.form(key=f"form_edit_prov_{ano}_{ticker}"):
-            novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=val_key)
-            st.markdown("")
-            submitted = st.form_submit_button("💾 Salvar", type="primary", use_container_width=True)
-            
-            if submitted:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("💾 Salvar", use_container_width=True):
                 db.save_provento(ano, selected_mes_num, ticker, novo_valor, st.session_state.user_id)
                 st.session_state.refresh_id += 1
                 clear_state()
                 st.rerun()
-
-        st.markdown("")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🗑️ Excluir Ativo", type="secondary", use_container_width=True):
+        with col2:
+            if st.button("🗑️ Excluir Ativo", use_container_width=True):
                 st.session_state.confirming_delete_provento = {'ano': ano, 'ticker': ticker}
                 clear_state()
                 st.rerun()
-        with col2:
+        with col3:
             if st.button("Cancelar", use_container_width=True):
                 clear_state()
                 st.rerun()
