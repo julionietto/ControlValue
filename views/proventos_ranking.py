@@ -17,8 +17,8 @@ def render_proventos_ranking_view():
     anos_disponiveis = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Reduzindo a largura do seletor para ~20%
-    col_sel, col_empty = st.columns([0.2, 0.8])
+    # Reduzindo a largura do seletor para ~10%
+    col_sel, col_empty = st.columns([0.1, 0.9])
     with col_sel:
         ano_selecionado = st.selectbox("Selecione o Ano", anos_disponiveis, key="ano_ranking_prov")
     
