@@ -198,9 +198,9 @@ def render_proventos_historico_view():
         .growth-negative { color: #EF553B !important; }
         th { font-weight: bold !important; font-size: 0.85rem !important; color: #ffffff !important; text-transform: uppercase; border-bottom: 1px solid #31333f !important; }
         th:first-child { text-align: center !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
-        td { font-size: 0.85rem; vertical-align: middle !important; border-bottom: 1px solid #31333f !important; }
-        td:first-child { font-weight: bold !important; color: #ffffff !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; text-align: center !important; }
-        table { border-collapse: collapse !important; width: 100%; border: 1px solid #31333f !important; table-layout: fixed !important; }
+        td { font-size: 0.85rem; vertical-align: middle !important; border-bottom: 1px solid #31333f !important; white-space: nowrap !important; }
+        td:first-child { font-weight: bold !important; color: #ffffff !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; text-align: center !important; white-space: normal !important; }
+        table { border-collapse: collapse !important; width: 100%; border: 1px solid #31333f !important; }
         </style>
     """, unsafe_allow_html=True)
 
