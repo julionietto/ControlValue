@@ -342,169 +342,167 @@ def render_proventos_view():
             else:
                 growth_icon_tag = f'<span title="{tooltip_text}">📈</span>'
             
-            tabs_anos = st.tabs([str(a) for a in anos_disponiveis])
+            ano = st.selectbox("📅 Selecione o Ano para Detalhamento", anos_disponiveis, key="sel_ano_detalhe")
             
-            for idx, ano in enumerate(anos_disponiveis):
-                with tabs_anos[idx]:
-                    df_ano = proventos_df[proventos_df['ano'] == ano]
-                    pivot_df = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
-                    pivot_df = pivot_df.rename(columns=meses_nomes_dict)
-                    
-                    for mes in meses_ordem:
-                        if mes not in pivot_df.columns:
-                            pivot_df[mes] = 0.0
-                    
-                    pivot_df = pivot_df[meses_ordem].sort_index()
-                    
-                    pivot_df['Valor Anual'] = pivot_df.sum(axis=1)
-                    pivot_df['Valor Mensal'] = pivot_df['Valor Anual'] / 12
-                    col_order = meses_ordem + ['Valor Mensal', 'Valor Anual']
-                    pivot_df = pivot_df[col_order]
-                    
-                    totais_row = pivot_df.sum(axis=0)
-                    
-                    display_df = pivot_df.copy()
-                    for col in display_df.columns:
-                        display_df[col] = display_df[col].apply(format_provento)
-                    display_df = display_df.reset_index()
-                    display_df['OriginalTicker'] = display_df['ticker']
-                    display_df['ticker'] = display_df['ticker'].apply(format_ticker_for_display)
-                    display_df.rename(columns={'ticker': 'Ativo'}, inplace=True)
-                    
-                    key_df = f"prov_df_{ano}_{st.session_state.refresh_id}"
-                    
-                    cols_right = [col for col in col_order]
-                    
-                    def style_row(row):
-                        is_active = row['OriginalTicker'] in active_tickers
-                        if not is_active and ano == ano_atual:
-                            return ['color: #EF553B'] * len(row)
-                        
-                        colors = []
-                        for col in row.index:
-                            if col == 'Valor Mensal':
-                                colors.append('color: #00CC96')
-                            elif col == 'Valor Anual':
-                                colors.append('color: #3d9df3')
-                            else:
-                                colors.append('')
-                        return colors
+            df_ano = proventos_df[proventos_df['ano'] == ano]
+            pivot_df = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
+            pivot_df = pivot_df.rename(columns=meses_nomes_dict)
+            
+            for mes in meses_ordem:
+                if mes not in pivot_df.columns:
+                    pivot_df[mes] = 0.0
+            
+            pivot_df = pivot_df[meses_ordem].sort_index()
+            
+            pivot_df['Valor Anual'] = pivot_df.sum(axis=1)
+            pivot_df['Valor Mensal'] = pivot_df['Valor Anual'] / 12
+            col_order = meses_ordem + ['Valor Mensal', 'Valor Anual']
+            pivot_df = pivot_df[col_order]
+            
+            totais_row = pivot_df.sum(axis=0)
+            
+            display_df = pivot_df.copy()
+            for col in display_df.columns:
+                display_df[col] = display_df[col].apply(format_provento)
+            display_df = display_df.reset_index()
+            display_df['OriginalTicker'] = display_df['ticker']
+            display_df['ticker'] = display_df['ticker'].apply(format_ticker_for_display)
+            display_df.rename(columns={'ticker': 'Ativo'}, inplace=True)
+            
+            key_df = f"prov_df_{ano}_{st.session_state.refresh_id}"
+            
+            cols_right = [col for col in col_order]
+            
+            def style_row(row):
+                is_active = row['OriginalTicker'] in active_tickers
+                if not is_active and ano == ano_atual:
+                    return ['color: #EF553B'] * len(row)
+                
+                colors = []
+                for col in row.index:
+                    if col == 'Valor Mensal':
+                        colors.append('color: #00CC96')
+                    elif col == 'Valor Anual':
+                        colors.append('color: #3d9df3')
+                    else:
+                        colors.append('')
+                return colors
 
-                    styled_df = display_df.style.apply(style_row, axis=1) \
-                                               .set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
-                                               .set_properties(**{'text-align': 'right'}, subset=cols_right)
+            styled_df = display_df.style.apply(style_row, axis=1) \
+                                       .set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
+                                       .set_properties(**{'text-align': 'right'}, subset=cols_right)
 
-                    selected = st.dataframe(
-                        styled_df,
-                        hide_index=True,
-                        use_container_width=True,
-                        on_select="rerun",
-                        selection_mode="single-row",
-                        column_config={"OriginalTicker": None},
-                        key=key_df
-                    )
+            selected = st.dataframe(
+                styled_df,
+                hide_index=True,
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                column_config={"OriginalTicker": None},
+                key=key_df
+            )
+            
+            if selected.selection.rows:
+                row_idx = selected.selection.rows[0]
+                ticker_selecionado = display_df.iloc[row_idx]['OriginalTicker']
+                st.session_state.editing_provento = {'ano': ano, 'ticker': ticker_selecionado}
+                st.session_state.refresh_id += 1
+                st.rerun()
+
+            st.markdown("""
+                <style>
+                .growth-positive { color: #00CC96 !important; }
+                .growth-negative { color: #EF553B !important; }
+                th { font-weight: normal !important; font-size: 0.85rem; }
+                th:first-child { text-align: center !important; }
+                td { font-size: 0.85rem; }
+                </style>
+            """, unsafe_allow_html=True)
+
+            footer_rows = []
+            
+            # 1. Linha MÊS (Cabeçalho de colunas)
+            mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÊS</div>'}
+            for mes_nome in meses_ordem:
+                mes_row[mes_nome] = f'<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">{mes_nome[:3]}</div>'
+            mes_row['Valor Mensal'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÉDIA</div>'
+            mes_row['Valor Anual'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">TOTAL</div>'
+            footer_rows.append(mes_row)
+
+            # 2. Linha TOTAL
+            tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.85rem;">TOTAL</div>'}
+            for col in col_order:
+                color_total = ''
+                if col == 'Valor Mensal': color_total = 'color: #00CC96;'
+                elif col == 'Valor Anual': color_total = 'color: #3d9df3;'
+                val_fmt = format_provento(totais_row[col])
+                tm_row[col] = f'<div style="text-align: right; font-size: 0.85rem; {color_total}">{val_fmt}</div>'
+            footer_rows.append(tm_row)
+            
+            ano_mais_antigo = min(anos_disponiveis)
+            if ano > ano_mais_antigo:
+                # 3. Linha PERCENTUAL DE CRESCIMENTO
+                prev_year = ano - 1
+                df_prev = proventos_df[proventos_df['ano'] == prev_year]
+                pivot_prev = df_prev.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
+                pivot_prev = pivot_prev.rename(columns=meses_nomes_dict)
+                for mes in meses_ordem:
+                    if mes not in pivot_prev.columns: pivot_prev[mes] = 0.0
+                
+                totais_prev = pivot_prev[meses_ordem].sum(axis=0)
+                res_final_prev = totais_prev.sum()
+                media_prev = res_final_prev / 12
+                
+                totais_prev_full = totais_prev.copy()
+                totais_prev_full['Valor Mensal'] = media_prev
+                totais_prev_full['Valor Anual'] = res_final_prev
+                
+                growth_row = {'MÊS': f'<div style="text-align: center;">{growth_icon_tag}</div>'}
+                for col in col_order:
+                    val_curr = totais_row[col]
+                    val_prev = totais_prev_full[col]
+                    style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
                     
-                    if selected.selection.rows:
-                        row_idx = selected.selection.rows[0]
-                        ticker_selecionado = display_df.iloc[row_idx]['OriginalTicker']
-                        st.session_state.editing_provento = {'ano': ano, 'ticker': ticker_selecionado}
-                        st.session_state.refresh_id += 1
-                        st.rerun()
+                    if st.session_state.get('hide_values', False):
+                        growth_row[col] = f'<div style="{style_val}">••••••</div>'
+                    elif val_prev > 0:
+                        pct = ((val_curr / val_prev) - 1) * 100
+                        color = "#00CC96" if pct >= 0 else "red"
+                        growth_row[col] = f'<div style="color: {color}; {style_val}">{pct:,.2f}%</div>'.replace('.', ',')
+                    else:
+                        growth_row[col] = f'<div style="{style_val}">0,00%</div>'
+                footer_rows.append(growth_row)
 
-                    st.markdown("""
-                        <style>
-                        .growth-positive { color: #00CC96 !important; }
-                        .growth-negative { color: #EF553B !important; }
-                        th { font-weight: normal !important; font-size: 0.85rem; }
-                        th:first-child { text-align: center !important; }
-                        td { font-size: 0.85rem; }
-                        </style>
-                    """, unsafe_allow_html=True)
+                # 4. Linha MÉDIA ACUMULADA
+                avg_ytd_row = {'MÊS': f'<div style="text-align: center; font-size: 0.8rem; white-space: nowrap;">MÉDIA ACUMULADA</div>'}
+                
+                now = pd.Timestamp.now()
+                mes_limite = now.month if ano == ano_atual else 12
+                
+                for i, mes_nome in enumerate(meses_ordem):
+                    if i < mes_limite:
+                        num_meses = i + 1
+                        soma_acumulada = totais_row[meses_ordem[:num_meses]].sum()
+                        media_mes = soma_acumulada / num_meses
+                        val_fmt = format_provento(media_mes)
+                        avg_ytd_row[mes_nome] = f'<div style="font-size: 0.85rem; text-align: right; color: #00CC96;">{val_fmt}</div>'
+                    else:
+                        avg_ytd_row[mes_nome] = ''
+                
+                avg_ytd_row['Valor Mensal'] = ''
+                avg_ytd_row['Valor Anual'] = ''
+                footer_rows.append(avg_ytd_row)
 
-                    footer_rows = []
+            df_footer = pd.DataFrame(footer_rows)
+            st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
+            
+            if ano == ano_atual:
+                st.markdown("")
+                if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}"):
+                    st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
+                    st.rerun()
                     
-                    # 1. Linha MÊS (Cabeçalho de colunas)
-                    mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÊS</div>'}
-                    for mes_nome in meses_ordem:
-                        mes_row[mes_nome] = f'<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">{mes_nome[:3]}</div>'
-                    mes_row['Valor Mensal'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÉDIA</div>'
-                    mes_row['Valor Anual'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">TOTAL</div>'
-                    footer_rows.append(mes_row)
-
-                    # 2. Linha TOTAL
-                    tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.85rem;">TOTAL</div>'}
-                    for col in col_order:
-                        color_total = ''
-                        if col == 'Valor Mensal': color_total = 'color: #00CC96;'
-                        elif col == 'Valor Anual': color_total = 'color: #3d9df3;'
-                        val_fmt = format_provento(totais_row[col])
-                        tm_row[col] = f'<div style="text-align: right; font-size: 0.85rem; {color_total}">{val_fmt}</div>'
-                    footer_rows.append(tm_row)
-                    
-                    ano_mais_antigo = min(anos_disponiveis)
-                    if ano > ano_mais_antigo:
-                        # 3. Linha PERCENTUAL DE CRESCIMENTO
-                        prev_year = ano - 1
-                        df_prev = proventos_df[proventos_df['ano'] == prev_year]
-                        pivot_prev = df_prev.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
-                        pivot_prev = pivot_prev.rename(columns=meses_nomes_dict)
-                        for mes in meses_ordem:
-                            if mes not in pivot_prev.columns: pivot_prev[mes] = 0.0
-                        
-                        totais_prev = pivot_prev[meses_ordem].sum(axis=0)
-                        res_final_prev = totais_prev.sum()
-                        media_prev = res_final_prev / 12
-                        
-                        totais_prev_full = totais_prev.copy()
-                        totais_prev_full['Valor Mensal'] = media_prev
-                        totais_prev_full['Valor Anual'] = res_final_prev
-                        
-                        growth_row = {'MÊS': f'<div style="text-align: center;">{growth_icon_tag}</div>'}
-                        for col in col_order:
-                            val_curr = totais_row[col]
-                            val_prev = totais_prev_full[col]
-                            style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
-                            
-                            if st.session_state.get('hide_values', False):
-                                growth_row[col] = f'<div style="{style_val}">••••••</div>'
-                            elif val_prev > 0:
-                                pct = ((val_curr / val_prev) - 1) * 100
-                                color = "#00CC96" if pct >= 0 else "red"
-                                growth_row[col] = f'<div style="color: {color}; {style_val}">{pct:,.2f}%</div>'.replace('.', ',')
-                            else:
-                                growth_row[col] = f'<div style="{style_val}">0,00%</div>'
-                        footer_rows.append(growth_row)
-
-                        # 4. Linha MÉDIA ACUMULADA
-                        avg_ytd_row = {'MÊS': f'<div style="text-align: center; font-size: 0.8rem; white-space: nowrap;">MÉDIA ACUMULADA</div>'}
-                        
-                        now = pd.Timestamp.now()
-                        mes_limite = now.month if ano == ano_atual else 12
-                        
-                        for i, mes_nome in enumerate(meses_ordem):
-                            if i < mes_limite:
-                                num_meses = i + 1
-                                soma_acumulada = totais_row[meses_ordem[:num_meses]].sum()
-                                media_mes = soma_acumulada / num_meses
-                                val_fmt = format_provento(media_mes)
-                                avg_ytd_row[mes_nome] = f'<div style="font-size: 0.85rem; text-align: right; color: #00CC96;">{val_fmt}</div>'
-                            else:
-                                avg_ytd_row[mes_nome] = ''
-                        
-                        avg_ytd_row['Valor Mensal'] = ''
-                        avg_ytd_row['Valor Anual'] = ''
-                        footer_rows.append(avg_ytd_row)
-
-                    df_footer = pd.DataFrame(footer_rows)
-                    st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
-                    
-                    if ano == ano_atual:
-                        st.markdown("")
-                        if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}"):
-                            st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
-                            st.rerun()
-                            
-                    st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
 
 
