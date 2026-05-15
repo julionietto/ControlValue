@@ -146,8 +146,10 @@ def render_proventos_historico_view():
         else: dialog_editar_provento(edit_data['ano'], edit_data['ticker'], proventos_df)
 
     # ---- Main Table Logic ----
-    anos_disponiveis = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
-    ano = st.selectbox("📅 Selecione o Ano para Detalhamento", anos_disponiveis, key="sel_ano_detalhe")
+    # Seleção de Ano (Reduzida para ~20%)
+    col_sel, col_empty = st.columns([0.2, 0.8])
+    with col_sel:
+        ano = st.selectbox("📅 Selecione o Ano", anos_disponiveis, key="sel_ano_detalhe")
     
     def format_provento(val):
         if st.session_state.get('hide_values', False): return "••••••"
@@ -189,14 +191,16 @@ def render_proventos_historico_view():
         st.session_state.refresh_id += 1
         st.rerun()
 
-    # Footer
-    footer_rows = []
-    mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÊS</div>'}
-    for m in meses_ordem: mes_row[m] = f'<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">{m[:3]}</div>'
-    mes_row['Valor Mensal'], mes_row['Valor Anual'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÉDIA</div>', '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">TOTAL</div>'
+    # 1. Linha MÊS (Títulos)
+    mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.65rem; color: #a1a1aa;">MÊS</div>'}
+    for m in meses_ordem: 
+        mes_row[m] = f'<div style="text-align: center; font-weight: bold; font-size: 0.65rem; color: #a1a1aa;">{m[:3].upper()}</div>'
+    mes_row['Valor Mensal'] = '<div style="text-align: center; font-weight: bold; font-size: 0.65rem; color: #a1a1aa;">MÉDIA</div>'
+    mes_row['Valor Anual'] = '<div style="text-align: center; font-weight: bold; font-size: 0.65rem; color: #a1a1aa;">TOTAL</div>'
     footer_rows.append(mes_row)
 
-    tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.85rem;">TOTAL</div>'}
+    # 2. Linha TOTAL
+    tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.75rem; font-weight: bold;">TOTAL</div>'}
     for col in col_order:
         val_fmt = format_provento(totais_row[col])
         color = 'color: #00CC96;' if col == 'Valor Mensal' else 'color: #3d9df3;' if col == 'Valor Anual' else ''
@@ -223,7 +227,7 @@ def render_proventos_historico_view():
             else: growth_row[col] = '<div style="text-align: right; font-size: 0.85rem;">0,00%</div>'
         footer_rows.append(growth_row)
 
-        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.8rem;">MÉDIA ACUMULADA</div>'}
+        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.65rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
         mes_limite = pd.Timestamp.now().month if ano == pd.Timestamp.now().year else 12
         for i, m in enumerate(meses_ordem):
             if i < mes_limite:
