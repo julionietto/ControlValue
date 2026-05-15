@@ -67,5 +67,3 @@ def render_proventos_resumo_view():
                 st.dataframe(display_us.style.set_properties(**{'text-align': 'center'}, subset=['Ano']).set_properties(**{'text-align': 'right'}, subset=['Valor']), hide_index=True, use_container_width=True)
             else:
                 st.info("Nenhum provento de Stocks ou Reits registrado.")
-    
-    st.stop()

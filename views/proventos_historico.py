@@ -183,7 +183,7 @@ def render_proventos_historico_view():
         column_config={"OriginalTicker": None}, key=f"prov_df_{ano}_{st.session_state.refresh_id}"
     )
     
-    if selected.selection.rows:
+    if selected.selection.rows and not st.session_state.get('editing_provento'):
         row_idx = selected.selection.rows[0]
         st.session_state.editing_provento = {'ano': ano, 'ticker': display_df.iloc[row_idx]['OriginalTicker']}
         st.session_state.refresh_id += 1
@@ -239,4 +239,3 @@ def render_proventos_historico_view():
             st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
             st.rerun()
     st.markdown("<br>", unsafe_allow_html=True)
-    st.stop()

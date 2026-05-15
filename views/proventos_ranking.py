@@ -45,5 +45,3 @@ def render_proventos_ranking_view():
         st.dataframe(ranking_display.style.set_properties(**{'text-align': 'center'}, subset=['Posição', 'Ativo']).set_properties(**{'text-align': 'right'}, subset=['Valor Anual']), hide_index=True, use_container_width=True)
     else:
         st.info(f"Nenhum provento registrado para o ano {ano_selecionado}.")
-    
-    st.stop()
