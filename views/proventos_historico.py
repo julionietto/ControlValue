@@ -250,7 +250,14 @@ def render_proventos_historico_view():
         footer_rows.append(avg_ytd_row)
 
     df_footer = pd.DataFrame(footer_rows)
-    st.write(df_footer.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
+    
+    # Renomeia colunas para o cabeçalho compacto no rodapé
+    rename_dict = {m: m[:3].upper() for m in meses_ordem}
+    rename_dict['Valor Mensal'] = 'VALOR MENSAL'
+    rename_dict['Valor Anual'] = 'VALOR ANUAL'
+    df_footer = df_footer.rename(columns=rename_dict)
+    
+    st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
     if ano == pd.Timestamp.now().year:
         if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}"):
             st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
