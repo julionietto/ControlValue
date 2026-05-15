@@ -35,7 +35,6 @@ try:
     from views.auth import render_auth_view, render_reset_password_view
     from views.admin import render_admin_view
     from views.derivativos import render_derivativos_view
-    from views.proventos import render_proventos_view
     from views.geral import render_visao_geral_view
 
     # Lógica de Autenticação e Timeout
@@ -150,8 +149,15 @@ try:
     current_view = st.session_state.get('navigation_tab', 'Visão Geral')
 
     # Área Principal - Divisão de Telas Baseada na Seleção
-    if current_view == "Proventos" or current_view == "Proventos Recebidos":
-        render_proventos_view()
+    if current_view == "Proventos_Historico":
+        from views.proventos_historico import render_proventos_historico_view
+        render_proventos_historico_view()
+    elif current_view == "Proventos_Resumo":
+        from views.proventos_resumo import render_proventos_resumo_view
+        render_proventos_resumo_view()
+    elif current_view == "Proventos_Ranking":
+        from views.proventos_ranking import render_proventos_ranking_view
+        render_proventos_ranking_view()
 
     if current_view == "Derivativos":
         render_derivativos_view()

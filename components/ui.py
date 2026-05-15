@@ -65,11 +65,23 @@ def render_profile_popover():
                 st.session_state.viewing_history = None
                 st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                 st.rerun()
-            if st.button("Proventos", use_container_width=True):
-                st.session_state.navigation_tab = "Proventos"
-                st.session_state.viewing_history = None
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
+            # --- Grupo de Proventos (Sub-menus) ---
+            with st.expander("💰 Proventos", expanded=st.session_state.get('navigation_tab', '').startswith('Proventos')):
+                if st.button("🗓️ Histórico Mensal", use_container_width=True):
+                    st.session_state.navigation_tab = "Proventos_Historico"
+                    st.session_state.viewing_history = None
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("📊 Resumo Anual", use_container_width=True):
+                    st.session_state.navigation_tab = "Proventos_Resumo"
+                    st.session_state.viewing_history = None
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("🏆 Ranking de Pagadores", use_container_width=True):
+                    st.session_state.navigation_tab = "Proventos_Ranking"
+                    st.session_state.viewing_history = None
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
             if st.button("Derivativos", use_container_width=True):
                 st.session_state.navigation_tab = "Derivativos"
                 st.session_state.viewing_history = None

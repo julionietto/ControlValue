@@ -106,7 +106,6 @@ def init_db():
         import logging
         logging.warning(f"Aviso na atualização do schema: {e}")
 
-    # Tabela de Proventos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS proventos (
             id SERIAL PRIMARY KEY,
@@ -117,6 +116,7 @@ def init_db():
             user_id INTEGER NOT NULL DEFAULT 1
         )
     ''')
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_proventos_user_ano ON proventos (user_id, ano)")
     
     try:
         cursor.execute("SELECT data_type FROM information_schema.columns WHERE table_name='proventos' AND column_name='mes'")
