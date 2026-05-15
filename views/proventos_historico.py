@@ -197,9 +197,9 @@ def render_proventos_historico_view():
         .growth-positive { color: #00CC96 !important; }
         .growth-negative { color: #EF553B !important; }
         th { font-weight: bold !important; font-size: 0.85rem !important; color: #ffffff !important; text-transform: uppercase; border-bottom: 1px solid #31333f !important; }
-        th:first-child { text-align: center !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
+        th:first-child { text-align: center !important; width: 85px !important; min-width: 85px !important; max-width: 85px !important; }
         td { font-size: 0.85rem; vertical-align: middle !important; border-bottom: 1px solid #31333f !important; }
-        td:first-child { font-weight: bold !important; color: #ffffff !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; text-align: center !important; }
+        td:first-child { font-weight: bold !important; color: #ffffff !important; width: 85px !important; min-width: 85px !important; max-width: 85px !important; text-align: center !important; }
         table { border-collapse: collapse !important; width: 100%; border: 1px solid #31333f !important; table-layout: fixed !important; }
         </style>
     """, unsafe_allow_html=True)
@@ -239,7 +239,7 @@ def render_proventos_historico_view():
         footer_rows.append(growth_row)
 
         # 3. Linha MÉDIA ACUMULADA
-        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.85rem; font-weight: bold;">MÉDIA ACUMULADA</div>'}
+        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.80rem; font-weight: bold;">MÉDIA ACUMULADA</div>'}
         mes_limite = pd.Timestamp.now().month if ano == pd.Timestamp.now().year else 12
         for i, m in enumerate(meses_ordem):
             if i < mes_limite:
@@ -250,14 +250,7 @@ def render_proventos_historico_view():
         footer_rows.append(avg_ytd_row)
 
     df_footer = pd.DataFrame(footer_rows)
-    
-    # Renomeia colunas para o cabeçalho compacto
-    rename_dict = {m: m[:3].upper() for m in meses_ordem}
-    rename_dict['Valor Mensal'] = 'Valor Mensal'
-    rename_dict['Valor Anual'] = 'Valor Anual'
-    df_footer = df_footer.rename(columns=rename_dict)
-    
-    st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
+    st.write(df_footer.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
     if ano == pd.Timestamp.now().year:
         if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}"):
             st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
