@@ -237,7 +237,7 @@ def render_proventos_historico_view():
         footer_rows.append(growth_row)
 
         # 3. Linha MÉDIA ACUMULADA
-        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.90rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
+        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 1.10rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
         mes_limite = pd.Timestamp.now().month if ano == pd.Timestamp.now().year else 12
         for i, m in enumerate(meses_ordem):
             if i < mes_limite:
@@ -251,8 +251,8 @@ def render_proventos_historico_view():
     
     # Renomeia colunas para o cabeçalho compacto
     rename_dict = {m: m[:3].upper() for m in meses_ordem}
-    rename_dict['Valor Mensal'] = 'MÉDIA'
-    rename_dict['Valor Anual'] = 'TOTAL'
+    rename_dict['Valor Mensal'] = 'Valor Mensal'
+    rename_dict['Valor Anual'] = 'Valor Anual'
     df_footer = df_footer.rename(columns=rename_dict)
     
     st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
