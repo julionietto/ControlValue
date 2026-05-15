@@ -193,6 +193,7 @@ def render_proventos_historico_view():
         st.rerun()
 
     # 1. Linha MÊS (Títulos)
+    footer_rows = []
     mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.65rem; color: #a1a1aa;">MÊS</div>'}
     for m in meses_ordem: 
         mes_row[m] = f'<div style="text-align: center; font-weight: bold; font-size: 0.65rem; color: #a1a1aa;">{m[:3].upper()}</div>'
