@@ -192,54 +192,70 @@ def render_proventos_historico_view():
         st.session_state.refresh_id += 1
         st.rerun()
 
-    # 1. Linha MÊS (Títulos)
-    footer_rows = []
-    mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.55rem; color: #a1a1aa;">MÊS</div>'}
-    for m in meses_ordem: 
-        mes_row[m] = f'<div style="text-align: center; font-weight: bold; font-size: 0.55rem; color: #a1a1aa;">{m[:3].upper()}</div>'
-    mes_row['Valor Mensal'] = '<div style="text-align: center; font-weight: bold; font-size: 0.55rem; color: #a1a1aa;">MÉDIA</div>'
-    mes_row['Valor Anual'] = '<div style="text-align: center; font-weight: bold; font-size: 0.55rem; color: #a1a1aa;">TOTAL</div>'
-    footer_rows.append(mes_row)
+            st.markdown("""
+                <style>
+                .growth-positive { color: #00CC96 !important; }
+                .growth-negative { color: #EF553B !important; }
+                th { font-weight: bold !important; font-size: 0.55rem !important; color: #a1a1aa !important; text-transform: uppercase; }
+                th:first-child { text-align: center !important; }
+                td { font-size: 0.75rem; }
+                </style>
+            """, unsafe_allow_html=True)
 
-    # 2. Linha TOTAL
-    tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.65rem; font-weight: bold;">TOTAL</div>'}
-    for col in col_order:
-        val_fmt = format_provento(totais_row[col])
-        color = 'color: #00CC96;' if col == 'Valor Mensal' else 'color: #3d9df3;' if col == 'Valor Anual' else ''
-        tm_row[col] = f'<div style="text-align: right; font-size: 0.85rem; {color}">{val_fmt}</div>'
-    footer_rows.append(tm_row)
-    
-    if ano > min(anos_disponiveis):
-        df_prev = proventos_df[proventos_df['ano'] == ano - 1]
-        pivot_prev = df_prev.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0).rename(columns=meses_nomes_dict)
-        for m in meses_ordem:
-            if m not in pivot_prev.columns: pivot_prev[m] = 0.0
-        totais_prev = pivot_prev[meses_ordem].sum(axis=0)
-        tot_prev_full = totais_prev.copy()
-        tot_prev_full['Valor Mensal'], tot_prev_full['Valor Anual'] = totais_prev.sum() / 12, totais_prev.sum()
-        
-        growth_row = {'MÊS': '<div style="text-align: center;">📈</div>'}
-        for col in col_order:
-            val_curr, val_prev = totais_row[col], tot_prev_full[col]
-            if st.session_state.get('hide_values', False): growth_row[col] = '<div style="text-align: right;">••••••</div>'
-            elif val_prev > 0:
-                pct = ((val_curr / val_prev) - 1) * 100
-                color = "#00CC96" if pct >= 0 else "red"
-                growth_row[col] = f'<div style="color: {color}; text-align: right; font-size: 0.85rem;">{pct:,.2f}%</div>'.replace('.', ',')
-            else: growth_row[col] = '<div style="text-align: right; font-size: 0.85rem;">0,00%</div>'
-        footer_rows.append(growth_row)
+            footer_rows = []
+            
+            # 1. Linha TOTAL
+            tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.75rem; font-weight: bold;">TOTAL</div>'}
+            for col in col_order:
+                val_fmt = format_provento(totais_row[col])
+                color = 'color: #00CC96;' if col == 'Valor Mensal' else 'color: #3d9df3;' if col == 'Valor Anual' else ''
+                tm_row[col] = f'<div style="text-align: right; font-size: 0.75rem; {color}">{val_fmt}</div>'
+            footer_rows.append(tm_row)
+            
+            ano_mais_antigo = min(anos_disponiveis)
+            if ano > ano_mais_antigo:
+                # 2. Linha PERCENTUAL DE CRESCIMENTO
+                df_prev = proventos_df[proventos_df['ano'] == ano - 1]
+                pivot_prev = df_prev.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0).rename(columns=meses_nomes_dict)
+                for m in meses_ordem:
+                    if m not in pivot_prev.columns: pivot_prev[m] = 0.0
+                totais_prev = pivot_prev[meses_ordem].sum(axis=0)
+                tot_prev_full = totais_prev.copy()
+                tot_prev_full['Valor Mensal'], tot_prev_full['Valor Anual'] = totais_prev.sum() / 12, totais_prev.sum()
+                
+                growth_row = {'MÊS': f'<div style="text-align: center; font-size: 0.75rem;">📈</div>'}
+                for col in col_order:
+                    val_curr, val_prev = totais_row[col], tot_prev_full[col]
+                    if st.session_state.get('hide_values', False):
+                        growth_row[col] = '<div style="text-align: right; font-size: 0.75rem;">••••••</div>'
+                    elif val_prev > 0:
+                        pct = ((val_curr / val_prev) - 1) * 100
+                        color = "#00CC96" if pct >= 0 else "red"
+                        growth_row[col] = f'<div style="color: {color}; text-align: right; font-size: 0.75rem;">{pct:,.2f}%</div>'.replace('.', ',')
+                    else:
+                        growth_row[col] = '<div style="text-align: right; font-size: 0.75rem;">0,00%</div>'
+                footer_rows.append(growth_row)
 
-        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.55rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
-        mes_limite = pd.Timestamp.now().month if ano == pd.Timestamp.now().year else 12
-        for i, m in enumerate(meses_ordem):
-            if i < mes_limite:
-                media_mes = totais_row[meses_ordem[:i+1]].sum() / (i+1)
-                avg_ytd_row[m] = f'<div style="font-size: 0.85rem; text-align: right; color: #00CC96;">{format_provento(media_mes)}</div>'
-            else: avg_ytd_row[m] = ''
-        avg_ytd_row['Valor Mensal'] = avg_ytd_row['Valor Anual'] = ''
-        footer_rows.append(avg_ytd_row)
+                # 3. Linha MÉDIA ACUMULADA
+                avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.55rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
+                mes_limite = pd.Timestamp.now().month if ano == pd.Timestamp.now().year else 12
+                for i, m in enumerate(meses_ordem):
+                    if i < mes_limite:
+                        media_mes = totais_row[meses_ordem[:i+1]].sum() / (i+1)
+                        avg_ytd_row[m] = f'<div style="font-size: 0.75rem; text-align: right; color: #00CC96;">{format_provento(media_mes)}</div>'
+                    else: avg_ytd_row[m] = ''
+                avg_ytd_row['Valor Mensal'] = avg_ytd_row['Valor Anual'] = ''
+                footer_rows.append(avg_ytd_row)
 
-    st.write(pd.DataFrame(footer_rows).to_html(escape=False, index=False), unsafe_allow_html=True)
+            df_footer = pd.DataFrame(footer_rows)
+            
+            # Renomeia colunas para o cabeçalho compacto
+            rename_dict = {m: m[:3].upper() for m in meses_ordem}
+            rename_dict['Valor Mensal'] = 'MÉDIA'
+            rename_dict['Valor Anual'] = 'TOTAL'
+            df_footer = df_footer.rename(columns=rename_dict)
+            
+            st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
     if ano == pd.Timestamp.now().year:
         if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}"):
             st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
