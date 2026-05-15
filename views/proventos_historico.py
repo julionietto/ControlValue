@@ -196,20 +196,20 @@ def render_proventos_historico_view():
         <style>
         .growth-positive { color: #00CC96 !important; }
         .growth-negative { color: #EF553B !important; }
-        th { font-weight: bold !important; font-size: 0.55rem !important; color: #a1a1aa !important; text-transform: uppercase; }
+        th { font-weight: bold !important; font-size: 0.70rem !important; color: #a1a1aa !important; text-transform: uppercase; }
         th:first-child { text-align: center !important; }
-        td { font-size: 0.75rem; }
+        td { font-size: 0.85rem; vertical-align: middle !important; }
         </style>
     """, unsafe_allow_html=True)
 
     footer_rows = []
-            
+    
     # 1. Linha TOTAL
-    tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.75rem; font-weight: bold;">TOTAL</div>'}
+    tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.80rem; font-weight: bold;">TOTAL</div>'}
     for col in col_order:
         val_fmt = format_provento(totais_row[col])
         color = 'color: #00CC96;' if col == 'Valor Mensal' else 'color: #3d9df3;' if col == 'Valor Anual' else ''
-        tm_row[col] = f'<div style="text-align: right; font-size: 0.75rem; {color}">{val_fmt}</div>'
+        tm_row[col] = f'<div style="text-align: right; font-size: 0.85rem; {color}">{val_fmt}</div>'
     footer_rows.append(tm_row)
     
     ano_mais_antigo = min(anos_disponiveis)
@@ -223,26 +223,26 @@ def render_proventos_historico_view():
         tot_prev_full = totais_prev.copy()
         tot_prev_full['Valor Mensal'], tot_prev_full['Valor Anual'] = totais_prev.sum() / 12, totais_prev.sum()
         
-        growth_row = {'MÊS': f'<div style="text-align: center; font-size: 0.75rem;">📈</div>'}
+        growth_row = {'MÊS': f'<div style="text-align: center; font-size: 0.85rem;">📈</div>'}
         for col in col_order:
             val_curr, val_prev = totais_row[col], tot_prev_full[col]
             if st.session_state.get('hide_values', False):
-                growth_row[col] = '<div style="text-align: right; font-size: 0.75rem;">••••••</div>'
+                growth_row[col] = '<div style="text-align: right; font-size: 0.85rem;">••••••</div>'
             elif val_prev > 0:
                 pct = ((val_curr / val_prev) - 1) * 100
                 color = "#00CC96" if pct >= 0 else "red"
-                growth_row[col] = f'<div style="color: {color}; text-align: right; font-size: 0.75rem;">{pct:,.2f}%</div>'.replace('.', ',')
+                growth_row[col] = f'<div style="color: {color}; text-align: right; font-size: 0.85rem;">{pct:,.2f}%</div>'.replace('.', ',')
             else:
-                growth_row[col] = '<div style="text-align: right; font-size: 0.75rem;">0,00%</div>'
+                growth_row[col] = '<div style="text-align: right; font-size: 0.85rem;">0,00%</div>'
         footer_rows.append(growth_row)
 
         # 3. Linha MÉDIA ACUMULADA
-        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.55rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
+        avg_ytd_row = {'MÊS': '<div style="text-align: center; font-size: 0.65rem; color: #a1a1aa; font-weight: bold;">MÉDIA ACUMULADA</div>'}
         mes_limite = pd.Timestamp.now().month if ano == pd.Timestamp.now().year else 12
         for i, m in enumerate(meses_ordem):
             if i < mes_limite:
                 media_mes = totais_row[meses_ordem[:i+1]].sum() / (i+1)
-                avg_ytd_row[m] = f'<div style="font-size: 0.75rem; text-align: right; color: #00CC96;">{format_provento(media_mes)}</div>'
+                avg_ytd_row[m] = f'<div style="font-size: 0.85rem; text-align: right; color: #00CC96;">{format_provento(media_mes)}</div>'
             else: avg_ytd_row[m] = ''
         avg_ytd_row['Valor Mensal'] = avg_ytd_row['Valor Anual'] = ''
         footer_rows.append(avg_ytd_row)
