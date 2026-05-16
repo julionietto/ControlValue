@@ -95,7 +95,10 @@ def render_proventos_historico_view():
         st.markdown("---")
         mes_key, val_id_key, prev_mes_key = f"me_{ano}_{ticker}", f"vi_{ano}_{ticker}", f"pm_{ano}_{ticker}"
         if val_id_key not in st.session_state: st.session_state[val_id_key] = 0
-        selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key)
+        col_m, col_v = st.columns(2)
+        with col_m:
+            selected_mes_nome = st.selectbox("Mês", meses_ordem, key=mes_key)
+            
         if prev_mes_key not in st.session_state: st.session_state[prev_mes_key] = selected_mes_nome
         elif st.session_state[prev_mes_key] != selected_mes_nome:
             st.session_state[val_id_key] += 1
@@ -104,7 +107,9 @@ def render_proventos_historico_view():
         current_val = df_prov[(df_prov['ano'] == ano) & (df_prov['ticker'] == ticker) & (df_prov['mes'] == selected_mes_num)]
         default_val = float(current_val['valor'].iloc[0]) if not current_val.empty else 0.0
         dynamic_val_key = f"ve_{ano}_{ticker}_{st.session_state[val_id_key]}"
-        novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=dynamic_val_key)
+        
+        with col_v:
+            novo_valor = st.number_input("Valor Recebido (R$)", min_value=0.0, format="%.2f", value=default_val, key=dynamic_val_key)
         
         def clear_state():
             for k in [mes_key, prev_mes_key, val_id_key, 'editing_provento']:
