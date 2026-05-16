@@ -49,8 +49,8 @@ def get_base64_image(image_path):
 def render_profile_popover():
     username_display = st.session_state.get('username', 'Perfil')
     
-    label_suffix = "\u200b" * (st.session_state.get('pop_ctrl', 0) % 2)
-    with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True):
+    pop_key = f"user_popover_{st.session_state.get('pop_ctrl', 0)}"
+    with st.popover(f"👤 {username_display}", use_container_width=True, key=pop_key):
         if st.session_state.get('is_admin', False):
             if st.button("Seu Perfil", use_container_width=True):
                 st.session_state.trigger_dialog_perfil = True
