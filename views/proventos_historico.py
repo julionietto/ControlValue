@@ -146,7 +146,7 @@ def render_proventos_historico_view():
         else: dialog_editar_provento(edit_data['ano'], edit_data['ticker'], proventos_df)
 
     # ---- Main Table Logic ----
-    # Seleção de Ano (Reduzida para ~20%)
+    # Seleção de Ano (Reduzida para ~15%)
     anos_disponiveis = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
     col_sel, col_empty = st.columns([0.15, 0.85])
     with col_sel:
