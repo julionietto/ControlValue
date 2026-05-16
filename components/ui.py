@@ -55,72 +55,72 @@ def render_profile_popover():
     
     with st.container(key=f"pop_container_{pop_ctrl}"):
         with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True, key=pop_key):
-        if st.session_state.get('is_admin', False):
-            if st.button("Seu Perfil", use_container_width=True):
-                st.session_state.trigger_dialog_perfil = True
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            if st.button("Sair", type="primary", use_container_width=True):
-                st.session_state.clear()
-                st.rerun()
-        else:
-            if st.button("Visão Geral", use_container_width=True):
-                st.session_state.navigation_tab = "Visão Geral"
-                st.session_state.viewing_history = None
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            # --- Grupo de Proventos (Sub-menus) ---
-            with st.expander("💰 Proventos", expanded=st.session_state.get('navigation_tab', '').startswith('Proventos')):
-                if st.button("🗓️ Histórico Mensal", use_container_width=True):
-                    st.session_state.navigation_tab = "Proventos_Historico"
+            if st.session_state.get('is_admin', False):
+                if st.button("Seu Perfil", use_container_width=True):
+                    st.session_state.trigger_dialog_perfil = True
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("Sair", type="primary", use_container_width=True):
+                    st.session_state.clear()
+                    st.rerun()
+            else:
+                if st.button("Visão Geral", use_container_width=True):
+                    st.session_state.navigation_tab = "Visão Geral"
                     st.session_state.viewing_history = None
                     st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                     st.rerun()
-                if st.button("📊 Resumo Anual", use_container_width=True):
-                    st.session_state.navigation_tab = "Proventos_Resumo"
+                # --- Grupo de Proventos (Sub-menus) ---
+                with st.expander("💰 Proventos", expanded=st.session_state.get('navigation_tab', '').startswith('Proventos')):
+                    if st.button("🗓️ Histórico Mensal", use_container_width=True):
+                        st.session_state.navigation_tab = "Proventos_Historico"
+                        st.session_state.viewing_history = None
+                        st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                        st.rerun()
+                    if st.button("📊 Resumo Anual", use_container_width=True):
+                        st.session_state.navigation_tab = "Proventos_Resumo"
+                        st.session_state.viewing_history = None
+                        st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                        st.rerun()
+                    if st.button("🏆 Ranking de Pagadores", use_container_width=True):
+                        st.session_state.navigation_tab = "Proventos_Ranking"
+                        st.session_state.viewing_history = None
+                        st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                        st.rerun()
+                if st.button("Derivativos", use_container_width=True):
+                    st.session_state.navigation_tab = "Derivativos"
                     st.session_state.viewing_history = None
                     st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                     st.rerun()
-                if st.button("🏆 Ranking de Pagadores", use_container_width=True):
-                    st.session_state.navigation_tab = "Proventos_Ranking"
-                    st.session_state.viewing_history = None
+                if st.button("Importar Ativos", use_container_width=True):
+                    st.session_state.trigger_dialog_ativos = True
                     st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                     st.rerun()
-            if st.button("Derivativos", use_container_width=True):
-                st.session_state.navigation_tab = "Derivativos"
-                st.session_state.viewing_history = None
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            if st.button("Importar Ativos", use_container_width=True):
-                st.session_state.trigger_dialog_ativos = True
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            if st.button("Importar Proventos", use_container_width=True):
-                st.session_state.trigger_dialog_proventos = True
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            if st.button("Seu Perfil", use_container_width=True):
-                st.session_state.trigger_dialog_perfil = True
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            if st.button("Alocação de Ativos", use_container_width=True):
-                st.session_state.trigger_dialog_alocacao = True
-                st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                st.rerun()
-            if st.button("Sair", type="primary", use_container_width=True):
-                st.session_state.clear()
-                st.rerun()
+                if st.button("Importar Proventos", use_container_width=True):
+                    st.session_state.trigger_dialog_proventos = True
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("Seu Perfil", use_container_width=True):
+                    st.session_state.trigger_dialog_perfil = True
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("Alocação de Ativos", use_container_width=True):
+                    st.session_state.trigger_dialog_alocacao = True
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("Sair", type="primary", use_container_width=True):
+                    st.session_state.clear()
+                    st.rerun()
 
-        try:
-            version = "Versão 1.0.0"
-            if os.path.exists(".version"):
-                with open(".version", "r", encoding="utf-8") as f:
-                    version = f.read().strip()
-            safe_version = escape_html(version)
-            st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #a1a1aa; padding-top: 8px; margin-top: 8px; border-top: 1px solid #27272a;'>{safe_version}</div>", unsafe_allow_html=True)
-        except Exception as e:
-            import logging
-            logging.error(f"Erro ao ler versão: {e}")
+            try:
+                version = "Versão 1.0.0"
+                if os.path.exists(".version"):
+                    with open(".version", "r", encoding="utf-8") as f:
+                        version = f.read().strip()
+                safe_version = escape_html(version)
+                st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #a1a1aa; padding-top: 8px; margin-top: 8px; border-top: 1px solid #27272a;'>{safe_version}</div>", unsafe_allow_html=True)
+            except Exception as e:
+                import logging
+                logging.error(f"Erro ao ler versão: {e}")
 
 def render_top_header(title, subtitle):
     """Renderiza o cabeçalho superior unificado com o logo home, título e perfil."""
