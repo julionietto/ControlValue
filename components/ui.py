@@ -57,13 +57,7 @@ def render_profile_popover():
     pop_ctrl = st.session_state.get('pop_ctrl', 0)
     last_pop_ctrl = st.session_state.get('last_pop_ctrl', 0)
     
-    # Se o controle mudou, significa que uma opção foi clicada.
-    # Forçamos um ciclo sem o popover para garantir que ele feche no frontend.
-    if pop_ctrl != last_pop_ctrl:
-        st.session_state.last_pop_ctrl = pop_ctrl
-        st.button(f"👤 {username_display}", use_container_width=True, disabled=True, key="btn_menu_closing")
-        st.rerun()
-        return
+    st.session_state.last_pop_ctrl = pop_ctrl
 
     label_suffix = "\u200b" * (pop_ctrl % 2)
     with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True, key=f"user_popover_{pop_ctrl}"):
