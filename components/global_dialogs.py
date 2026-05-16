@@ -193,7 +193,20 @@ def dialog_alocacao_ativos():
     })
     
     # Header da "Tabela"
-    st.markdown("---")
+    st.markdown("<hr style='margin: 0.2rem 0;'>", unsafe_allow_html=True)
+    
+    st.markdown("""
+        <style>
+        div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stColumn"]) {
+            gap: 0rem !important;
+        }
+        .stNumberInput {
+            margin-top: -15px !important;
+            margin-bottom: -15px !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     col_h1, col_h2, col_h3 = st.columns([1.2, 1.5, 1])
     col_h1.markdown("**Tipo de Ativo**")
     col_h2.markdown("<div style='text-align: center;'><b>Desejado (%)</b></div>", unsafe_allow_html=True)
@@ -230,12 +243,12 @@ def dialog_alocacao_ativos():
         val_atual = current_allocs_pct.get(db_key, 0.0)
         # Cor vermelha (#EF553B) se o atual for maior que o desejado
         color = "#EF553B" if val_atual > val_desejado else "#a1a1aa"
-        c3.markdown(f"<div style='color: {color}; text-align: center; font-weight: bold; margin-top: 5px;'>{val_atual:.2f}%</div>", unsafe_allow_html=True)
+        c3.markdown(f"<div style='color: {color}; text-align: center; font-weight: bold;'>{val_atual:.2f}%</div>", unsafe_allow_html=True)
 
     # Cálculo da soma das metas
     soma = sum(new_values.values())
     
-    st.markdown("---")
+    st.markdown("<hr style='margin: 0.2rem 0;'>", unsafe_allow_html=True)
     
     color_soma = "green" if soma == 100.0 else "red"
     st.markdown(f"**Soma das Metas:** <span style='color: {color_soma}; font-weight: bold;'>{soma:.2f}%</span>", unsafe_allow_html=True)
