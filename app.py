@@ -105,6 +105,8 @@ try:
         st.session_state.viewing_history = None # Armazena os dados do ativo sendo visualizado
     if 'is_first_load' not in st.session_state:
         st.session_state.is_first_load = True
+    if 'pop_ctrl' not in st.session_state:
+        st.session_state.pop_ctrl = 0
 
     # Lógica de Carga Inicial Obrigatória (Independente de horário)
     if st.session_state.authenticated and st.session_state.get('is_first_load', True):
