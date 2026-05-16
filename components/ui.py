@@ -58,11 +58,10 @@ def render_profile_popover():
     last_pop_ctrl = st.session_state.get('last_pop_ctrl', 0)
     
     # Se o controle mudou, significa que uma opção foi clicada.
-    # Forçamos um ciclo com injeção de JS para fechar o popover (simulando clique fora).
+    # Forçamos um ciclo sem o popover para garantir que ele feche no frontend.
     if pop_ctrl != last_pop_ctrl:
         st.session_state.last_pop_ctrl = pop_ctrl
-        import streamlit.components.v1 as components
-        components.html("<script>window.parent.document.body.click();</script>", height=0)
+        st.button(f"👤 {username_display}", use_container_width=True, disabled=True, key="btn_menu_closing")
         st.rerun()
         return
 
