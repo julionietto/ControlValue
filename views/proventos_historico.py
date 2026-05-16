@@ -9,7 +9,7 @@ from components.ui import render_top_header
 def render_proventos_historico_view():
     render_top_header("🗓️ Histórico Mensal", "Detalhamento de proventos recebidos por ativo e ano.")
     
-    # --- Bloco de Consulta Status Invest ---
+    # --- Bloco de Consulta Investidor10 ---
     col_bt1, col_bt2 = st.columns([2, 1])
     with col_bt2:
         last_sync = db.get_last_sync_log()
@@ -24,10 +24,10 @@ def render_proventos_historico_view():
             sync_msg = f"Última sincronização diária: {sync_dt} ({status_text})"
         st.caption(f"☁️ {sync_msg}")
 
-        if st.button("🔍 Proventos Futuros", key="btn_statusinvest_consult", use_container_width=True):
-            st.session_state.show_statusinvest_results = True
+        if st.button("🔍 Proventos Futuros", key="btn_investidor10_consult", use_container_width=True):
+            st.session_state.show_investidor10_results = True
 
-    if st.session_state.get('show_statusinvest_results'):
+    if st.session_state.get('show_investidor10_results'):
         with st.expander("📅 Proventos Provisionados (Rotina Diária)", expanded=True):
             prov_df = db.get_proventos_provisionados_calculados(st.session_state.user_id)
             if prov_df.empty:
@@ -69,7 +69,7 @@ def render_proventos_historico_view():
                 col_f1, col_f2 = st.columns([1, 1])
                 with col_f1:
                     if st.button("Fechar Tabela", use_container_width=True):
-                        st.session_state.show_statusinvest_results = False
+                        st.session_state.show_investidor10_results = False
                         st.rerun()
                 with col_f2:
                     total_fmt = "R$ ••••••" if is_hidden else f"R$ {total_provisionado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
