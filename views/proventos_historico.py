@@ -146,11 +146,11 @@ def render_proventos_historico_view():
         else: dialog_editar_provento(edit_data['ano'], edit_data['ticker'], proventos_df)
 
     # ---- Main Table Logic ----
-    # Seleção de Ano (Reduzida para ~15%)
+    # Seleção de Ano (Reduzida para ~10%)
     anos_disponiveis = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
-    col_sel, col_empty = st.columns([0.15, 0.85])
+    col_sel, col_empty = st.columns([0.10, 0.90])
     with col_sel:
-        ano = st.selectbox("📅 Selecione o Ano", anos_disponiveis, key="sel_ano_detalhe")
+        ano = st.selectbox("Selecione o Ano", anos_disponiveis, key="sel_ano_detalhe")
     
     def format_provento(val):
         if st.session_state.get('hide_values', False): return "••••••"
