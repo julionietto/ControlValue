@@ -232,8 +232,30 @@ def dialog_adicionar_novo_ativo():
                     """
                     msg_container.markdown(loading_html, unsafe_allow_html=True)
                     time.sleep(1.5)
-                    db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id, asset_type=tipo_manual)
-                    st.success(f"Ativo {nome} ({tipo_manual}) adicionado!")
+                    clean_name = nome.strip().upper()
+                    db.add_or_update_fixed_income_asset(clean_name, saldo, st.session_state.user_id, asset_type=tipo_manual)
+                    
+                    with db.get_db_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT * FROM assets WHERE ticker = %s AND user_id = %s", (clean_name, st.session_state.user_id))
+                        row = cursor.fetchone()
+                        if row:
+                            asset_data = {
+                                'id': row[0],
+                                'ticker': row[1],
+                                'asset_type': row[2],
+                                'quantity': row[3],
+                                'average_price': row[4],
+                                'price_ceiling': row[5],
+                                'fair_value': row[6],
+                                'currency': row[8]
+                            }
+                            asset_data['original_current_price'] = row[4]
+                            asset_data['current_price'] = row[4]
+                            
+                            st.session_state.viewing_history = asset_data
+                            st.session_state.navigation_tab = "Detalhe do Ativo"
+                            st.session_state.scroll_to_top = True
                     st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
