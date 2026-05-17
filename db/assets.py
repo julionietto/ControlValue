@@ -121,7 +121,7 @@ def get_all_asset_histories(user_id):
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
-def add_or_update_fixed_income_asset(ticker, saldo, user_id):
+def add_or_update_fixed_income_asset(ticker, saldo, user_id, asset_type='Renda Fixa'):
     ticker = ticker.upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -131,13 +131,13 @@ def add_or_update_fixed_income_asset(ticker, saldo, user_id):
         if existing_asset:
             asset_id = existing_asset[0]
             cursor.execute(
-                "UPDATE assets SET quantity = 1, average_price = %s, asset_type = 'Renda Fixa' WHERE id = %s AND user_id = %s",
-                (saldo, asset_id, user_id)
+                "UPDATE assets SET quantity = 1, average_price = %s, asset_type = %s WHERE id = %s AND user_id = %s",
+                (saldo, asset_type, asset_id, user_id)
             )
         else:
             cursor.execute(
-                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, 'Renda Fixa', 1, %s, %s)",
-                (ticker, saldo, user_id)
+                "INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, %s, 1, %s, %s)",
+                (ticker, asset_type, saldo, user_id)
             )
         conn.commit()
 
@@ -214,7 +214,7 @@ def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price,
     ticker = ticker.upper()
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        if asset_type == 'Renda Fixa':
+        if asset_type in ['Renda Fixa', 'Fundo CETIP']:
             cursor.execute(
                 "UPDATE assets SET ticker = %s, asset_type = %s, quantity = %s, average_price = %s, price_ceiling = %s, fair_value = %s, currency = %s WHERE id = %s AND user_id = %s",
                 (ticker, asset_type, quantity, average_price, price_ceiling, fair_value, currency, asset_id, user_id)

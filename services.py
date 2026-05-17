@@ -218,6 +218,8 @@ def _fetch_single_sector(ticker, a_type):
         return 'Criptomoedas'
     elif a_type == 'Renda Fixa':
         return 'Renda Fixa'
+    elif a_type == 'Fundo CETIP':
+        return 'Fundo CETIP'
     elif a_type == 'ETF':
         return 'ETF'
     elif a_type == 'Reits':
@@ -291,7 +293,7 @@ def fetch_asset_sectors(df_assets_tuple, is_auto_refresh=False):
         if ticker in sectors:
             continue
             
-        if a_type in ['Cripto', 'Renda Fixa']:
+        if a_type in ['Cripto', 'Renda Fixa', 'Fundo CETIP']:
             sectors[ticker] = _fetch_single_sector(ticker, a_type)
             st.session_state.sector_cache_dict[ticker] = sectors[ticker]
         else:

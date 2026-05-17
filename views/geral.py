@@ -16,6 +16,7 @@ from components.global_dialogs import dialog_importar_ativos, dialog_importar_pr
 from utils.refresh_manager import is_market_open, get_market_status
 
 import datetime
+MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
 @st.dialog("Confirmar Exclusão", dismissible=False)
 def confirm_delete_dialog(asset_id, ticker):
     st.warning(f"Tem certeza que deseja excluir o ativo **{format_ticker_for_display(ticker)}**?")
@@ -180,6 +181,7 @@ def dialog_adicionar_novo_ativo():
     msg_container = st.empty()
     
     if categoria == "Renda Fixa":
+        tipo_manual = st.selectbox("Subtipo", ["Renda Fixa", "Fundo CETIP"])
         saldo = st.number_input("Saldo Atualizado (R$)", min_value=0.0, format="%.2f")
         st.markdown("")
         col1, col2 = st.columns(2)
@@ -199,8 +201,8 @@ def dialog_adicionar_novo_ativo():
                     """
                     msg_container.markdown(loading_html, unsafe_allow_html=True)
                     time.sleep(1.5)
-                    db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id)
-                    st.success(f"Ativo {nome} adicionado!")
+                    db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id, asset_type=tipo_manual)
+                    st.success(f"Ativo {nome} ({tipo_manual}) adicionado!")
                     st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
@@ -238,7 +240,7 @@ def dialog_adicionar_novo_ativo():
                     # Se for renda variável, valida a cotação ANTES de inserir no BD
                     live_native = 0.0
                     live_brl = 0.0
-                    if tipo_inicial != 'Renda Fixa':
+                    if tipo_inicial not in MANUAL_TYPES:
                         ticker_to_fetch = clean_name
                         if tipo_inicial == 'Cripto' and '-' not in clean_name:
                             ticker_to_fetch = f"{clean_name}-USD"
@@ -281,7 +283,7 @@ def dialog_adicionar_novo_ativo():
                                 'currency': row[8]
                             }
                             
-                            if tipo_inicial != 'Renda Fixa':
+                            if tipo_inicial not in MANUAL_TYPES:
                                 asset_data['original_current_price'] = live_native
                                 asset_data['current_price'] = live_brl
 
@@ -313,8 +315,8 @@ def render_visao_geral_view():
             dialog_adicionar_novo_ativo()
     else:
         # Buscar preços atualizados
-        # Para Renda Fixa, MVP: usamos o preço médio como valor atual (sem flutuação de mercado via YF)
-        tickers_to_fetch = assets_df[assets_df['asset_type'] != 'Renda Fixa']['ticker'].unique().tolist()
+        # Para Renda Fixa e Fundo CETIP, MVP: usamos o preço médio como valor atual (sem flutuação de mercado via YF)
+        tickers_to_fetch = assets_df[~assets_df['asset_type'].isin(MANUAL_TYPES)]['ticker'].unique().tolist()
         
         # Mapeamento de tickers para busca no Yahoo Finance
         ticker_fetch_map = {}
@@ -391,7 +393,7 @@ def render_visao_geral_view():
             
         # Alerta de Mercados Fechados
         closed_markets = []
-        if not m_status['BR'] and (tickers_br or assets_df[assets_df['asset_type'] == 'Renda Fixa'].empty == False):
+        if not m_status['BR'] and (tickers_br or assets_df[assets_df['asset_type'].isin(MANUAL_TYPES)].empty == False):
             closed_markets.append("Brasil (B3)")
         if not m_status['US'] and tickers_us:
             closed_markets.append("EUA (NYSE/NASDAQ)")
@@ -413,8 +415,8 @@ def render_visao_geral_view():
         
         # Função para determinar o preco atual na tabela original
         def get_current_price(row):
-            if row['asset_type'] == 'Renda Fixa':
-                return row['average_price']  # MVP Renda Fixa (não sofre variação em tempo real via yahoo)
+            if row['asset_type'] in MANUAL_TYPES:
+                return row['average_price']  # MVP Renda Fixa / Fundo CETIP (não sofre variação em tempo real via yahoo)
             
             # Usa o mapeamento para pegar o preço correto do dicionário
             ticker = row['ticker']
@@ -457,7 +459,7 @@ def render_visao_geral_view():
             base_invested = row['quantity'] * row['average_price_brl']
             base_profit = row['current_value'] - base_invested
             
-            if row['asset_type'] == 'Renda Fixa':
+            if row['asset_type'] in MANUAL_TYPES:
                 return pd.Series({'profit_loss': 0.0, 'total_invested': base_invested})
                 
             if not all_histories_df.empty:
@@ -498,7 +500,7 @@ def render_visao_geral_view():
         # Calcula Percentuais Atuais por Classe para validar "Melhor Compra"
         current_allocs_pct = {}
         if current_total_value > 0:
-            current_allocs_pct['Ações'] = (assets_df[assets_df['asset_type'].isin(['Ações', 'ETF'])]['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Ações'] = (assets_df[assets_df['asset_type'].isin(['Ações', 'ETF', 'Fundo CETIP'])]['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Fiis'] = (assets_df[assets_df['asset_type'] == 'Fiis']['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Criptos'] = (assets_df[assets_df['asset_type'] == 'Cripto']['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Renda Fixa'] = (assets_df[assets_df['asset_type'] == 'Renda Fixa']['current_value'].sum() / current_total_value) * 100
@@ -577,7 +579,7 @@ def render_visao_geral_view():
         display_df['Qtd'] = display_df.apply(format_qty, axis=1)
         
         # Substitui os valores irrelevantes para Renda Fixa por 'N/A'
-        is_rf = display_df['Tipo'] == 'Renda Fixa'
+        is_rf = display_df['Tipo'].isin(MANUAL_TYPES)
         cols_to_na = ['Qtd', 'Preço Médio', 'Preço Atual']
         for col in cols_to_na:
             display_df.loc[is_rf, col] = 'N/A'
@@ -612,7 +614,7 @@ def render_visao_geral_view():
             val_at = asset['current_value']
             
             # Lógica de Orientação
-            if asset['asset_type'] == 'Renda Fixa':
+            if asset['asset_type'] in MANUAL_TYPES:
                 orientation = "COMPRA"
             else:
                 price_ceiling = asset.get('price_ceiling', 0)
@@ -650,7 +652,7 @@ def render_visao_geral_view():
                 if "," in formatted:
                     formatted = formatted.rstrip('0').rstrip(',')
                 return formatted
-            if row['Tipo'] == 'Renda Fixa':
+            if row['Tipo'] in MANUAL_TYPES:
                 return 'N/A'
             return f"{row['Quantidade']:,.0f}".replace(",", ".")
     
@@ -662,7 +664,7 @@ def render_visao_geral_view():
             val = row['Cotação Atual']
             if row['currency'] == 'USD':
                 return f"$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            elif row['Tipo'] == 'Renda Fixa':
+            elif row['Tipo'] in MANUAL_TYPES:
                 return 'N/A'
             else:
                 return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -732,7 +734,7 @@ def render_visao_geral_view():
     
         # Mapeamento do asset_type para a chave de user_targets
         def get_target_class_key(a_type):
-            if a_type in ['Ações', 'ETF']: return 'Ações'
+            if a_type in ['Ações', 'ETF', 'Fundo CETIP']: return 'Ações'
             if a_type == 'Fiis': return 'Fiis'
             if a_type == 'Cripto': return 'Criptos'
             if a_type == 'Renda Fixa': return 'Renda Fixa'
@@ -941,7 +943,7 @@ def render_visao_geral_view():
                         for t in tickers_port:
                             asset_row = all_assets_user[all_assets_user['ticker']==t]
                             if not asset_row.empty:
-                                if asset_row['asset_type'].iloc[0] == 'Renda Fixa':
+                                if asset_row['asset_type'].iloc[0] in MANUAL_TYPES:
                                     continue
                                 tyf = f"{t}-USD" if (asset_row['asset_type'].iloc[0]=='Cripto' and '-' not in t) else t
                                 if tyf not in tickers_for_yf:
@@ -1007,7 +1009,7 @@ def render_visao_geral_view():
                                                     p = p * rate
 
                                                 total_dt += qty_at_dt * p
-                                elif asset['asset_type'] == 'Renda Fixa':
+                                elif asset['asset_type'] in MANUAL_TYPES:
                                     total_dt += float(asset['average_price'])
 
                             portfolio_values.append(total_dt)

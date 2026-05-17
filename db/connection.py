@@ -101,7 +101,7 @@ def init_db():
         if not cursor.fetchone():
             cursor.execute("ALTER TABLE assets ADD COLUMN currency TEXT NOT NULL DEFAULT 'BRL'")
             cursor.execute("UPDATE assets SET currency = 'USD' WHERE asset_type IN ('Stocks', 'Reits')")
-            cursor.execute("UPDATE assets SET currency = 'BRL' WHERE asset_type IN ('Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Cripto')")
+            cursor.execute("UPDATE assets SET currency = 'BRL' WHERE asset_type IN ('Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Cripto', 'Fundo CETIP')")
     except Exception as e:
         import logging
         logging.warning(f"Aviso na atualização do schema: {e}")

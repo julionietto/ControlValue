@@ -7,7 +7,8 @@ import plotly.express as px  # type: ignore # pyrefly: ignore[missing-import]
 import numpy as np  # type: ignore
 import time
 from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type
-from components.ui import create_card, render_top_header
+MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
+from utils.ui import create_card, render_top_header
 
 @st.dialog("Confirmar Exclusão", dismissible=False)
 def confirm_delete_dialog(asset_id, ticker):
@@ -310,7 +311,7 @@ def render_asset_detail_view(asset_data):
     avg_price_native = asset_data.get('average_price', 0.0)
     
     compare_init = price_now_brl if current_type == 'Cripto' else price_now_native
-    init_guidance = "COMPRA" if (current_type == 'Renda Fixa' or compare_init <= price_ceiling) else "AGUARDE"
+    init_guidance = "COMPRA" if (current_type in MANUAL_TYPES or compare_init <= price_ceiling) else "AGUARDE"
     
     col_h1, col_h2 = st.columns([3, 1])
     with col_h1:
@@ -345,7 +346,7 @@ def render_asset_detail_view(asset_data):
         total_ativo = history_df['valor_atualizado'].sum()
         retorno_total = history_df['lucro_prejuizo'].sum()
         total_qtd = history_df['quantity'].sum()
-    elif current_type == 'Renda Fixa':
+    elif current_type in MANUAL_TYPES:
         total_investido = asset_data.get('total_invested', 0.0)
         total_ativo = asset_data.get('current_value', 0.0)
         retorno_total = asset_data.get('profit_loss', 0.0)
@@ -403,10 +404,10 @@ def render_asset_detail_view(asset_data):
     currency_symbol = "$" if current_type in ['Stocks', 'Reits'] else "R$"
     
     with col_p1:
-        asset_types = ["Ações", "Fiis", "ETF", "Cripto", "Reits", "Stocks", "Renda Fixa"]
+        asset_types = ["Ações", "Fiis", "ETF", "Cripto", "Reits", "Stocks", "Renda Fixa", "Fundo CETIP"]
         try: type_idx = asset_types.index(current_type)
         except ValueError: type_idx = 0
-        new_asset_type = st.selectbox("Tipo de Ativo", asset_types, index=type_idx, disabled=(current_type == 'Renda Fixa'))
+        new_asset_type = st.selectbox("Tipo de Ativo", asset_types, index=type_idx, disabled=(current_type in MANUAL_TYPES))
         
     with col_p2:
         new_currency = st.selectbox("Moeda de Origem", ["BRL", "USD"], index=0 if asset_data['currency'] == 'BRL' else 1, help="Moeda em que as operações foram registradas.")
@@ -414,20 +415,20 @@ def render_asset_detail_view(asset_data):
     display_val, display_sym = (price_now_brl, "R$") if asset_data['currency'] == 'BRL' and current_type == 'Cripto' else (price_now_native, currency_symbol)
     
     with col_p3:
-        if current_type == 'Renda Fixa':
+        if current_type in MANUAL_TYPES:
             new_avg_price = st.number_input("Saldo Acumulado (R$)", min_value=0.0, format="%.2f", value=float(avg_price_native))
         else:
             st.text_input("Preço Médio", value=f"{currency_symbol} {avg_price_native:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
             new_avg_price = asset_data.get('average_price', 0.0)
             
-    with col_p4: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type == 'Renda Fixa'))
-    with col_p5: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type == 'Renda Fixa'))
+    with col_p4: new_price_ceiling = st.number_input(f"Preço Teto ({currency_symbol})", min_value=0.0, format="%.2f", value=float(price_ceiling), disabled=(current_type in MANUAL_TYPES))
+    with col_p5: new_fair_value = st.number_input(f"Preço Justo ({currency_symbol})", min_value=0.0, format="%.2f", value=float(fair_value), disabled=(current_type in MANUAL_TYPES))
     with col_p6: st.text_input("Cotação Atual", value=f"{display_sym} {display_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), disabled=True)
 
     with col_p7:
         st.markdown('<div style="padding-top: 28px;"></div>', unsafe_allow_html=True)
         if st.button("Salvar", type="primary", use_container_width=True):
-            if current_type != 'Renda Fixa' and history_df.empty:
+            if current_type not in MANUAL_TYPES and history_df.empty:
                 st.error("É necessário adicionar pelo menos uma operação antes de salvar o ativo.")
             else:
                 db.update_asset(asset_id, st.session_state.user_id, ticker, new_asset_type, asset_data.get('quantity', 0.0), new_avg_price, new_price_ceiling, new_fair_value, currency=new_currency)
@@ -437,7 +438,7 @@ def render_asset_detail_view(asset_data):
                 st.success("Alterações salvas com sucesso!")
                 st.rerun()
             
-    if current_type != 'Renda Fixa':
+    if current_type not in MANUAL_TYPES:
         new_guidance = "COMPRA" if compare_init <= new_price_ceiling else "AGUARDE"
         if new_guidance != init_guidance:
             st.info(f"Nova Orientação baseado no Preço Teto: **{new_guidance}**")
@@ -476,16 +477,16 @@ def render_asset_detail_view(asset_data):
     st.markdown("---")
     col_add, col_prov, col_del, col_voltar = st.columns(4)
     with col_add:
-        if current_type != 'Renda Fixa' and st.button("Adicionar Operação", type="primary", use_container_width=True): dialog_add_operation()
+        if current_type not in MANUAL_TYPES and st.button("Adicionar Operação", type="primary", use_container_width=True): dialog_add_operation()
     with col_prov:
-        if current_type != 'Renda Fixa' and st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker)
+        if current_type not in MANUAL_TYPES and st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker)
     with col_del:
         if st.button("Excluir Ativo", type="secondary", use_container_width=True):
             st.session_state.show_confirm_delete, st.session_state.delete_asset_id, st.session_state.delete_asset_ticker = True, asset_id, ticker
             st.rerun()
     with col_voltar:
         if st.button("Voltar", use_container_width=True):
-            if current_type != 'Renda Fixa' and history_df.empty: db.delete_asset(asset_id, st.session_state.user_id)
+            if current_type not in MANUAL_TYPES and history_df.empty: db.delete_asset(asset_id, st.session_state.user_id)
             st.session_state.viewing_history, st.session_state.navigation_tab = None, "Visão Geral"
             st.session_state.table_key += 1
             st.rerun()
