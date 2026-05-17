@@ -211,10 +211,7 @@ def dialog_adicionar_novo_ativo():
     msg_container = st.empty()
     
     if categoria in ["Renda Fixa", "Fundo CETIP"]:
-        if categoria == "Renda Fixa":
-            tipo_manual = st.selectbox("Subtipo", ["Renda Fixa", "Fundo CETIP"])
-        else:
-            tipo_manual = "Fundo CETIP"
+        tipo_manual = categoria
             
         saldo = st.number_input("Saldo Atualizado (R$)", min_value=0.0, format="%.2f")
         st.markdown("")
