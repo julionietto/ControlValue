@@ -57,6 +57,8 @@ def run_sync():
         for ticker, a_type in unique_tickers.items():
             if a_type is None:
                 a_type = db.infer_asset_type(ticker)
+            if a_type in ['Renda Fixa', 'Fundo CETIP']:
+                continue
             tickers_with_types.append({'ticker': ticker, 'type': a_type})
         print(f"Encontrados {len(tickers_with_types)} ativos únicos para buscar. Iniciando Web Scraper...")
 
@@ -136,6 +138,10 @@ def run_sync():
                     
                     if asset_type is None:
                         asset_type = db.infer_asset_type(db_ticker)
+                    
+                    # Pula se for Renda Fixa ou Fundo CETIP (Ativos Manuais)
+                    if asset_type in ['Renda Fixa', 'Fundo CETIP']:
+                        continue
                     
                     # Converte para BRL se for ativo internacionalizado e aplica retenção de 30% de IR (USA)
                     user_valor = valor
