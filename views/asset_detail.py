@@ -8,7 +8,7 @@ import numpy as np  # type: ignore
 import time
 from utils.formatters import format_ticker_for_display, escape_html, format_brl, infer_asset_type
 MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
-from utils.ui import create_card, render_top_header
+from components.ui import create_card, render_top_header
 
 @st.dialog("Confirmar Exclusão", dismissible=False)
 def confirm_delete_dialog(asset_id, ticker):
