@@ -163,8 +163,45 @@ def dialog_fiis_by_class(selected_class, chart_df):
 
 @st.dialog("Adicionar novo ativo", dismissible=False)
 def dialog_adicionar_novo_ativo():
-    categoria = st.radio("Selecione a Categoria", ["Renda Variável", "Renda Fixa"], horizontal=True)
-    nome = st.text_input("Nome do Ativo")
+    # Pergunta de confirmação de CETIP se falhar busca de cotação online
+    if st.session_state.get('cetip_question_ticker'):
+        ticker_duvida = st.session_state.cetip_question_ticker
+        raw_name = st.session_state.get('cetip_raw_name', '')
+        st.warning(f"⚠️ O ativo informado ('{ticker_duvida}') não foi localizado como Renda Variável nas bolsas públicas (B3/NYSE).")
+        st.markdown(f"**O ativo '{raw_name}' é um fundo de investimentos do tipo CETIP (ativo não listado na B3 ou NYSE)?**")
+        
+        col_yes, col_no = st.columns(2)
+        with col_yes:
+            if st.button("SIM", type="primary", use_container_width=True):
+                st.session_state.prefill_cetip_name = raw_name
+                st.session_state.prefill_cetip_category = "Fundo CETIP"
+                st.session_state.cetip_question_ticker = None
+                st.session_state.cetip_raw_name = None
+                st.rerun()
+        with col_no:
+            if st.button("NÃO", type="secondary", use_container_width=True):
+                st.session_state.prefill_cetip_name = ""
+                st.session_state.prefill_cetip_category = "Renda Variável"
+                st.session_state.cetip_question_ticker = None
+                st.session_state.cetip_raw_name = None
+                st.rerun()
+        return
+
+    # Determina categoria padrão
+    cat_options = ["Renda Variável", "Renda Fixa", "Fundo CETIP"]
+    cat_index = 0
+    if st.session_state.get('prefill_cetip_category') in cat_options:
+        cat_index = cat_options.index(st.session_state.prefill_cetip_category)
+        st.session_state.prefill_cetip_category = None
+        
+    categoria = st.radio("Selecione a Categoria", cat_options, index=cat_index, horizontal=True)
+    
+    # Determina o nome do ativo padrão
+    default_name = st.session_state.get('prefill_cetip_name', "")
+    if default_name:
+        st.session_state.prefill_cetip_name = None
+        
+    nome = st.text_input("Nome do Ativo", value=default_name)
     
     # Campo de Moeda (v1.2.1) - Obrigatório para Renda Variável
     moeda_default = 0 # BRL
@@ -180,8 +217,12 @@ def dialog_adicionar_novo_ativo():
     moeda = st.selectbox("Moeda de Origem", ["BRL", "USD"], index=moeda_default, help="Selecione a moeda em que você registra suas operações para este ativo.")
     msg_container = st.empty()
     
-    if categoria == "Renda Fixa":
-        tipo_manual = st.selectbox("Subtipo", ["Renda Fixa", "Fundo CETIP"])
+    if categoria in ["Renda Fixa", "Fundo CETIP"]:
+        if categoria == "Renda Fixa":
+            tipo_manual = st.selectbox("Subtipo", ["Renda Fixa", "Fundo CETIP"])
+        else:
+            tipo_manual = "Fundo CETIP"
+            
         saldo = st.number_input("Saldo Atualizado (R$)", min_value=0.0, format="%.2f")
         st.markdown("")
         col1, col2 = st.columns(2)
@@ -260,8 +301,9 @@ def dialog_adicionar_novo_ativo():
                         
                         if live_native <= 0.0:
                             msg_container.empty()
-                            st.error(f"É possível que o ativo informado ('{clean_name}') não exista. Por favor, digite o código do ativo novamente.")
-                            st.stop()
+                            st.session_state.cetip_question_ticker = clean_name
+                            st.session_state.cetip_raw_name = nome
+                            st.rerun()
                             
                     # Adiciona ou recupera o ativo
                     db.add_empty_asset(clean_name, tipo_inicial, st.session_state.user_id, currency=moeda)
