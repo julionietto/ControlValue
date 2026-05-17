@@ -161,31 +161,35 @@ def dialog_fiis_by_class(selected_class, chart_df):
         st.rerun()
 
 
+@st.dialog("Confirmação de Fundo CETIP", dismissible=False)
+def dialog_cetip_question():
+    ticker_duvida = st.session_state.get('cetip_question_ticker', '')
+    raw_name = st.session_state.get('cetip_raw_name', '')
+    st.warning(f"⚠️ O ativo informado ('{ticker_duvida}') não foi localizado como Renda Variável nas bolsas públicas (B3/NYSE).")
+    st.markdown(f"**O ativo '{raw_name}' é um fundo de investimentos do tipo CETIP (ativo não listado na B3 ou NYSE)?**")
+    
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("SIM", type="primary", use_container_width=True):
+            st.session_state.prefill_cetip_name = raw_name
+            st.session_state.prefill_cetip_category = "Fundo CETIP"
+            st.session_state.show_cetip_question = False
+            st.session_state.cetip_question_ticker = None
+            st.session_state.cetip_raw_name = None
+            st.session_state.show_add_asset_dialog = True
+            st.rerun()
+    with col_no:
+        if st.button("NÃO", type="secondary", use_container_width=True):
+            st.session_state.prefill_cetip_name = ""
+            st.session_state.prefill_cetip_category = "Renda Variável"
+            st.session_state.show_cetip_question = False
+            st.session_state.cetip_question_ticker = None
+            st.session_state.cetip_raw_name = None
+            st.session_state.show_add_asset_dialog = True
+            st.rerun()
+
 @st.dialog("Adicionar novo ativo", dismissible=False)
 def dialog_adicionar_novo_ativo():
-    # Pergunta de confirmação de CETIP se falhar busca de cotação online
-    if st.session_state.get('cetip_question_ticker'):
-        ticker_duvida = st.session_state.cetip_question_ticker
-        raw_name = st.session_state.get('cetip_raw_name', '')
-        st.warning(f"⚠️ O ativo informado ('{ticker_duvida}') não foi localizado como Renda Variável nas bolsas públicas (B3/NYSE).")
-        st.markdown(f"**O ativo '{raw_name}' é um fundo de investimentos do tipo CETIP (ativo não listado na B3 ou NYSE)?**")
-        
-        col_yes, col_no = st.columns(2)
-        with col_yes:
-            if st.button("SIM", type="primary", use_container_width=True):
-                st.session_state.prefill_cetip_name = raw_name
-                st.session_state.prefill_cetip_category = "Fundo CETIP"
-                st.session_state.cetip_question_ticker = None
-                st.session_state.cetip_raw_name = None
-                st.rerun()
-        with col_no:
-            if st.button("NÃO", type="secondary", use_container_width=True):
-                st.session_state.prefill_cetip_name = ""
-                st.session_state.prefill_cetip_category = "Renda Variável"
-                st.session_state.cetip_question_ticker = None
-                st.session_state.cetip_raw_name = None
-                st.rerun()
-        return
 
     # Determina categoria padrão
     cat_options = ["Renda Variável", "Renda Fixa", "Fundo CETIP"]
@@ -303,6 +307,7 @@ def dialog_adicionar_novo_ativo():
                             msg_container.empty()
                             st.session_state.cetip_question_ticker = clean_name
                             st.session_state.cetip_raw_name = nome
+                            st.session_state.show_cetip_question = True
                             st.rerun()
                             
                     # Adiciona ou recupera o ativo
@@ -345,6 +350,14 @@ def dialog_adicionar_novo_ativo():
 # Inicializa o banco de dados
 
 def render_visao_geral_view():
+    # Gatilhos de Diálogos baseados em Estado
+    if st.session_state.get('show_add_asset_dialog', False):
+        st.session_state.show_add_asset_dialog = False
+        dialog_adicionar_novo_ativo()
+        
+    if st.session_state.get('show_cetip_question', False):
+        dialog_cetip_question()
+
     # HEADER INTERNALIZED - This forces a native scroll reset on navigation
     render_top_header("Ativos Financeiros", "Controle de investimentos e análise de performance em tempo real.")
 
@@ -354,7 +367,8 @@ def render_visao_geral_view():
     if assets_df.empty:
         st.info("O seu portfólio está vazio no momento. Comece adicionando o seu primeiro ativo!")
         if st.button("Adicionar novo ativo", type="primary", key="btn_add_first_asset"):
-            dialog_adicionar_novo_ativo()
+            st.session_state.show_add_asset_dialog = True
+            st.rerun()
     else:
         # Buscar preços atualizados
         # Para Renda Fixa e Fundo CETIP, MVP: usamos o preço médio como valor atual (sem flutuação de mercado via YF)
@@ -767,7 +781,8 @@ def render_visao_geral_view():
         # Botão Adicionar novo ativo
         st.markdown("")
         if st.button("Adicionar novo ativo", type="primary", use_container_width=False):
-            dialog_adicionar_novo_ativo()
+            st.session_state.show_add_asset_dialog = True
+            st.rerun()
     
         st.markdown("---")
     
