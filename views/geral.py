@@ -172,7 +172,7 @@ def dialog_cetip_question():
     with col_yes:
         if st.button("SIM", type="primary", use_container_width=True):
             st.session_state.new_asset_name_input = raw_name
-            st.session_state.prefill_cetip_category = "Fundo CETIP"
+            st.session_state.new_asset_category_radio = "Fundo CETIP"
             st.session_state.show_cetip_question = False
             st.session_state.cetip_question_ticker = None
             st.session_state.cetip_raw_name = None
@@ -181,7 +181,7 @@ def dialog_cetip_question():
     with col_no:
         if st.button("NÃO", type="secondary", use_container_width=True):
             st.session_state.new_asset_name_input = ""
-            st.session_state.prefill_cetip_category = "Renda Variável"
+            st.session_state.new_asset_category_radio = "Renda Variável"
             st.session_state.show_cetip_question = False
             st.session_state.cetip_question_ticker = None
             st.session_state.cetip_raw_name = None
@@ -191,14 +191,8 @@ def dialog_cetip_question():
 @st.dialog("Adicionar novo ativo", dismissible=False)
 def dialog_adicionar_novo_ativo():
 
-    # Determina categoria padrão
     cat_options = ["Renda Variável", "Renda Fixa", "Fundo CETIP"]
-    cat_index = 0
-    if st.session_state.get('prefill_cetip_category') in cat_options:
-        cat_index = cat_options.index(st.session_state.prefill_cetip_category)
-        st.session_state.prefill_cetip_category = None
-        
-    categoria = st.radio("Selecione a Categoria", cat_options, index=cat_index, horizontal=True)
+    categoria = st.radio("Selecione a Categoria", cat_options, key="new_asset_category_radio", horizontal=True)
     
     nome = st.text_input("Nome do Ativo", key="new_asset_name_input")
     
@@ -363,6 +357,7 @@ def render_visao_geral_view():
         st.info("O seu portfólio está vazio no momento. Comece adicionando o seu primeiro ativo!")
         if st.button("Adicionar novo ativo", type="primary", key="btn_add_first_asset"):
             st.session_state.new_asset_name_input = ""
+            st.session_state.new_asset_category_radio = "Renda Variável"
             st.session_state.show_add_asset_dialog = True
             st.rerun()
     else:
@@ -778,6 +773,7 @@ def render_visao_geral_view():
         st.markdown("")
         if st.button("Adicionar novo ativo", type="primary", use_container_width=False):
             st.session_state.new_asset_name_input = ""
+            st.session_state.new_asset_category_radio = "Renda Variável"
             st.session_state.show_add_asset_dialog = True
             st.rerun()
     
