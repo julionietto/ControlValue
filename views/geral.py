@@ -243,15 +243,11 @@ def dialog_adicionar_novo_ativo():
                     time.sleep(1.5)
                     db.add_or_update_fixed_income_asset(nome, saldo, st.session_state.user_id, asset_type=tipo_manual)
                     st.success(f"Ativo {nome} ({tipo_manual}) adicionado!")
-                    if 'new_asset_name_input' in st.session_state:
-                        st.session_state.new_asset_name_input = ""
                     st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
-                if 'new_asset_name_input' in st.session_state:
-                    st.session_state.new_asset_name_input = ""
                 st.rerun()
     else:
         st.info("Ativos brasileiros (Ações/Fiis) recebem o sufixo .SA automaticamente. Para Stocks/Reits/Cripto, digite o ticker completo.")
@@ -336,15 +332,11 @@ def dialog_adicionar_novo_ativo():
                             st.session_state.viewing_history = asset_data
                             st.session_state.navigation_tab = "Detalhe do Ativo"
                             st.session_state.scroll_to_top = True
-                            if 'new_asset_name_input' in st.session_state:
-                                st.session_state.new_asset_name_input = ""
                             st.rerun()
                 else:
                     st.error("Informe o nome do ativo.")
         with col2:
             if st.button("Cancelar", use_container_width=True):
-                if 'new_asset_name_input' in st.session_state:
-                    st.session_state.new_asset_name_input = ""
                 st.rerun()
 
 
@@ -370,6 +362,7 @@ def render_visao_geral_view():
     if assets_df.empty:
         st.info("O seu portfólio está vazio no momento. Comece adicionando o seu primeiro ativo!")
         if st.button("Adicionar novo ativo", type="primary", key="btn_add_first_asset"):
+            st.session_state.new_asset_name_input = ""
             st.session_state.show_add_asset_dialog = True
             st.rerun()
     else:
@@ -784,6 +777,7 @@ def render_visao_geral_view():
         # Botão Adicionar novo ativo
         st.markdown("")
         if st.button("Adicionar novo ativo", type="primary", use_container_width=False):
+            st.session_state.new_asset_name_input = ""
             st.session_state.show_add_asset_dialog = True
             st.rerun()
     
