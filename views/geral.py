@@ -814,8 +814,9 @@ def render_visao_geral_view():
         # 1. Preço atual < Preço Teto
         # 2. A classe do ativo está ABAIXO da meta de alocação (%)
         def is_eligible(row):
-            if row['original_current_price'] >= row['price_ceiling']:
-                return False
+            if row['asset_type'] not in MANUAL_TYPES:
+                if row['original_current_price'] >= row['price_ceiling']:
+                    return False
             
             target_key = get_target_class_key(row['asset_type'])
             if target_key:
@@ -825,7 +826,7 @@ def render_visao_geral_view():
             return False
             
         any_eligible = False
-        full_radar_df = assets_df[assets_df['asset_type'].isin(['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits'])].copy()
+        full_radar_df = assets_df[assets_df['asset_type'].isin(['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits', 'Renda Fixa', 'Fundo CETIP'])].copy()
         if not full_radar_df.empty:
             full_radar_df['eligible'] = full_radar_df.apply(is_eligible, axis=1)
             any_eligible = full_radar_df['eligible'].any()
@@ -882,11 +883,11 @@ def render_visao_geral_view():
         if has_us_assets:
             col_radar1, col_radar2 = st.columns(2)
             with col_radar1:
-                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF'], assets_df, user_targets, current_allocs_pct)
+                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP'], assets_df, user_targets, current_allocs_pct)
             with col_radar2:
                 show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df, user_targets, current_allocs_pct)
         else:
-            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF'], assets_df, user_targets, current_allocs_pct)
+            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP'], assets_df, user_targets, current_allocs_pct)
     
     
         # Gráficos
