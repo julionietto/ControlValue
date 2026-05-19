@@ -190,8 +190,11 @@ def render_proventos_historico_view():
         for col in row.index:
             col_styles = []
             
+            # Destaca os valores do mês atual com fonte laranja (se ano corrente)
+            if is_current_year and col == current_month_name:
+                col_styles.append('color: #FFA726; font-weight: bold;')
             # Cor da fonte/texto para inativos (ano corrente) ou colorização padrão
-            if not is_active and is_current_year:
+            elif not is_active and is_current_year:
                 col_styles.append('color: #EF553B')
             else:
                 if col == 'Valor Mensal':
@@ -199,10 +202,6 @@ def render_proventos_historico_view():
                 elif col == 'Valor Anual':
                     col_styles.append('color: #3d9df3')
             
-            # Cor de preenchimento verde para o mês corrente do ano corrente
-            if is_current_year and col == current_month_name:
-                col_styles.append('background-color: #00CC96; color: white; font-weight: bold;')
-                
             styles.append('; '.join(col_styles))
         return styles
 
