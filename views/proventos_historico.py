@@ -207,7 +207,13 @@ def render_proventos_historico_view():
 
     col_config = {"OriginalTicker": None}
     for col in col_order:
-        col_config[col] = st.column_config.Column(alignment="right")
+        try:
+            col_config[col] = st.column_config.Column(alignment="right")
+        except (TypeError, AttributeError, Exception):
+            try:
+                col_config[col] = st.column_config.TextColumn(alignment="right")
+            except (TypeError, AttributeError, Exception):
+                col_config[col] = st.column_config.Column()
 
     selected = st.dataframe(
         display_df.style.apply(style_row, axis=1).set_properties(**{'text-align': 'right'}, subset=col_order),
