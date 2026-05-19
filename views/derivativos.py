@@ -194,7 +194,7 @@ def render_derivativos_view():
     opcoes_df = db.get_opcoes(st.session_state.user_id)
     
     if opcoes_df.empty:
-        st.info("Nenhum dado de Opções registrado. Por favor, importe o arquivo Opcoes.tsv no Menu de Perfil -> Importar Dados.")
+        st.info("Nenhum derivativo registrado para essa conta.")
         if st.button("Adicionar Opção", type="primary"):
             dialog_add_opcao()
     else:
