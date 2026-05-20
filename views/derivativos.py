@@ -209,7 +209,7 @@ def render_derivativos_view():
         display_df['Cobertura PUT'] = display_df.apply(
             lambda row: row['quantidade'] * row['strike'] if row['tp_opcao'] == 'PUT' else None, axis=1
         )
-        display_df['Oper'] = display_df['tipo_operacao'].apply(lambda x: 'C' if x == 'COMPRA' else 'V')
+        display_df['Oper'] = display_df['tipo_operacao'].apply(lambda x: 'Compra' if x == 'COMPRA' else 'Venda')
         
         # Lógica para tratar campos legados vs novos
         display_df['Vl Operação'] = display_df['resultado'].fillna(display_df['vl_premio'])
