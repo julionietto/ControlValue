@@ -209,7 +209,7 @@ def render_derivativos_view():
         display_df['Cobertura PUT'] = display_df.apply(
             lambda row: row['quantidade'] * row['strike'] if row['tp_opcao'] == 'PUT' else None, axis=1
         )
-        display_df['OP'] = display_df['tipo_operacao'].apply(lambda x: 'C' if x == 'COMPRA' else 'V')
+        display_df['Oper'] = display_df['tipo_operacao'].apply(lambda x: 'C' if x == 'COMPRA' else 'V')
         
         # Lógica para tratar campos legados vs novos
         display_df['Vl Operação'] = display_df['resultado'].fillna(display_df['vl_premio'])
@@ -237,7 +237,7 @@ def render_derivativos_view():
         ordem_colunas = [
             'id', 'Ativo', 'Cotação Atual', 'Strike', 'Diferença', 'Tp Opção', 
             'Dt Operação', 'Dt Vencimento', 'Derivativo', 'Saldo Qtd', 
-            'Vl Opção', 'Vl Operação', 'OP', 'Taxa', 'Cobertura PUT', 'Status'
+            'Vl Opção', 'Vl Operação', 'Oper', 'Taxa', 'Cobertura PUT', 'Status'
         ]
         display_df = display_df[ordem_colunas]
         
@@ -326,19 +326,28 @@ def render_derivativos_view():
         if not is_hidden:
             styled_df = styled_df.format({'Taxa': '{:.2%}'})
             
-        styled_df = styled_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tp Opção', 'OP', 'Dt Operação', 'Dt Vencimento', 'Status']) \
-            .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Diferença', 'Strike', 'Saldo Qtd', 'Vl Opção', 'Vl Operação', 'Cobertura PUT', 'Taxa'])
+        styled_df = styled_df.set_properties(**{'text-align': 'center'})
         
+        col_config = {
+            "id": None,
+            "diff_num": None
+        }
+        for col in [c for c in ordem_colunas if c not in ['id', 'diff_num']]:
+            try:
+                col_config[col] = st.column_config.Column(alignment="center")
+            except (TypeError, AttributeError, Exception):
+                try:
+                    col_config[col] = st.column_config.TextColumn(alignment="center")
+                except (TypeError, AttributeError, Exception):
+                    col_config[col] = st.column_config.Column()
+
         selected_opcao = st.dataframe(
             styled_df, 
             use_container_width=True, 
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",
-            column_config={
-                "id": None,
-                "diff_num": None
-            },
+            column_config=col_config,
             key=f"opcoes_table_{st.session_state.refresh_id}"
         )
         
