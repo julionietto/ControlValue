@@ -206,7 +206,10 @@ def render_derivativos_view():
         
         display_df['Diferença'] = display_df['Cotação Atual'] - display_df['strike']
         display_df['Taxa'] = display_df['vl_opcao'] / display_df['strike']
-        display_df['Cobertura PUT'] = display_df['quantidade'] * display_df['strike']
+        display_df['Cobertura PUT'] = display_df.apply(
+            lambda row: row['quantidade'] * row['strike'] if row['tp_opcao'] == 'PUT' else None, axis=1
+        )
+        display_df['OP'] = display_df['tipo_operacao'].apply(lambda x: 'C' if x == 'COMPRA' else 'V')
         
         # Lógica para tratar campos legados vs novos
         display_df['Vl Operação'] = display_df['resultado'].fillna(display_df['vl_premio'])
@@ -234,7 +237,7 @@ def render_derivativos_view():
         ordem_colunas = [
             'id', 'Ativo', 'Cotação Atual', 'Strike', 'Diferença', 'Tp Opção', 
             'Dt Operação', 'Dt Vencimento', 'Derivativo', 'Saldo Qtd', 
-            'Vl Opção', 'Vl Operação', 'Taxa', 'Cobertura PUT', 'Status'
+            'Vl Opção', 'Vl Operação', 'OP', 'Taxa', 'Cobertura PUT', 'Status'
         ]
         display_df = display_df[ordem_colunas]
         
@@ -275,6 +278,8 @@ def render_derivativos_view():
         
         is_hidden = st.session_state.get('hide_values', False)
         def safe_format_brl(val):
+            if pd.isna(val) or val is None or val == "":
+                return ""
             return "R$ ••••••" if is_hidden else format_brl(val)
             
         display_df['Cotação Atual'] = display_df['Cotação Atual'].apply(safe_format_brl)
@@ -321,7 +326,7 @@ def render_derivativos_view():
         if not is_hidden:
             styled_df = styled_df.format({'Taxa': '{:.2%}'})
             
-        styled_df = styled_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tp Opção', 'Dt Operação', 'Dt Vencimento', 'Status']) \
+        styled_df = styled_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tp Opção', 'OP', 'Dt Operação', 'Dt Vencimento', 'Status']) \
             .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Diferença', 'Strike', 'Saldo Qtd', 'Vl Opção', 'Vl Operação', 'Cobertura PUT', 'Taxa'])
         
         selected_opcao = st.dataframe(
