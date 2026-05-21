@@ -511,15 +511,33 @@ def render_asset_detail_view(asset_data):
         if is_us_asset:
             display_hist['Preço'] = history_df['unit_price'].apply(lambda x: format_details_val(x))
             display_hist['Valor Operação'] = (history_df['quantity'] * history_df['unit_price']).apply(lambda x: format_details_val(x))
-            display_hist['% Ganho'] = (((price_now_native / history_df['unit_price']) - 1) * 100).apply(lambda x: f"{x:,.2f}%".replace('.', ','))
-            display_hist['Vlr Atualizado'] = (history_df['quantity'] * price_now_native).apply(lambda x: format_details_val(x))
-            display_hist['Lucro/Prej'] = ((history_df['quantity'] * price_now_native) - (history_df['quantity'] * history_df['unit_price'])).apply(lambda x: format_details_val(x))
+            display_hist['% Ganho'] = history_df.apply(
+                lambda row: f"{(((price_now_native / row['unit_price']) - 1) * 100):,.2f}%".replace('.', ',') if row['quantity'] > 0 else "-",
+                axis=1
+            )
+            display_hist['Vlr Atualizado'] = history_df.apply(
+                lambda row: format_details_val(row['quantity'] * price_now_native) if row['quantity'] > 0 else "-",
+                axis=1
+            )
+            display_hist['Lucro/Prej'] = history_df.apply(
+                lambda row: format_details_val((row['quantity'] * price_now_native) - (row['quantity'] * row['unit_price'])) if row['quantity'] > 0 else "-",
+                axis=1
+            )
         else:
             display_hist['Preço'] = history_df['unit_price_brl'].apply(format_brl)
             display_hist['Valor Operação'] = history_df['valor_operacao'].apply(format_brl)
-            display_hist['% Ganho'] = history_df['ganho_pct'].apply(lambda x: f"{x:,.2f}%".replace('.', ','))
-            display_hist['Vlr Atualizado'] = history_df['valor_atualizado'].apply(format_brl)
-            display_hist['Lucro/Prej'] = history_df['lucro_prejuizo'].apply(format_brl)
+            display_hist['% Ganho'] = history_df.apply(
+                lambda row: f"{row['ganho_pct']:,.2f}%".replace('.', ',') if row['quantity'] > 0 else "-",
+                axis=1
+            )
+            display_hist['Vlr Atualizado'] = history_df.apply(
+                lambda row: format_brl(row['valor_atualizado']) if row['quantity'] > 0 else "-",
+                axis=1
+            )
+            display_hist['Lucro/Prej'] = history_df.apply(
+                lambda row: format_brl(row['lucro_prejuizo']) if row['quantity'] > 0 else "-",
+                axis=1
+            )
         
         display_hist = display_hist.reset_index().rename(columns={'index': 'op_idx'})
         styled_hist = display_hist.style.set_properties(**{'text-align': 'center'}, subset=['Data', 'Operação', 'Qtd']) \
