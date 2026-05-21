@@ -92,7 +92,7 @@ def get_crypto_ticker(ticker):
     return ticker
 
 @st.dialog("Histórico de Proventos", dismissible=False)
-def dialog_consultar_proventos(ticker):
+def dialog_consultar_proventos(ticker, history_df=None, total_qtd=0.0):
     import db
     st.markdown(f"**Proventos de:** `{ticker}`")
     prov_df = db.get_proventos(st.session_state.user_id)
@@ -101,8 +101,27 @@ def dialog_consultar_proventos(ticker):
     # [v1.2.5] Filtrar registros com valor zerado
     prov_df = prov_df[prov_df['valor'] > 0]
     
+    # Filtrar pelo período de existência na carteira
+    if history_df is not None and not history_df.empty and not prov_df.empty:
+        history_dates = pd.to_datetime(history_df['date'])
+        min_date = history_dates.min()
+        year_min, month_min = min_date.year, min_date.month
+        
+        prov_df = prov_df[
+            (prov_df['ano'] > year_min) | 
+            ((prov_df['ano'] == year_min) & (prov_df['mes'] >= month_min))
+        ]
+        
+        if abs(total_qtd) < 1e-5 and not prov_df.empty:
+            max_date = history_dates.max()
+            year_max, month_max = max_date.year, max_date.month
+            prov_df = prov_df[
+                (prov_df['ano'] < year_max) | 
+                ((prov_df['ano'] == year_max) & (prov_df['mes'] <= month_max))
+            ]
+            
     if prov_df.empty:
-        st.info("Nenhum provento recebido registrado para este ativo.")
+        st.info("Nenhum provento recebido registrado para este ativo no período de sua existência na carteira.")
     else:
         # Ordenação por data (Mês/Ano)
         meses_nomes_dict = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
@@ -342,17 +361,49 @@ def render_asset_detail_view(asset_data):
         history_df['lucro_prejuizo'] = history_df['valor_atualizado'] - history_df['valor_operacao']
         history_df['ganho_pct'] = ((price_now_brl / history_df['unit_price_brl']) - 1) * 100
         
-        total_investido = history_df['valor_operacao'].sum()
-        total_ativo = history_df['valor_atualizado'].sum()
-        retorno_total = history_df['lucro_prejuizo'].sum()
         total_qtd = history_df['quantity'].sum()
+        if abs(total_qtd) < 1e-5:
+            total_investido = 0.0
+            total_ativo = 0.0
+        else:
+            total_investido = history_df['valor_operacao'].sum()
+            total_ativo = history_df['valor_atualizado'].sum()
+        retorno_total = history_df['lucro_prejuizo'].sum()
     elif current_type in MANUAL_TYPES:
         total_investido = asset_data.get('total_invested', 0.0)
         total_ativo = asset_data.get('current_value', 0.0)
         retorno_total = asset_data.get('profit_loss', 0.0)
         total_qtd = asset_data.get('quantity', 0.0)
+        if abs(total_qtd) < 1e-5:
+            total_investido = 0.0
+            total_ativo = 0.0
         
-    total_proventos = db.get_total_proventos_by_ticker(ticker, st.session_state.user_id)
+    # Calcular total de proventos recebidos no período de existência
+    prov_df = db.get_proventos(st.session_state.user_id)
+    if not prov_df.empty and ticker in prov_df['ticker'].values:
+        prov_df = prov_df[prov_df['ticker'] == ticker].copy()
+        prov_df = prov_df[prov_df['valor'] > 0]
+        
+        if not history_df.empty:
+            history_dates = pd.to_datetime(history_df['date'])
+            min_date = history_dates.min()
+            year_min, month_min = min_date.year, min_date.month
+            
+            prov_df = prov_df[
+                (prov_df['ano'] > year_min) | 
+                ((prov_df['ano'] == year_min) & (prov_df['mes'] >= month_min))
+            ]
+            
+            if abs(total_qtd) < 1e-5 and not prov_df.empty:
+                max_date = history_dates.max()
+                year_max, month_max = max_date.year, max_date.month
+                prov_df = prov_df[
+                    (prov_df['ano'] < year_max) | 
+                    ((prov_df['ano'] == year_max) & (prov_df['mes'] <= month_max))
+                ]
+        total_proventos = prov_df['valor'].sum()
+    else:
+        total_proventos = 0.0
     is_us_asset = current_type in ['Stocks', 'Reits']
     display_symbol = "$" if is_us_asset else "R$"
     
@@ -368,8 +419,12 @@ def render_asset_detail_view(asset_data):
         return f"{display_symbol} {fmt}" if show_symbol else fmt
 
     if is_us_asset:
-        total_investido_native = (history_df['quantity'] * history_df['unit_price']).sum() if not history_df.empty else 0.0
-        total_ativo_native = (history_df['quantity'] * price_now_native).sum() if not history_df.empty else (total_qtd * price_now_native)
+        if abs(total_qtd) < 1e-5:
+            total_investido_native = 0.0
+            total_ativo_native = 0.0
+        else:
+            total_investido_native = (history_df['quantity'] * history_df['unit_price']).sum() if not history_df.empty else 0.0
+            total_ativo_native = (history_df['quantity'] * price_now_native).sum() if not history_df.empty else (total_qtd * price_now_native)
         retorno_total_native = total_ativo_native - total_investido_native
         total_proventos_usd = total_proventos / usd_to_brl_rate if usd_to_brl_rate > 0 else 0.0
         retorno_total_com_prov_native = retorno_total_native + total_proventos_usd
@@ -479,7 +534,7 @@ def render_asset_detail_view(asset_data):
     with col_add:
         if current_type not in MANUAL_TYPES and st.button("Adicionar Operação", type="primary", use_container_width=True): dialog_add_operation()
     with col_prov:
-        if current_type not in MANUAL_TYPES and st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker)
+        if current_type not in MANUAL_TYPES and st.button("Consultar Proventos", use_container_width=True): dialog_consultar_proventos(ticker, history_df, total_qtd)
     with col_del:
         if st.button("Excluir Ativo", type="secondary", use_container_width=True):
             st.session_state.show_confirm_delete, st.session_state.delete_asset_id, st.session_state.delete_asset_ticker = True, asset_id, ticker
