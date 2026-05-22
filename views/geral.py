@@ -838,7 +838,7 @@ def render_visao_geral_view():
             return False
             
         any_eligible = False
-        full_radar_df = assets_df[assets_df['asset_type'].isin(['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits', 'Renda Fixa', 'Fundo CETIP'])].copy()
+        full_radar_df = assets_df[(assets_df['asset_type'].isin(['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits', 'Renda Fixa', 'Fundo CETIP'])) & (assets_df['quantity'] > 1e-5) & (assets_df['current_value'] > 1e-5)].copy()
         if not full_radar_df.empty:
             full_radar_df['eligible'] = full_radar_df.apply(is_eligible, axis=1)
             any_eligible = full_radar_df['eligible'].any()
@@ -848,7 +848,7 @@ def render_visao_geral_view():
 
         def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct):
             st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;'>{title}</h3>", unsafe_allow_html=True)
-            radar_df = df[(df['asset_type'].isin(asset_types)) & (df['quantity'] > 1e-5)].copy()
+            radar_df = df[(df['asset_type'].isin(asset_types)) & (df['quantity'] > 1e-5) & (df['current_value'] > 1e-5)].copy()
             
             if not radar_df.empty:
                 # Ordena por valor total do ativo na carteira de forma crescente
@@ -946,7 +946,7 @@ def render_visao_geral_view():
                 if current_total_value > 0:
                     # O Plotly/Streamlit não emite eventos on_select para gráficos de pizza.
                     # Utilizando um gráfico de barras horizontais (Treemap/Bar) para suportar a interatividade
-                    bar_df = assets_df.groupby('asset_type', as_index=False)['current_value'].sum()
+                    bar_df = assets_df[assets_df['current_value'] > 1e-5].groupby('asset_type', as_index=False)['current_value'].sum()
                     bar_df = bar_df.sort_values('current_value', ascending=True)
                     
                     bar_df['percentual'] = (bar_df['current_value'] / current_total_value) * 100
@@ -983,7 +983,7 @@ def render_visao_geral_view():
                 
             with col_g2:
                 if current_total_value > 0:
-                    plot_df = assets_df.copy()
+                    plot_df = assets_df[(assets_df['quantity'] > 1e-5) & (assets_df['current_value'] > 1e-5)].copy()
                     plot_df['ticker_display'] = plot_df['ticker'].apply(format_ticker_for_display)
                     fig_asset = px.pie(plot_df, values='current_value', names='ticker_display', title='Por Ativo Específico', hole=0.4)
                     st.plotly_chart(fig_asset, use_container_width=True)
@@ -1208,7 +1208,7 @@ def render_visao_geral_view():
                 st.info("Adicione ativos para visualizar o gráfico de performance.")
                     
         with tab_setores:
-            rv_assets = assets_df[assets_df['asset_type'] != 'Renda Fixa']
+            rv_assets = assets_df[(assets_df['asset_type'] != 'Renda Fixa') & (assets_df['quantity'] > 1e-5) & (assets_df['current_value'] > 1e-5)]
             if not rv_assets.empty and total_renda_variavel > 0:
                 sector_df = rv_assets.groupby('sector')['current_value'].sum().reset_index()
                 sector_df['percent'] = (sector_df['current_value'] / total_renda_variavel) * 100
@@ -1239,7 +1239,7 @@ def render_visao_geral_view():
                 
         if tab_us:
             with tab_us:
-                us_assets = assets_df[assets_df['asset_type'].isin(['Stocks', 'Reits'])]
+                us_assets = assets_df[(assets_df['asset_type'].isin(['Stocks', 'Reits'])) & (assets_df['quantity'] > 1e-5) & (assets_df['current_value'] > 1e-5)]
                 if not us_assets.empty and us_assets['current_value'].sum() > 0:
                     us_df = us_assets.groupby('ticker')['current_value'].sum().reset_index()
                     us_df = us_df.sort_values(by='current_value', ascending=False)
@@ -1296,96 +1296,102 @@ def render_visao_geral_view():
                     st.info("Nenhum ativo do tipo Stocks ou Reits encontrado no portfólio.")
         with tab_fii:
             fii_assets = assets_df[assets_df['asset_type'] == 'Fiis'].copy()
-            if not fii_assets.empty and fii_assets['current_value'].sum() > 0:
-                # Lógica para Recebíveis x Tijolos
-                def classify_fii(row):
-                    ticker = row['ticker']
-                    sector = row['sector']
-                    
-                    # Regras específicas conforme solicitado
-                    if ticker in ['KNCA11.SA', 'MCRE11.SA']:
-                        return 'Recebíveis'
+            if not fii_assets.empty:
+                # Para distribuição por ticker, segmento e recebíveis x tijolos, removemos os ativos zerados
+                fii_assets_active = fii_assets[(fii_assets['quantity'] > 1e-5) & (fii_assets['current_value'] > 1e-5)].copy()
+                
+                if not fii_assets_active.empty and fii_assets_active['current_value'].sum() > 0:
+                    # Lógica para Recebíveis x Tijolos
+                    def classify_fii(row):
+                        ticker = row['ticker']
+                        sector = row['sector']
                         
-                    recebiveis_types = ['Recebíveis', 'Hedge Funds', 'Papel / Crédito']
-                    if sector in recebiveis_types:
-                        return 'Recebíveis'
-                    return 'Tijolo'
-                
-                fii_assets['classe'] = fii_assets.apply(classify_fii, axis=1)
-                
-                # Lógica Especial para KNHF11 (60% Recebíveis / 40% Tijolo)
-                chart_df = fii_assets.copy()
-                knhf_mask = chart_df['ticker'] == 'KNHF11.SA'
-                if knhf_mask.any():
-                    knhf_data = chart_df[knhf_mask].iloc[0]
-                    # Remove original
-                    chart_df = chart_df[~knhf_mask]
-                    # Adiciona 60% Recebíveis
-                    row_rec = knhf_data.copy()
-                    row_rec['current_value'] = knhf_data['current_value'] * 0.6
-                    row_rec['classe'] = 'Recebíveis'
-                    # Adiciona 40% Tijolo
-                    row_tij = knhf_data.copy()
-                    row_tij['current_value'] = knhf_data['current_value'] * 0.4
-                    row_tij['classe'] = 'Tijolo'
+                        # Regras específicas conforme solicitado
+                        if ticker in ['KNCA11.SA', 'MCRE11.SA']:
+                            return 'Recebíveis'
+                            
+                        recebiveis_types = ['Recebíveis', 'Hedge Funds', 'Papel / Crédito']
+                        if sector in recebiveis_types:
+                            return 'Recebíveis'
+                        return 'Tijolo'
                     
-                    chart_df = pd.concat([chart_df, pd.DataFrame([row_rec, row_tij])], ignore_index=True)
-    
-                col_fii1, col_fii2, col_fii3 = st.columns(3)
-                with col_fii1:
-                    fii_assets['ticker_display'] = fii_assets['ticker'].apply(format_ticker_for_display)
-                    fig_fii = px.pie(
-                        fii_assets, 
-                        values='current_value', 
-                        names='ticker_display', 
-                        title='Distribuição por Ticker', 
-                        hole=0.4
-                    )
-                    st.plotly_chart(fig_fii, use_container_width=True)
-                with col_fii2:
-                    fii_sect_df = fii_assets.groupby('sector')['current_value'].sum().reset_index()
-                    fig_fii_sect = px.bar(
-                        fii_sect_df, 
-                        x='sector',
-                        y='current_value', 
-                        title='Distribuição por Segmento', 
-                        text_auto='.2s'
-                    )
-                    fig_fii_sect.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Segmento", yaxis_title="")
-                    event_fii_sect = st.plotly_chart(fig_fii_sect, use_container_width=True, on_select="rerun", key="bar_fii_sect")
+                    fii_assets_active['classe'] = fii_assets_active.apply(classify_fii, axis=1)
                     
-                    if event_fii_sect and event_fii_sect.selection and event_fii_sect.selection.points:
-                        selected_sector = event_fii_sect.selection.points[0].get("x", "")
-                        if selected_sector and st.session_state.get('last_fii_sect_selection') != selected_sector:
-                            st.session_state.sector_dialog_handled = False
-                            st.session_state.last_fii_sect_selection = selected_sector
-                        if not st.session_state.get('sector_dialog_handled'):
-                            dialog_assets_by_sector(selected_sector, fii_assets)
-                with col_fii3:
-                    class_df = chart_df.groupby('classe')['current_value'].sum().reset_index()
-                    total_fii_value = class_df['current_value'].sum()
-                    class_df['percent'] = (class_df['current_value'] / total_fii_value) * 100 if total_fii_value > 0 else 0
-                    
-                    fig_fii_class = px.bar(
-                        class_df, 
-                        x='classe',
-                        y='percent', 
-                        title='Recebíveis x Tijolos (%)', 
-                        color='classe',
-                        color_discrete_map={'Tijolo': '#00CC96', 'Recebíveis': '#636EFA'},
-                        text_auto='.1f'
-                    )
-                    fig_fii_class.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Classe", yaxis_title="Percentual (%)")
-                    fig_fii_class.update_traces(texttemplate='%{y:.1f}%', textposition='outside')
-                    event_fii_class = st.plotly_chart(fig_fii_class, use_container_width=True, on_select="rerun", key="bar_fii_class")
-                    
-                    if event_fii_class and event_fii_class.selection and event_fii_class.selection.points:
-                        selected_class = event_fii_class.selection.points[0].get("x", "")
-                        if selected_class and st.session_state.get('last_fii_class_selection') != selected_class:
-                            st.session_state.fii_class_dialog_handled = False
-                            st.session_state.last_fii_class_selection = selected_class
-                        if not st.session_state.get('fii_class_dialog_handled'):
-                            dialog_fiis_by_class(selected_class, chart_df)
+                    # Lógica Especial para KNHF11 (60% Recebíveis / 40% Tijolo)
+                    chart_df = fii_assets_active.copy()
+                    knhf_mask = chart_df['ticker'] == 'KNHF11.SA'
+                    if knhf_mask.any():
+                        knhf_data = chart_df[knhf_mask].iloc[0]
+                        # Remove original
+                        chart_df = chart_df[~knhf_mask]
+                        # Adiciona 60% Recebíveis
+                        row_rec = knhf_data.copy()
+                        row_rec['current_value'] = knhf_data['current_value'] * 0.6
+                        row_rec['classe'] = 'Recebíveis'
+                        # Adiciona 40% Tijolo
+                        row_tij = knhf_data.copy()
+                        row_tij['current_value'] = knhf_data['current_value'] * 0.4
+                        row_tij['classe'] = 'Tijolo'
+                        
+                        chart_df = pd.concat([chart_df, pd.DataFrame([row_rec, row_tij])], ignore_index=True)
+        
+                    col_fii1, col_fii2, col_fii3 = st.columns(3)
+                    with col_fii1:
+                        fii_assets_active['ticker_display'] = fii_assets_active['ticker'].apply(format_ticker_for_display)
+                        fig_fii = px.pie(
+                            fii_assets_active, 
+                            values='current_value', 
+                            names='ticker_display', 
+                            title='Distribuição por Ticker', 
+                            hole=0.4
+                        )
+                        st.plotly_chart(fig_fii, use_container_width=True)
+                    with col_fii2:
+                        fii_sect_df = fii_assets_active.groupby('sector')['current_value'].sum().reset_index()
+                        fig_fii_sect = px.bar(
+                            fii_sect_df, 
+                            x='sector',
+                            y='current_value', 
+                            title='Distribuição por Segmento', 
+                            text_auto='.2s'
+                        )
+                        fig_fii_sect.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Segmento", yaxis_title="")
+                        event_fii_sect = st.plotly_chart(fig_fii_sect, use_container_width=True, on_select="rerun", key="bar_fii_sect")
+                        
+                        if event_fii_sect and event_fii_sect.selection and event_fii_sect.selection.points:
+                            selected_sector = event_fii_sect.selection.points[0].get("x", "")
+                            if selected_sector and st.session_state.get('last_fii_sect_selection') != selected_sector:
+                                st.session_state.sector_dialog_handled = False
+                                st.session_state.last_fii_sect_selection = selected_sector
+                            if not st.session_state.get('sector_dialog_handled'):
+                                dialog_assets_by_sector(selected_sector, fii_assets_active)
+                    with col_fii3:
+                        class_df = chart_df.groupby('classe')['current_value'].sum().reset_index()
+                        total_fii_value = class_df['current_value'].sum()
+                        class_df['percent'] = (class_df['current_value'] / total_fii_value) * 100 if total_fii_value > 0 else 0
+                        
+                        fig_fii_class = px.bar(
+                            class_df, 
+                            x='classe',
+                            y='percent', 
+                            title='Recebíveis x Tijolos (%)', 
+                            color='classe',
+                            color_discrete_map={'Tijolo': '#00CC96', 'Recebíveis': '#636EFA'},
+                            text_auto='.1f'
+                        )
+                        fig_fii_class.update_layout(clickmode='event+select', showlegend=False, xaxis_title="Classe", yaxis_title="Percentual (%)")
+                        fig_fii_class.update_traces(texttemplate='%{y:.1f}%', textposition='outside')
+                        event_fii_class = st.plotly_chart(fig_fii_class, use_container_width=True, on_select="rerun", key="bar_fii_class")
+                        
+                        if event_fii_class and event_fii_class.selection and event_fii_class.selection.points:
+                            selected_class = event_fii_class.selection.points[0].get("x", "")
+                            if selected_class and st.session_state.get('last_fii_class_selection') != selected_class:
+                                st.session_state.fii_class_dialog_handled = False
+                                st.session_state.last_fii_class_selection = selected_class
+                            if not st.session_state.get('fii_class_dialog_handled'):
+                                dialog_fiis_by_class(selected_class, chart_df)
+                else:
+                    st.info("Nenhum Fundo Imobiliário ativo no portfólio no momento.")
                 
                 st.markdown("---")
                 # NOVO GRÁFICO: Proventos Fiis
@@ -1447,9 +1453,8 @@ def render_visao_geral_view():
                     st.plotly_chart(fig_fii_ret, use_container_width=True)
                 else:
                     st.info("Nenhum dado suficiente para calcular o retorno total dos FIIs.")
-                    
             else:
-                st.info("Nenhum Fundo Imobiliário (Fiis) encontrado no portfólio.")
+                st.info("Nenhum Fundo Imobiliário (Fiis) encontrado no histórico.")
     
         with tab_passiva:
             # Gráficos de Renda Passiva
