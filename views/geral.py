@@ -71,7 +71,7 @@ def confirm_delete_operation_dialog(op_data, asset_id):
 def dialog_assets_by_type(selected_type, assets_df):
     st.markdown(f"### Ativos na Categoria: {selected_type}")
     
-    filtered_df = assets_df[assets_df['asset_type'] == selected_type].copy()
+    filtered_df = assets_df[(assets_df['asset_type'] == selected_type) & (assets_df['quantity'] > 1e-5)].copy()
     
     if filtered_df.empty:
         st.info("Nenhum ativo encontrado nesta categoria.")
@@ -104,7 +104,7 @@ def dialog_assets_by_type(selected_type, assets_df):
 def dialog_assets_by_sector(selected_sector, assets_df):
     st.markdown(f"<h3 style='text-align: center;'>Ativos no Setor: {selected_sector}</h3>", unsafe_allow_html=True)
     
-    filtered_df = assets_df[assets_df['sector'] == selected_sector].copy()
+    filtered_df = assets_df[(assets_df['sector'] == selected_sector) & (assets_df['quantity'] > 1e-5)].copy()
     
     if filtered_df.empty:
         st.info("Nenhum ativo encontrado neste setor.")
@@ -526,6 +526,8 @@ def render_visao_geral_view():
             base_profit = row['current_value'] - base_invested
             
             if row['asset_type'] in MANUAL_TYPES:
+                if abs(row['quantity']) < 1e-5:
+                    return pd.Series({'profit_loss': 0.0, 'total_invested': 0.0})
                 return pd.Series({'profit_loss': 0.0, 'total_invested': base_invested})
                 
             if not all_histories_df.empty:
@@ -534,6 +536,8 @@ def render_visao_geral_view():
                 history_df = pd.DataFrame()
             
             if history_df.empty:
+                if abs(row['quantity']) < 1e-5:
+                    return pd.Series({'profit_loss': 0.0, 'total_invested': 0.0})
                 return pd.Series({'profit_loss': base_profit, 'total_invested': base_invested})
                 
             def convert_to_brl(val):
@@ -546,6 +550,12 @@ def render_visao_geral_view():
             history_df['valor_atualizado'] = history_df['quantity'] * row['current_price']
             history_df['lucro_prejuizo'] = history_df['valor_atualizado'] - history_df['valor_operacao']
             
+            if abs(row['quantity']) < 1e-5:
+                return pd.Series({
+                    'profit_loss': history_df['lucro_prejuizo'].sum(),
+                    'total_invested': 0.0
+                })
+            
             return pd.Series({
                 'profit_loss': history_df['lucro_prejuizo'].sum(),
                 'total_invested': history_df['valor_operacao'].sum()
@@ -554,7 +564,7 @@ def render_visao_geral_view():
         totals_df = assets_df.apply(calculate_asset_totals, axis=1)
         assets_df['profit_loss'] = totals_df['profit_loss']
         assets_df['total_invested'] = totals_df['total_invested']
-        assets_df['profit_loss_pct'] = (assets_df['profit_loss'] / assets_df['total_invested']) * 100
+        assets_df['profit_loss_pct'] = (assets_df['profit_loss'] / assets_df['total_invested'] * 100).fillna(0.0).replace([float('inf'), float('-inf')], 0.0)
     
         # Resumo Geral
         total_invested = assets_df['total_invested'].sum()
@@ -675,6 +685,8 @@ def render_visao_geral_view():
         all_rows = []
         
         for _, asset in assets_df.iterrows():
+            if abs(asset['quantity']) < 1e-5:
+                continue
             # Para todos os ativos, usamos a linha consolidada original do assets_df
             val_op = asset['total_invested']
             val_at = asset['current_value']
@@ -836,7 +848,7 @@ def render_visao_geral_view():
 
         def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct):
             st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;'>{title}</h3>", unsafe_allow_html=True)
-            radar_df = df[df['asset_type'].isin(asset_types)].copy()
+            radar_df = df[(df['asset_type'].isin(asset_types)) & (df['quantity'] > 1e-5)].copy()
             
             if not radar_df.empty:
                 # Ordena por valor total do ativo na carteira de forma crescente
