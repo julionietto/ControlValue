@@ -57,6 +57,9 @@ def generate_or_update_doc(diff_text, file_path, doc_context=""):
     Caminho do arquivo de documentação a ser escrito: {file_path}
     O arquivo existe atualmente? {'Sim' if file_exists else 'Não'}
     
+    DIRETRIZ DE CONTEXTO ADICIONAL PARA ESTE ARQUIVO:
+    {doc_context or 'Nenhuma diretriz especial.'}
+    
     CONTEÚDO ATUAL DA DOCUMENTAÇÃO (se aplicável):
     \"\"\"
     {current_content}
@@ -118,11 +121,26 @@ def main():
     # Criar pasta /docs se não existir
     os.makedirs("docs", exist_ok=True)
     
-    # 2. Atualizar README.md principal
-    generate_or_update_doc(diff, "README.md")
+    # 2. Atualizar README.md principal (Técnico / Setup)
+    generate_or_update_doc(
+        diff, 
+        "README.md",
+        doc_context="Foque na perspectiva técnica do projeto, incluindo requisitos de ambiente, inicialização de banco de dados e execução dos scripts de pipeline."
+    )
     
-    # 3. Atualizar docs/architecture.md
-    generate_or_update_doc(diff, "docs/architecture.md")
+    # 3. Atualizar docs/architecture.md (Técnico / Arquitetural)
+    generate_or_update_doc(
+        diff, 
+        "docs/architecture.md",
+        doc_context="Foque na perspectiva técnica da arquitetura, incluindo fluxo de dados, estrutura de diretórios e o funcionamento dos agentes autônomos."
+    )
+    
+    # 4. Atualizar docs/manual_do_usuario.md (Usuário Leigo / Negócio)
+    generate_or_update_doc(
+        diff, 
+        "docs/manual_do_usuario.md", 
+        doc_context="Este é um Manual do Usuário voltado para pessoas leigas. NÃO inclua termos de programação, instalações de console, scripts ou banco de dados. Foque em explicar novas funcionalidades ou mudanças visuais na perspectiva do usuário final de negócio do app Streamlit."
+    )
     
     print("[Doc Agent] Processo de documentação concluído com sucesso!")
 

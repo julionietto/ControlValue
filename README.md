@@ -1,6 +1,3 @@
-Aqui está a documentação `README.md` atualizada:
-
-```markdown
 # Agente de Auto Deploy e Orquestrador de CI/CD (Multi-Agente)
 
 Este projeto apresenta um sistema avançado de Continuous Integration/Continuous Deployment (CI/CD) orquestrado por um agente principal, `auto_push.py`. Utilizando inteligência artificial (Gemini API) e uma arquitetura multi-agente, ele automatiza o processo de versionamento semântico, geração de mensagens de commit, execução de testes e atualização de documentação antes de realizar o commit e push das alterações para o repositório.
@@ -13,7 +10,7 @@ Este projeto apresenta um sistema avançado de Continuous Integration/Continuous
     *   Cria e gerencia o arquivo `.version` automaticamente, iniciando em `1.0.0` se não existir.
 *   **Geração de Mensagens de Commit por IA:** A inteligência artificial é empregada para gerar mensagens de commit concisas, claras e padronizadas, que incluem a nova versão do projeto.
 *   **Integração com Agente de Testes:** Antes de qualquer commit, o orquestrador invoca um `test_agent.py` para executar os testes do projeto. Se os testes falharem, o processo de deploy é abortado, garantindo a integridade do código.
-*   **Integração com Agente de Documentação:** Após os testes, um `doc_agent.py` é executado para criar ou atualizar automaticamente a documentação do projeto, incluindo o `README.md`, um manual do usuário (`docs/manual_do_usuario.md`) e a documentação da arquitetura (`docs/architecture.md`), mantendo-a sempre alinhada com as alterações de código.
+*   **Integração com Agente de Documentação:** Após os testes, um `doc_agent.py` é executado para criar ou atualizar automaticamente a documentação do projeto. Este agente agora utiliza **diretrizes de contexto específicas** para cada tipo de documento, garantindo que o `README.md` mantenha um foco técnico, `docs/architecture.md` detalhe a estrutura e o fluxo do sistema, e `docs/manual_do_usuario.md` seja adaptado para um público leigo, explicando funcionalidades e mudanças visuais de forma acessível. Isso assegura que a documentação esteja sempre alinhada, precisa e adequada ao seu público-alvo.
 *   **Compatibilidade Aprimorada:** Inclui configurações para forçar a codificação UTF-8 no console, resolvendo potenciais problemas de caracteres em ambientes Windows.
 *   **Processo de Deploy Robusto:** Automatiza `git add`, `git commit` e `git push` para simplificar o fluxo de trabalho do desenvolvedor.
 
@@ -87,7 +84,7 @@ Você verá o progresso e as decisões da IA sendo impressas no console.
 *   `.version`: Arquivo de controle de versão semântica.
 *   `requirements.txt`: Lista de dependências Python.
 *   `test_agent.py`: Responsável pela execução dos testes do projeto, utilizando `pytest`. Em caso de falha, a IA pode fornecer um diagnóstico e sugestões de correção.
-*   `doc_agent.py`: Responsável pela criação e atualização automatizada da documentação do projeto, incluindo o `README.md`, o manual do usuário (`docs/manual_do_usuario.md`) e a documentação da arquitetura (`docs/architecture.md`), mantendo-a sempre alinhada com as alterações de código.
+*   `doc_agent.py`: Responsável pela criação e atualização automatizada da documentação do projeto. Ele agora emprega **diretrizes de contexto específicas** para gerar e refinar os conteúdos (como `README.md` para foco técnico, `docs/architecture.md` para detalhes arquiteturais e `docs/manual_do_usuario.md` para usuários leigos), assegurando que cada documento seja relevante e apropriado para seu público-alvo e sempre alinhado com as alterações de código.
 *   `docs/architecture.md`: Documentação detalhada da arquitetura do sistema multi-agente, incluindo o fluxo do pipeline e os componentes.
 *   `docs/manual_do_usuario.md`: Documentação abrangente para o usuário final, explicando como interagir com o sistema e suas funcionalidades.
 *   `tests/`: Diretório contendo os testes unitários do projeto, executados pelo `test_agent.py`.
