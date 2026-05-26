@@ -232,18 +232,25 @@ def render_asset_detail_view(asset_data):
     asset_id = asset_data['id']
     current_type = asset_data['asset_type']
 
+    price_now_native = asset_data.get('original_current_price') or 0.0
+    price_now_brl = asset_data.get('current_price') or 0.0
+    currency_symbol = "$" if current_type in ['Stocks', 'Reits'] else "R$"
+    display_val, display_sym = (price_now_brl, "R$") if asset_data['currency'] == 'BRL' and current_type == 'Cripto' else (price_now_native, currency_symbol)
+
     @st.dialog("Adicionar Operação", dismissible=False)
     def dialog_add_operation():
         st.markdown(f"**Ativo:** `{display_ticker}`<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
         op_type = st.radio("Tipo de Operação", ["Compra", "Venda"], horizontal=True, key="add_op_type")
         op_date = st.date_input("Data", value=pd.Timestamp.now().date(), max_value=pd.Timestamp.now().date(), format="DD/MM/YYYY", key="add_op_date")
         
+        default_price = max(0.01, float(display_val))
+
         if current_type in ['Ações', 'Fiis', 'ETF', 'Stocks', 'Reits']:
             op_qty_input = st.number_input("Quantidade", min_value=1, step=1, format="%d", key="add_op_qty")
-            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", key="add_op_price")
+            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", value=default_price, key="add_op_price")
         else:
             op_qty_input = st.number_input("Quantidade", min_value=0.00000001, step=0.00001, format="%.8f", key="add_op_qty")
-            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", key="add_op_price")
+            op_price = st.number_input("Preço", min_value=0.01, step=0.01, format="%.2f", value=default_price, key="add_op_price")
             
         st.markdown("")
         col_c1, col_c2 = st.columns(2)
