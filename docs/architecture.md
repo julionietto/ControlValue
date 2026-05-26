@@ -1,20 +1,3 @@
-Para atualizar o arquivo `docs/architecture.md`, farei as seguintes modificações com base nas alterações de código fornecidas:
-
-1.  **Diagrama da Arquitetura**: Atualizar o diagrama para refletir explicitamente a invocação do `Agente de Testes` e do `Agente de Documentação` pelo Orquestrador como passos distintos do pipeline. Também deixarei claro que o `Agente de Versionamento` e `Agente de Commit` são lógicas que residem dentro do Orquestrador, mas interagem com a IA.
-2.  **2.1. Componentes Principais**:
-    *   **Orquestrador (`auto_push.py`)**: A descrição será expandida para detalhar seu papel como orquestrador que *invoca* os outros agentes, e sua lógica aprimorada de versionamento e geração de commit.
-    *   **Agente de Testes (`test_agent.py`)**: A descrição será atualizada para incluir a nova funcionalidade de diagnóstico de falhas com IA.
-    *   **Agente de Documentação (`doc_agent.py`)**: A descrição será atualizada para reforçar seu papel de criação/atualização dinâmica do `README.md` e do próprio `docs/architecture.md`.
-    *   **Agente de Versionamento**: Esclarecer que a IA é utilizada para a *decisão* do tipo de incremento (`major`, `minor`, `patch`), e que a função `increment_version` no orquestrador implementa a lógica completa do SemVer (resetando partes menores).
-    *   **Agente de Geração de Mensagem de Commit**: Mencionar que a mensagem agora sempre inclui a nova versão do projeto.
-    *   **Integração com Git**: Reforçar o uso de `errors='replace'` para maior robustez de codificação.
-3.  **3. Fluxo de Execução do Pipeline Multiagente**: Esta seção será completamente reescrita para refletir a nova sequência de execução do `auto_push.py`, incluindo a invocação dos agentes externos, o re-staging e o uso diferenciado do `diff` (inicial vs. completo).
-4.  **4. Tecnologias e Ferramentas**: Adicionar `Pytest` como uma tecnologia explícita e expandir o uso da API do Google Gemini para incluir o diagnóstico de testes.
-5.  **5. Princípios de Design**: Reforçar os princípios de "Qualidade Assegurada", "Documentação Contínua" e "Versionamento Semântico Automatizado" com os detalhes das novas funcionalidades.
-
----
-
-```markdown
 # Arquitetura do Sistema de Deploy Multiagente
 
 ## 1. Introdução
@@ -77,7 +60,7 @@ O sistema é concebido como um orquestrador que coordena uma série de agentes e
 
 *   **Orquestrador (`auto_push.py`):** O coração do sistema. Ele gerencia o fluxo de execução completo, *invocando* os agentes externos em sequência, lida com a lógica central de versionamento e interage diretamente com o Git para operações de commit e push. Implementa a lógica para determinar o tipo de incremento de versão (major, minor, patch) e gerar a mensagem de commit, utilizando a IA. Possui tratamento para forçar a codificação UTF-8 na saída do console, melhorando a compatibilidade em diferentes sistemas operacionais.
 *   **Agente de Testes (`test_agent.py`):** Um agente externo invocado pelo orquestrador. Responsável por executar os testes automatizados do projeto (`pytest`). O pipeline só prossegue se todos os testes forem aprovados, garantindo a qualidade e estabilidade do código. Em caso de falha, ele utiliza a API do Google Gemini para analisar os logs de erro e fornecer um diagnóstico resumido e sugestões de correção.
-*   **Agente de Documentação (`doc_agent.py`):** Um agente externo invocado pelo orquestrador. Encarregado de atualizar e/ou criar a documentação do projeto (como `README.md` e `docs/architecture.md`) com base nas mudanças de código. Este agente assegura que a documentação esteja sempre sincronizada com o estado atual do software, utilizando a inteligência artificial para gerar e integrar o conteúdo de forma contextual.
+*   **Agente de Documentação (`doc_agent.py`):** Um agente externo invocado pelo orquestrador. Encarregado de atualizar e/ou criar diversos arquivos de documentação do projeto (como `README.md`, `docs/architecture.md` e manuais de usuário), baseando-se nas mudanças de código. Este agente assegura que a documentação esteja sempre sincronizada com o estado atual do software, utilizando a inteligência artificial para gerar e integrar o conteúdo de forma contextual.
 *   **Agente de Versionamento (Lógica `determine_version_increment` e `increment_version` no Orquestrador):** A função `determine_version_increment` utiliza a inteligência artificial (Google Gemini) para analisar o `git diff` das alterações de código *originais* (antes da geração de documentação) e decidir qual parte do versionamento semântico (`major`, `minor`, `patch`) deve ser incrementada. Em caso de falha da IA ou chave de API não configurada, o incremento padrão é `patch`. A função `increment_version` então aplica esta decisão, realizando incrementos `major` e `minor` que resetam as partes seguintes (ex: `1.2.3` com `minor` vira `1.3.0`). Ele também inicializa o arquivo `.version` para "1.0.0" se não existir.
 *   **Agente de Geração de Mensagem de Commit (Função `generate_commit_message` no Orquestrador):** Emprega a inteligência artificial (Google Gemini) para gerar mensagens de commit claras e concisas. A mensagem é formatada para iniciar obrigatoriamente com a nova versão do projeto (ex: `[vX.Y.Z] Adiciona...`), baseando-se no `git diff` *completo* (incluindo as alterações de código, documentação e versão).
 *   **Integração com Git:** A comunicação com o sistema de controle de versão é feita através de comandos `subprocess`, utilizando `text=True`, `encoding='utf-8'` e `errors='replace'` para garantir operações como `add`, `diff`, `commit` e `push` com robustez de codificação em diferentes sistemas operacionais.
@@ -102,7 +85,7 @@ O orquestrador (`auto_push.py`) executa as seguintes etapas para cada deploy:
     *   Se os testes forem aprovados, o pipeline continua, garantindo a qualidade do código.
 3.  **Invocação do Agente de Documentação (`doc_agent.py`):**
     *   O orquestrador invoca o `doc_agent.py`.
-    *   O `doc_agent.py` utiliza o `git diff` inicial para analisar as alterações de código e, com o auxílio da IA, atualiza ou gera arquivos de documentação (como `README.md` e `docs/architecture.md`).
+    *   O `doc_agent.py` utiliza o `git diff` inicial para analisar as alterações de código e, com o auxílio da IA, atualiza ou gera diversos arquivos de documentação, incluindo `README.md`, `docs/architecture.md` e outros guias ou manuais (ex: `docs/manual_do_usuario.md`).
     *   Se o agente de documentação reportar falha, o pipeline é abortado.
 4.  **Re-staging e Recálculo do Diff Completo:**
     *   Após a potencial atualização da documentação pelo `doc_agent.py`, todas as mudanças (incluindo quaisquer novos ou modificados arquivos de documentação) são novamente adicionadas ao *staging area* (`git add .`).
@@ -130,8 +113,8 @@ O orquestrador (`auto_push.py`) executa as seguintes etapas para cada deploy:
 *   **Google Gemini API (GenAI):** Plataforma de inteligência artificial generativa, utilizada para:
     *   Análise de `git diff` para decisão de versionamento (`major`, `minor`, `patch`).
     *   Geração de mensagens de commit.
-    *   Criação e atualização de documentação (pelo `doc_agent.py`).
-    *   Diagnóstico inteligente de falhas em testes (pelo `test_agent.py`).
+    *   Criação/atualização de documentos (no `doc_agent.py`).
+    *   Diagnóstico inteligente de falhas em testes (no `test_agent.py`).
 *   **Pytest:** Framework de testes unitários em Python, utilizado pelo Agente de Testes para garantir a qualidade do código.
 *   **`python-dotenv`:** Para o gerenciamento de variáveis de ambiente, como a chave da API do Gemini.
 *   **`subprocess`:** Módulo Python para a execução de comandos externos (ex: comandos Git e invocação de agentes), com tratamento robusto de codificação (`errors='replace'`).
@@ -140,7 +123,7 @@ O orquestrador (`auto_push.py`) executa as seguintes etapas para cada deploy:
 
 *   **Automação Inteligente:** Redução da intervenção manual em tarefas de deploy através da automação e uso de IA para decisões estratégicas (versionamento, commit, documentação) e diagnóstico de problemas.
 *   **Qualidade Assegurada:** Integração de uma etapa obrigatória de testes com `pytest` para garantir a estabilidade e funcionalidade do software antes do deploy. A inteligência artificial auxilia no diagnóstico e sugestão de correção para falhas, agilizando o desenvolvimento.
-*   **Documentação Contínua:** Automação da atualização da documentação (`README.md`, `docs/architecture.md`) através do `doc_agent.py`, garantindo que ela esteja sempre alinhada com o código e sem a necessidade de intervenção manual.
+*   **Documentação Contínua:** Automação da atualização e geração de diversos documentos (`README.md`, `docs/architecture.md`, manuais de usuário, etc.) através do `doc_agent.py`, garantindo que ela esteja sempre alinhada com o código e sem a necessidade de intervenção manual.
 *   **Versionamento Semântico Automatizado:** Aplicação automática das regras de SemVer (`major`, `minor`, `patch`) com base na análise do impacto das mudanças de código pela IA, com a lógica de incremento completa implementada no orquestrador.
 *   **Modularidade e Extensibilidade:** A arquitetura baseada em orquestrador e agentes externos permite adicionar novos passos ou modificar existentes com relativa facilidade, sem impactar o fluxo principal.
 *   **Robustez:** Melhorias no tratamento de codificação de caracteres (UTF-8 com `errors='replace'`) e no gerenciamento de arquivos, garantindo a execução e logs claros em diferentes ambientes, incluindo sistemas Windows.
