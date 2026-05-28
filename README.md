@@ -9,7 +9,7 @@ Este projeto apresenta um sistema avançado de Continuous Integration/Continuous
     *   Utiliza a IA (Gemini) para analisar o `git diff` e determinar de forma inteligente o tipo de incremento de versão (major, minor ou patch) conforme as boas práticas do Versionamento Semântico.
     *   Cria e gerencia o arquivo `.version` automaticamente, iniciando em `1.0.0` se não existir.
 *   **Geração de Mensagens de Commit por IA:** A inteligência artificial é empregada para gerar mensagens de commit concisas, claras e padronizadas, que incluem a nova versão do projeto.
-*   **Integração com Agente de Testes:** Antes de qualquer commit, o orquestrador invoca um `test_agent.py` para executar os testes do projeto. Se os testes falharem, o processo de deploy é abortado, garantindo a integridade do código. A cobertura de testes foi expandida para incluir verificações robustas nas funcionalidades de autenticação e a capacidade de realizar testes de interface de usuário (UI) para aplicações Streamlit, assegurando a estabilidade e a qualidade das interações do usuário.
+*   **Integração com Agente de Testes:** Antes de qualquer commit, o orquestrador invoca um `test_agent.py` para executar os testes do projeto. Se os testes falharem, o processo de deploy é abortado, garantindo a integridade do código. A cobertura de testes foi expandida para incluir verificações robustas nas funcionalidades de autenticação e a capacidade de realizar testes de interface de usuário (UI) para aplicações Streamlit, assegurando a estabilidade e a qualidade das interações do usuário. Além disso, o `test_agent.py` agora gera um relatório detalhado dos testes em formato HTML, que é automaticamente aberto no navegador ao final da execução do pipeline.
 *   **Integração com Agente de Documentação:** Após os testes, um `doc_agent.py` é executado para criar ou atualizar automaticamente a documentação do projeto. Este agente agora utiliza **diretrizes de contexto específicas** para cada tipo de documento, garantindo que o `README.md` mantenha um foco técnico, `docs/architecture.md` detalhe a estrutura e o fluxo do sistema, e `docs/manual_do_usuario.md` seja adaptado para um público leigo, explicando funcionalidades e mudanças visuais de forma acessível. Isso assegura que a documentação esteja sempre alinhada, precisa e adequada ao seu público-alvo.
 *   **Compatibilidade Aprimorada:** Inclui configurações para forçar a codificação UTF-8 no console, resolvendo potenciais problemas de caracteres em ambientes Windows.
 *   **Processo de Deploy Robusto:** Automatiza `git add`, `git commit` e `git push` para simplificar o fluxo de trabalho do desenvolvedor.
@@ -81,6 +81,7 @@ O `auto_push.py` irá então:
 *   Utilizar a IA para gerar uma mensagem de commit detalhada, incluindo a nova versão.
 *   Realizar o `git commit` com a mensagem gerada.
 *   Executar o `git push` para o branch `master` (ou o branch configurado por padrão).
+*   Abrir o relatório de testes HTML gerado (`docs/test_report.html`) no navegador padrão.
 
 Você verá o progresso e as decisões da IA sendo impressas no console.
 
@@ -90,7 +91,7 @@ Você verá o progresso e as decisões da IA sendo impressas no console.
 *   `.env`: Arquivo para variáveis de ambiente (como a chave da API do Gemini).
 *   `.version`: Arquivo de controle de versão semântica.
 *   `requirements.txt`: Lista de dependências Python.
-*   `test_agent.py`: Responsável pela execução dos testes do projeto, utilizando `pytest`. Em caso de falha, a IA pode fornecer um diagnóstico e sugestões de correção.
+*   `test_agent.py`: Responsável pela execução dos testes do projeto, utilizando `pytest`. Agora, além de executar os testes, ele gera um relatório detalhado em formato JUnit XML (`tests/report.xml`) e, a partir deste, um relatório HTML "ultra-premium" (`docs/test_report.html`) que é automaticamente aberto ao final do pipeline. Em caso de falha, a IA pode fornecer um diagnóstico e sugestões de correção.
 *   `doc_agent.py`: Responsável pela criação e atualização automatizada da documentação do projeto. Ele agora emprega **diretrizes de contexto específicas** para gerar e refinar os conteúdos (como `README.md` para foco técnico, `docs/architecture.md` para detalhes arquiteturais e `docs/manual_do_usuario.md` para usuários leigos), assegurando que cada documento seja relevante e apropriado para seu público-alvo e sempre alinhado com as alterações de código.
 *   `db/`: Diretório que contém módulos para interação com o banco de dados.
     *   `db/auth.py`: Módulo responsável pelas operações de autenticação e gerenciamento de usuários. A função `get_all_users` foi aprimorada para garantir que os dados dos usuários sejam sempre retornados ordenados por `id` de forma ascendente, otimizando a consistência dos resultados.
@@ -98,6 +99,7 @@ Você verá o progresso e as decisões da IA sendo impressas no console.
     *   `views/admin.py`: Módulo que gerencia a interface administrativa. A lógica de exibição de usuários agora inclui uma etapa explícita de ordenação do DataFrame de usuários por `id` de forma ascendente, complementando a ordenação do banco de dados e assegurando uma apresentação consistente dos dados.
 *   `docs/architecture.md`: Documentação detalhada da arquitetura do sistema multi-agente, incluindo o fluxo do pipeline e os componentes.
 *   `docs/manual_do_usuario.md`: Documentação abrangente para o usuário final, explicando como interagir com o sistema e suas funcionalidades.
+*   `docs/test_report.html`: Relatório HTML gerado automaticamente pelo `test_agent.py` contendo os resultados detalhados da execução dos testes.
 *   `tests/`: Diretório contendo os testes unitários e de integração do projeto, executados pelo `test_agent.py`. Foram adicionados testes abrangentes para o módulo de autenticação (`tests/test_auth.py`), garantindo a robustez do processo de login e logout.
 
 ## Contribuição

@@ -222,6 +222,18 @@ def main():
     print("[GIT] Enviando para o GitHub (git push origin master)...")
     run_git_command("git push origin master", capture_output=False) # Exibe o output no terminal
     
+    # 10. Abrir Relatório no Navegador
+    try:
+        import webbrowser
+        report_path = os.path.abspath("docs/test_report.html")
+        if os.path.exists(report_path):
+            print(f"\n[Pipeline] Abrindo relatório de testes no navegador: {report_path}")
+            webbrowser.open("file://" + report_path)
+        else:
+            print(f"\n[Pipeline] [AVISO] Relatório HTML não encontrado em: {report_path}")
+    except Exception as e:
+        print(f"\n[Pipeline] Erro ao tentar abrir o navegador: {e}")
+        
     print("\n" + "="*50)
     print("[OK] PIPELINE MULTIAGENTE CONCLUÍDO COM SUCESSO!")
     print(f"Versão de Deploy: {new_version} ({increment_type})")

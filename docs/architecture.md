@@ -4,7 +4,7 @@
 
 Este documento detalha a arquitetura do sistema de auto-push, que evoluiu para um robusto pipeline de deploy multiagente. O objetivo principal do sistema é automatizar e inteligentemente orquestrar o processo de integração contínua (CI) e entrega contínua (CD), desde a detecção de mudanças no código até o push final para o repositório, garantindo qualidade, consistência e conformidade com as práticas de versionamento semântico.
 
-A arquitetura atual integra múltiplos "agentes" autônomos, cada um com uma responsabilidade específica, coordenados por um orquestrador central. Essa abordagem visa aumentar a confiabilidade do deploy, automatizar tarefas repetitivas e incorporar inteligência artificial para decisões estratégicas, como o versionamento de releases e a geração de mensagens de commit. O sistema também incorpora melhorias para garantir sua robustez em diferentes ambientes operacionais, como a compatibilidade com a codificação UTF-8 em consoles do Windows.
+A arquitetura atual integra múltiplos "agentes" autônomos, cada um com uma responsabilidade específica, coordenados por um orquestrador central. Essa abordagem visa aumentar a confiabilidade do deploy, automatizar tarefas repetitivas e incorporar inteligência artificial para decisões estratégicas, como o versionamento de releases e a geração de mensagens de commit. O sistema também incorpora melhorias para garantir sua robustez em diferentes ambientes operacionais, como a compatibilidade com a codificação UTF-8 em consoles do Windows, e agora oferece uma visão clara e imediata dos resultados dos testes através de relatórios HTML.
 
 ## 2. Visão Geral da Arquitetura
 
@@ -24,9 +24,12 @@ O sistema é concebido como um orquestrador que coordena uma série de agentes e
 |  (test_agent.py)    |      |   (Execução)      |
 |                     |<-----+   Google Gemini   |
 |                     |      |   (Diagnóstico)   |
+|                     |      |   (Geração de     |
+|                     |      |    Relatório HTML)|
 +----------+----------+      +-------------------+
            |
            | 2. Validação de Código (com IA para diagnóstico)
+           |    e Geração de Relatório de Testes HTML
            |
 +----------V----------+
 | Agente de Docs      |<-----+   Google Gemini   |
@@ -53,13 +56,18 @@ O sistema é concebido como um orquestrador que coordena uma série de agentes e
 +----------V----------+
 |  Repositório Remoto |
 |      (GitHub)       |
-+---------------------+
++----------+----------+
+           |
+           | 6. Abertura do Relatório de Testes HTML
+           |    (docs/test_report.html) no navegador
+           |
+           V
 ```
 
 ### 2.1. Componentes Principais
 
-*   **Orquestrador (`auto_push.py`):** O coração do sistema. Ele gerencia o fluxo de execução completo, *invocando* os agentes externos em sequência, lida com a lógica central de versionamento e interage diretamente com o Git para operações de commit e push. Implementa a lógica para determinar o tipo de incremento de versão (major, minor, patch) e gerar a mensagem de commit, utilizando a IA. Possui tratamento para forçar a codificação UTF-8 na saída do console, melhorando a compatibilidade em diferentes sistemas operacionais.
-*   **Agente de Testes (`test_agent.py`):** Um agente externo invocado pelo orquestrador. Responsável por executar os testes automatizados do projeto (`pytest`). O pipeline só prossegue se todos os testes forem aprovados, garantindo a qualidade e estabilidade do código. Em caso de falha, ele utiliza a API do Google Gemini para analisar os logs de erro e fornecer um diagnóstico resumido e sugestões de correção. A cobertura de testes foi expandida para incluir módulos críticos como o de autenticação (`tests/test_auth.py`), assegurando a robustez das funcionalidades centrais.
+*   **Orquestrador (`auto_push.py`):** O coração do sistema. Ele gerencia o fluxo de execução completo, *invocando* os agentes externos em sequência, lida com a lógica central de versionamento e interage diretamente com o Git para operações de commit e push. Implementa a lógica para determinar o tipo de incremento de versão (major, minor, patch) e gerar a mensagem de commit, utilizando a IA. Possui tratamento para forçar a codificação UTF-8 na saída do console, melhorando a compatibilidade em diferentes sistemas operacionais. **Após a conclusão do pipeline, ele também tenta abrir o relatório de testes HTML gerado em `docs/test_report.html` no navegador padrão, proporcionando feedback imediato sobre a qualidade do código.**
+*   **Agente de Testes (`test_agent.py`):** Um agente externo invocado pelo orquestrador. Responsável por executar os testes automatizados do projeto (`pytest`). O pipeline só prossegue se todos os testes forem aprovados, garantindo a qualidade e estabilidade do código. **Agora, o agente de testes não só executa os testes, mas também gera um relatório detalhado em formato JUnit XML (`tests/report.xml`) e, subsequentemente, um relatório HTML visualmente rico (`docs/test_report.html`), utilizando as funções `generate_html_report` e `escape_html` para este propósito.** Em caso de falha, ele utiliza a API do Google Gemini para analisar os logs de erro e fornecer um diagnóstico resumido e sugestões de correção. A cobertura de testes foi expandida para incluir módulos críticos como o de autenticação (`tests/test_auth.py`), assegurando a robustez das funcionalidades centrais.
 *   **Agente de Documentação (`doc_agent.py`):** Um agente externo invocado pelo orquestrador. Encarregado de atualizar e/ou criar diversos arquivos de documentação do projeto (como `README.md`, `docs/architecture.md`, `docs/manual_do_usuario.md` e outros guias), baseando-se nas mudanças de código. Este agente assegura que a documentação esteja sempre sincronizada com o estado atual do software, utilizando a inteligência artificial para gerar e integrar o conteúdo de forma contextual, agora com diretrizes contextuais específicas para cada arquivo (e.g., perspectiva técnica para `architecture.md`, manual de usuário leigo) que guiam a IA na geração de conteúdo mais preciso e direcionado.
 *   **Agente de Versionamento (Lógica `determine_version_increment` e `increment_version` no Orquestrador):** A função `determine_version_increment` utiliza a inteligência artificial (Google Gemini) para analisar o `git diff` das alterações de código *originais* (antes da geração de documentação) e decidir qual parte do versionamento semântico (`major`, `minor`, `patch`) deve ser incrementada. Em caso de falha da IA ou chave de API não configurada, o incremento padrão é `patch`. A função `increment_version` então aplica esta decisão, realizando incrementos `major` e `minor` que resetam as partes seguintes (ex: `1.2.3` com `minor` vira `1.3.0`). Ele também inicializa o arquivo `.version` para "1.0.0" se não existir.
 *   **Agente de Geração de Mensagem de Commit (Função `generate_commit_message` no Orquestrador):** Emprega a inteligência artificial (Google Gemini) para gerar mensagens de commit claras e concisas. A mensagem é formatada para iniciar obrigatoriamente com a nova versão do projeto (ex: `[vX.Y.Z] Adiciona...`), baseando-se no `git diff` *completo* (incluindo as alterações de código, documentação e versão).
@@ -80,7 +88,8 @@ O orquestrador (`auto_push.py`) executa as seguintes etapas para cada deploy:
     *   Se não houver mudanças detectadas, o processo é abortado.
 2.  **Invocação do Agente de Testes (`test_agent.py`):**
     *   O orquestrador invoca o `test_agent.py` de forma síncrona.
-    *   O `test_agent.py` executa a suíte de testes (`pytest`).
+    *   O `test_agent.py` executa a suíte de testes (`pytest`), **agora com a opção `--junitxml=tests/report.xml` para gerar um arquivo XML de resultados.**
+    *   **Após a execução dos testes, o `test_agent.py` processa este arquivo XML e gera um relatório HTML completo (`docs/test_report.html`), que oferece uma visão detalhada e formatada dos resultados dos testes, incluindo sumarização e pormenores de cada caso de teste.**
     *   Se os testes falharem (código de retorno diferente de zero), o `test_agent.py` utiliza a IA para diagnosticar a falha e o pipeline é interrompido imediatamente, reportando o erro e o diagnóstico da IA.
     *   Se os testes forem aprovados, o pipeline continua, garantindo a qualidade do código.
 3.  **Invocação do Agente de Documentação (`doc_agent.py`):**
@@ -105,6 +114,9 @@ O orquestrador (`auto_push.py`) executa as seguintes etapas para cada deploy:
     *   Um `git commit` é realizado com a mensagem gerada pela IA, contendo a nova versão do projeto.
 9.  **Push para o Repositório Remoto:**
     *   Finalmente, um `git push origin master` é executado para enviar todas as mudanças (código, documentação, atualização de versão) para o repositório remoto.
+10. **Abertura do Relatório de Testes (no Orquestrador):**
+    *   Após o push bem-sucedido, o orquestrador verifica a existência do relatório HTML de testes (`docs/test_report.html`).
+    *   Se o relatório for encontrado, ele é automaticamente aberto no navegador padrão do sistema, oferecendo um feedback visual e instantâneo sobre a saúde do projeto após o deploy.
 
 ## 4. Tecnologias e Ferramentas
 
@@ -118,11 +130,13 @@ O orquestrador (`auto_push.py`) executa as seguintes etapas para cada deploy:
 *   **Pytest:** Framework de testes unitários e de integração em Python, utilizado pelo Agente de Testes para garantir a qualidade do código. A cobertura de testes foi ampliada, incluindo agora testes robustos para o módulo de autenticação (`tests/test_auth.py`). Adicionalmente, `streamlit.testing.v1.AppTest` está sendo explorado para testes funcionais da interface do usuário (`scratch/test_apptest.py`), visando garantir a estabilidade e usabilidade da aplicação Streamlit.
 *   **`python-dotenv`:** Para o gerenciamento de variáveis de ambiente, como a chave da API do Gemini.
 *   **`subprocess`:** Módulo Python para a execução de comandos externos (ex: comandos Git e invocação de agentes), com tratamento robusto de codificação (`errors='replace'`).
+*   **`xml.etree.ElementTree` (Python):** Módulo padrão do Python utilizado pelo Agente de Testes para parsear os resultados JUnit XML gerados pelo Pytest e construir o relatório HTML.
+*   **`webbrowser` (Python):** Módulo padrão do Python utilizado pelo Orquestrador para abrir automaticamente o relatório de testes HTML no navegador web após a conclusão do pipeline.
 
 ## 5. Princípios de Design
 
 *   **Automação Inteligente:** Redução da intervenção manual em tarefas de deploy através da automação e uso de IA para decisões estratégicas (versionamento, commit, documentação) e diagnóstico de problemas.
-*   **Qualidade Assegurada:** Integração de uma etapa obrigatória de testes com `pytest` para garantir a estabilidade e funcionalidade do software antes do deploy. A inteligência artificial auxilia no diagnóstico e sugestão de correção para falhas, agilizando o desenvolvimento. A suíte de testes foi fortalecida com a adição de testes para funcionalidades críticas como autenticação (`tests/test_auth.py`) e a exploração de testes de interface do usuário com `streamlit.testing.v1` (`scratch/test_apptest.py`) reforça o compromisso com a qualidade em todas as camadas da aplicação.
+*   **Qualidade Assegurada:** Integração de uma etapa obrigatória de testes com `pytest` para garantir a estabilidade e funcionalidade do software antes do deploy. A inteligência artificial auxilia no diagnóstico e sugestão de correção para falhas, agilizando o desenvolvimento. A suíte de testes foi fortalecida com a adição de testes para funcionalidades críticas como autenticação (`tests/test_auth.py`) e a exploração de testes de interface do usuário com `streamlit.testing.v1` (`scratch/test_apptest.py`) reforça o compromisso com a qualidade em todas as camadas da aplicação. **A introdução de relatórios de testes em HTML detalhados e visualmente atraentes (`docs/test_report.html`) melhora significativamente a transparência e a facilidade de análise dos resultados dos testes, fornecendo um feedback imediato e compreensível sobre a qualidade do código após cada execução do pipeline.**
 *   **Documentação Contínua:** Automação da atualização e geração de diversos documentos (`README.md`, `docs/architecture.md`, `docs/manual_do_usuario.md`, etc.) através do `doc_agent.py`, garantindo que ela esteja sempre alinhada com o código e sem a necessidade de intervenção manual, agora com a capacidade de direcionar a IA com contextos específicos para cada tipo de documento.
 *   **Versionamento Semântico Automatizado:** Aplicação automática das regras de SemVer (`major`, `minor`, `patch`) com base na análise do impacto das mudanças de código pela IA, com a lógica de incremento completa implementada no orquestrador.
 *   **Modularidade e Extensibilidade:** A arquitetura baseada em orquestrador e agentes externos permite adicionar novos passos ou modificar existentes com relativa facilidade, sem impactar o fluxo principal.
