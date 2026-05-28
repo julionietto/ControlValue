@@ -81,7 +81,7 @@ O `auto_push.py` irá então:
 *   Utilizar a IA para gerar uma mensagem de commit detalhada, incluindo a nova versão.
 *   Realizar o `git commit` com a mensagem gerada.
 *   Executar o `git push` para o branch `master` (ou o branch configurado por padrão).
-*   Abrir o relatório de testes HTML gerado (`docs/test_report.html`) no navegador padrão.
+*   Abrir o relatório de testes HTML gerado (`docs/test_report.html`) no navegador. O sistema prioriza a abertura no Microsoft Edge (especialmente em ambientes Windows) e, caso não seja possível, tentará abrir no navegador padrão configurado.
 
 Você verá o progresso e as decisões da IA sendo impressas no console.
 

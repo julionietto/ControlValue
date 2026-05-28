@@ -113,11 +113,10 @@ def determine_version_increment(diff_text):
         return "patch"
 
 def generate_commit_message(diff_text, new_version):
-    """Gera a mensagem de commit usando a API do Gemini."""
+    """Gera a mensagem de commit usando a API do Gemini com fallback em caso de erro."""
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("[ERRO] Chave de API 'GEMINI_API_KEY' não encontrada no arquivo .env.")
-        sys.exit(1)
+        return f"[v{new_version}] Atualização automática de rotina"
         
     client = genai.Client(api_key=api_key)
     
@@ -145,8 +144,8 @@ def generate_commit_message(diff_text, new_version):
             
         return message
     except Exception as e:
-        print(f"[ERRO] Erro ao comunicar com a API do Gemini: {e}")
-        sys.exit(1)
+        print(f"[AVISO] Falha ao gerar mensagem de commit por IA ({e}). Usando mensagem padrão.")
+        return f"[v{new_version}] Atualização automática do projeto com novos testes e relatórios"
 
 def main():
     print("[START] Iniciando Auto Push Agent (Orquestrador)...")
@@ -222,17 +221,23 @@ def main():
     print("[GIT] Enviando para o GitHub (git push origin master)...")
     run_git_command("git push origin master", capture_output=False) # Exibe o output no terminal
     
-    # 10. Abrir Relatório no Navegador
+    # 10. Abrir Relatório no Microsoft Edge
     try:
-        import webbrowser
         report_path = os.path.abspath("docs/test_report.html")
         if os.path.exists(report_path):
-            print(f"\n[Pipeline] Abrindo relatório de testes no navegador: {report_path}")
-            webbrowser.open("file://" + report_path)
+            print(f"\n[Pipeline] Abrindo relatório de testes no Microsoft Edge: {report_path}")
+            url = f"file://{report_path}"
+            # Tenta abrir especificamente no Microsoft Edge no Windows
+            subprocess.Popen(f'start msedge "{url}"', shell=True)
         else:
             print(f"\n[Pipeline] [AVISO] Relatório HTML não encontrado em: {report_path}")
     except Exception as e:
-        print(f"\n[Pipeline] Erro ao tentar abrir o navegador: {e}")
+        print(f"\n[Pipeline] Erro ao abrir no Microsoft Edge ({e}). Usando navegador padrão...")
+        try:
+            import webbrowser
+            webbrowser.open("file://" + report_path)
+        except Exception as e2:
+            print(f"[Pipeline] Erro ao abrir o navegador padrão: {e2}")
         
     print("\n" + "="*50)
     print("[OK] PIPELINE MULTIAGENTE CONCLUÍDO COM SUCESSO!")
