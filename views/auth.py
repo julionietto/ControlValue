@@ -206,8 +206,7 @@ def render_auth_view():
                             st.error("Preencha todos os campos.")
                 else:
                     user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
-                    show_pwd = st.checkbox("Mostrar senha", value=False)
-                    password = st.text_input("Senha", type="default" if show_pwd else "password", placeholder="Sua senha")
+                    password = st.text_input("Senha", type="password", placeholder="Sua senha")
                     submit_login = st.button("Entrar", use_container_width=True)
                     
                     if submit_login:

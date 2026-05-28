@@ -1,3 +1,6 @@
+Aqui está a documentação atualizada:
+
+```markdown
 # Manual do Usuário - ControlValue 📈
 
 Bem-vindo ao **ControlValue**, a sua plataforma pessoal para consolidação, acompanhamento e análise de investimentos! Este guia foi feito para ajudar você a navegar e utilizar todos os recursos do sistema, mesmo se você não tiver conhecimento técnico em informática.
@@ -9,7 +12,7 @@ Bem-vindo ao **ControlValue**, a sua plataforma pessoal para consolidação, aco
 ### 🔑 Criando sua Conta e Fazendo Login
 1. Ao abrir o ControlValue, você verá a tela de **Acesso**.
 2. Se for seu primeiro acesso, clique na aba **Cadastrar** (ou botão de cadastro), preencha seu e-mail e crie uma senha segura.
-3. Se já tiver cadastro, basta preencher seu e-mail e senha cadastrados na aba **Entrar**. Ao digitar sua senha, você notará uma opção **"Mostrar senha"**. Você pode marcá-la para ver os caracteres que está digitando, o que pode ser útil para evitar erros de digitação. Desmarque-a novamente para manter sua senha oculta por segurança.
+3. Se já tiver cadastro, basta preencher seu **e-mail ou nome de usuário** e sua senha cadastrados na aba **Entrar**. O sistema é inteligente: ele reconhece seu e-mail ou nome de usuário independentemente de letras maiúsculas ou minúsculas e também ignora espaços extras no início ou fim do que você digitar, facilitando o seu acesso.
 4. **Recuperação de Senha:** Caso esqueça sua senha, clique no link de recuperação. Você receberá um e-mail com instruções e um link seguro para cadastrar uma nova senha (o link é válido por 30 minutos).
 
 ### 🛡️ Segurança: Desconexão Automática (Timeout)

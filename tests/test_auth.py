@@ -44,19 +44,6 @@ def test_login_invalid_password(mock_db):
     assert status == 'WRONG_PASS'
     assert username == "usuario_teste"
 
-# 3. Teste de visualização de senha digitada (lógica do tipo do text_input)
-def test_password_visibility_toggle():
-    # Testa a lógica usada no views/auth.py
-    # Quando o checkbox "Mostrar senha" (show_pwd) está marcado (True), o input de senha deve ser do tipo "default".
-    # Quando desmarcado (False), deve ser "password".
-    
-    show_pwd_true = True
-    password_type_when_visible = "default" if show_pwd_true else "password"
-    assert password_type_when_visible == "default"
-    
-    show_pwd_false = False
-    password_type_when_hidden = "default" if show_pwd_false else "password"
-    assert password_type_when_hidden == "password"
 
 # 4. Teste de login com sucesso para controlvalueoficial@gmail.com / teste123
 def test_login_success_controlvalueoficial(mock_db):
@@ -94,3 +81,32 @@ def test_logout_flow():
     # Verifica que o estado foi completamente limpo e o usuário está deslogado
     assert "authenticated" not in session_state
     assert len(session_state) == 0
+
+# 6. Teste de login com username em vez de email
+def test_login_success_by_username(mock_db):
+    hashed_pwd = auth.hash_password("teste123")
+    mock_db.fetchone.return_value = (
+        10, "controlvalueoficial", hashed_pwd, "controlvalueoficial@gmail.com", "1990-01-01", 0, None, "cyberpunk"
+    )
+    
+    success, user_id, username, is_admin, status, extra, theme = auth.verify_user(
+        "controlvalueoficial", "teste123"
+    )
+    
+    assert success is True
+    assert status == 'SUCCESS'
+    assert username == "controlvalueoficial"
+
+# 7. Teste de login com e-mail case-insensitive e espaços nas pontas
+def test_login_case_insensitive_and_whitespace(mock_db):
+    hashed_pwd = auth.hash_password("teste123")
+    mock_db.fetchone.return_value = (
+        10, "controlvalueoficial", hashed_pwd, "controlvalueoficial@gmail.com", "1990-01-01", 0, None, "cyberpunk"
+    )
+    
+    success, user_id, username, is_admin, status, extra, theme = auth.verify_user(
+        "  ControlValueOficial@Gmail.Com  ", "teste123"
+    )
+    
+    assert success is True
+    assert status == 'SUCCESS'

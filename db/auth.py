@@ -60,13 +60,22 @@ def verify_password(plain_password, hashed_password):
         return False, False
 
 def verify_user(login_identifier, password):
-    """Verifica o usuário pelo email ou pelo nome 'admin'."""
+    """Verifica o usuário pelo email ou pelo nome de usuário."""
+    if not login_identifier:
+        return False, None, None, False, 'NOT_FOUND', None, None
+        
+    clean_identifier = login_identifier.strip()
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        if login_identifier == 'admin':
-            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until, theme_preference FROM users WHERE username = %s", (login_identifier,))
-        else:
-            cursor.execute("SELECT id, username, password, email, birth_date, failed_attempts, locked_until, theme_preference FROM users WHERE email = %s", (login_identifier,))
+        cursor.execute(
+            """
+            SELECT id, username, password, email, birth_date, failed_attempts, locked_until, theme_preference 
+            FROM users 
+            WHERE LOWER(email) = LOWER(%s) OR LOWER(username) = LOWER(%s)
+            """,
+            (clean_identifier, clean_identifier)
+        )
         
         row = cursor.fetchone()
         if not row:
@@ -111,7 +120,9 @@ def get_user_count():
         return cursor.fetchone()[0]
 
 def create_user(username, email, birth_date, password):
-    if username.lower().strip() == 'admin':
+    clean_username = username.strip() if username else ""
+    clean_email = email.strip().lower() if email else None
+    if clean_username.lower() == 'admin':
         if get_user_count() > 0:
             raise ValueError("O nome de usuário 'admin' é reservado.")
     hashed = hash_password(password)
@@ -119,13 +130,16 @@ def create_user(username, email, birth_date, password):
     now_str = datetime.now(sp_tz).strftime('%Y-%m-%d %H:%M:%S')
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (%s, %s, %s, %s, %s)", (username, email, birth_date, hashed, now_str))
+        cursor.execute("INSERT INTO users (username, email, birth_date, password, created_at) VALUES (%s, %s, %s, %s, %s)", (clean_username, clean_email, birth_date, hashed, now_str))
         conn.commit()
 
 def get_user_by_email(email):
+    if not email:
+        return None
+    clean_email = email.strip()
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SELECT id, username, email FROM users WHERE email = %s", (email,))
+        cursor.execute("SELECT id, username, email FROM users WHERE LOWER(email) = LOWER(%s)", (clean_email,))
         row = cursor.fetchone()
         return dict(row) if row else None
 
@@ -139,16 +153,18 @@ def admin_create_user(username, email, birth_date, password):
     create_user(username, email, birth_date, password)
 
 def admin_update_user(user_id, username, email, birth_date, new_password=None):
-    if username.lower().strip() == 'admin':
-        email = None
+    clean_username = username.strip() if username else ""
+    clean_email = email.strip().lower() if email else None
+    if clean_username.lower() == 'admin':
+        clean_email = None
         birth_date = None
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if new_password:
             hashed = hash_password(new_password)
-            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s, password = %s WHERE id = %s", (username, email, birth_date, hashed, user_id))
+            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s, password = %s WHERE id = %s", (clean_username, clean_email, birth_date, hashed, user_id))
         else:
-            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s WHERE id = %s", (username, email, birth_date, user_id))
+            cursor.execute("UPDATE users SET username = %s, email = %s, birth_date = %s WHERE id = %s", (clean_username, clean_email, birth_date, user_id))
         conn.commit()
 
 def admin_unlock_user(user_id):
