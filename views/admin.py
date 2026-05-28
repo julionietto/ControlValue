@@ -12,6 +12,8 @@ def render_admin_view():
     
     # 1. Metricas
     users_df = pd.DataFrame(db.get_all_users())
+    if not users_df.empty:
+        users_df = users_df.sort_values(by='id', ascending=True).reset_index(drop=True)
     if not users_df.empty and 'created_at' in users_df.columns:
         users_df['created_at_dt'] = pd.to_datetime(users_df['created_at'], errors='coerce')
         users_df['created_at'] = users_df['created_at_dt'].dt.strftime('%d/%m/%Y')

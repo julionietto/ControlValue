@@ -132,7 +132,7 @@ def get_user_by_email(email):
 def get_all_users():
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SELECT id, username, email, birth_date, created_at, failed_attempts, locked_until FROM users")
+        cursor.execute("SELECT id, username, email, birth_date, created_at, failed_attempts, locked_until FROM users ORDER BY id ASC")
         return cursor.fetchall()
 
 def admin_create_user(username, email, birth_date, password):

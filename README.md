@@ -1,6 +1,6 @@
 # Agente de Auto Deploy e Orquestrador de CI/CD (Multi-Agente)
 
-Este projeto apresenta um sistema avançado de Continuous Integration/Continuous Deployment (CI/CD) orquestrado por um agente principal, `auto_push.py`. Utilizando inteligência artificial (Gemini API) e uma arquitetura multi-agente, ele automatiza o processo de versionamento semântico, geração de mensagens de commit, execução de testes e atualização de documentação antes de realizar o commit e push das alterações para o repositório.
+Este projeto apresenta um sistema avançado de Continuous Integration/Continuous Deployment (CI/CD) orquestrado por um agente principal, `auto_push.py`. Utilizando inteligência artificial (Gemini API) e uma arquitetura multi-agente, ele automatiza o processo de versionamento semântico, geração de mensagens de commit, execução de testes e atualização de documentação antes de realizar o commit e o push das alterações para o repositório.
 
 ## Funcionalidades Principais
 
@@ -23,6 +23,8 @@ Para executar este projeto, você precisará ter instalado:
 *   **Git:** Sistema de controle de versão.
 *   **Chave de API do Google AI Studio (Gemini API):** Para a funcionalidade de IA.
 *   **Pytest:** Usado pelo Agente de Testes para executar os testes do projeto.
+*   **PostgreSQL:** O banco de dados PostgreSQL é utilizado para persistência de dados.
+*   **psycopg2:** Driver Python para PostgreSQL, listado em `requirements.txt`.
 
 ## Instalação
 
@@ -53,6 +55,10 @@ Siga os passos abaixo para configurar o ambiente e começar a usar o agente:
     ```
     GEMINI_API_KEY=SUA_CHAVE_DE_API_DO_GEMINI_AQUI
     ```
+
+5.  **Inicialização do Banco de Dados (PostgreSQL):**
+    Configure seu servidor PostgreSQL e crie um banco de dados conforme a necessidade do projeto. As credenciais de conexão (host, database, user, password) devem ser configuradas de forma segura (e.g., via variáveis de ambiente ou arquivo `.env`).
+    *Nota:* Certifique-se de que as tabelas necessárias, como `users`, estejam criadas no banco de dados.
 
 ## Uso
 
@@ -85,6 +91,10 @@ Você verá o progresso e as decisões da IA sendo impressas no console.
 *   `requirements.txt`: Lista de dependências Python.
 *   `test_agent.py`: Responsável pela execução dos testes do projeto, utilizando `pytest`. Em caso de falha, a IA pode fornecer um diagnóstico e sugestões de correção.
 *   `doc_agent.py`: Responsável pela criação e atualização automatizada da documentação do projeto. Ele agora emprega **diretrizes de contexto específicas** para gerar e refinar os conteúdos (como `README.md` para foco técnico, `docs/architecture.md` para detalhes arquiteturais e `docs/manual_do_usuario.md` para usuários leigos), assegurando que cada documento seja relevante e apropriado para seu público-alvo e sempre alinhado com as alterações de código.
+*   `db/`: Diretório que contém módulos para interação com o banco de dados.
+    *   `db/auth.py`: Módulo responsável pelas operações de autenticação e gerenciamento de usuários. A função `get_all_users` foi aprimorada para garantir que os dados dos usuários sejam sempre retornados ordenados por `id` de forma ascendente, otimizando a consistência dos resultados.
+*   `views/`: Diretório que hospeda a lógica de apresentação e os controladores para diferentes interfaces.
+    *   `views/admin.py`: Módulo que gerencia a interface administrativa. A lógica de exibição de usuários agora inclui uma etapa explícita de ordenação do DataFrame de usuários por `id` de forma ascendente, complementando a ordenação do banco de dados e assegurando uma apresentação consistente dos dados.
 *   `docs/architecture.md`: Documentação detalhada da arquitetura do sistema multi-agente, incluindo o fluxo do pipeline e os componentes.
 *   `docs/manual_do_usuario.md`: Documentação abrangente para o usuário final, explicando como interagir com o sistema e suas funcionalidades.
 *   `tests/`: Diretório contendo os testes unitários do projeto, executados pelo `test_agent.py`.
