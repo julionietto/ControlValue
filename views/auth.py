@@ -205,9 +205,10 @@ def render_auth_view():
                         else:
                             st.error("Preencha todos os campos.")
                 else:
-                    user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
-                    password = st.text_input("Senha", type="password", placeholder="Sua senha")
-                    submit_login = st.button("Entrar", use_container_width=True)
+                    with st.form("login_form", clear_on_submit=False):
+                        user_input = st.text_input("Email / Usuário", placeholder="seu@email.com")
+                        password = st.text_input("Senha", type="password", placeholder="Sua senha")
+                        submit_login = st.form_submit_button("Entrar", use_container_width=True)
                     
                     if submit_login:
                         success, uid, uname, is_admin, status, extra, theme_pref = db.verify_user(user_input, password)

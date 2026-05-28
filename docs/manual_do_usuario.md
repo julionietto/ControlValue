@@ -1,6 +1,3 @@
-Aqui está a documentação atualizada:
-
-```markdown
 # Manual do Usuário - ControlValue 📈
 
 Bem-vindo ao **ControlValue**, a sua plataforma pessoal para consolidação, acompanhamento e análise de investimentos! Este guia foi feito para ajudar você a navegar e utilizar todos os recursos do sistema, mesmo se você não tiver conhecimento técnico em informática.
