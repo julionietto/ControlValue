@@ -212,8 +212,8 @@ def render_proventos_historico_view():
     html_table.append('    <tr style="background-color: var(--table-header-bg);">')
     html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">Ativo</th>')
     for mes in meses_ordem:
-        html_table.append(f'      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">{mes[:3].upper()}</th>')
-    html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Total</th>')
+        html_table.append(f'      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">{mes[:3].upper()}</th>')
+    html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">Total</th>')
     html_table.append('    </tr>')
     html_table.append('  </thead>')
     
@@ -254,7 +254,7 @@ def render_proventos_historico_view():
     # Linha TOTAL
     total_style = 'background-color: #16181d; font-weight: bold;'
     html_table.append(f'    <tr style="{total_style}">')
-    html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 1.05rem; font-weight: bold;">TOTAL</td>')
+    html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">TOTAL</td>')
     for col in col_order:
         val_fmt = format_provento(totais_row[col])
         if col == 'Valor Anual':
@@ -277,7 +277,7 @@ def render_proventos_historico_view():
         
         growth_style = 'background-color: #121316;'
         html_table.append(f'    <tr style="{growth_style}">')
-        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; font-weight: bold; color: var(--text-primary);">CRESCIMENTO</td>')
+        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); text-transform: uppercase;">CRESCIMENTO</td>')
         
         for col in col_order:
             val_curr, val_prev = totais_row[col], tot_prev_full[col]
@@ -299,7 +299,7 @@ def render_proventos_historico_view():
         # Linha MÉDIA ACUMULADA (Renomeada para VALOR MÉDIO)
         avg_style = 'background-color: #16181d; font-weight: bold;'
         html_table.append(f'    <tr style="{avg_style}">')
-        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.95rem; font-weight: bold; white-space: nowrap;">VALOR MÉDIO</td>')
+        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; white-space: nowrap; text-transform: uppercase;">VALOR MÉDIO</td>')
         
         mes_limite = now.month if ano == now.year else 12
         for i, m in enumerate(meses_ordem):
@@ -328,11 +328,13 @@ def render_proventos_historico_view():
     with col_edit:
         available_tickers = sorted(display_df['OriginalTicker'].unique())
         ticker_options = ["✏️ Selecionar Ativo para Editar/Excluir..."] + [f"{format_ticker_for_display(t)}" for t in available_tickers]
-        selected_option = st.selectbox("Editar Ativo", ticker_options, label_visibility="collapsed", key=f"sel_edit_ticker_{ano}")
+        sel_key = f"sel_edit_ticker_{ano}_{st.session_state.refresh_id}"
+        selected_option = st.selectbox("Editar Ativo", ticker_options, label_visibility="collapsed", key=sel_key)
         if selected_option != "✏️ Selecionar Ativo para Editar/Excluir...":
             sel_idx = ticker_options.index(selected_option) - 1
             original_ticker = available_tickers[sel_idx]
             st.session_state.editing_provento = {'ano': ano, 'ticker': original_ticker}
+            st.session_state.refresh_id += 1
             st.rerun()
             
     st.markdown("---")
