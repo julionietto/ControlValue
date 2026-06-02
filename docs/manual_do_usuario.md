@@ -69,7 +69,7 @@ Ela é dividida em três visões principais:
 
 #### Gerenciando Ativos e Proventos
 *   **Adicionar Novo Ativo:** Para registrar proventos de um ativo que ainda não está na sua lista ou para um novo ano, clique no botão "➕ Adicionar Ativo".
-*   **Editar ou Excluir Ativo Existente:** Se precisar ajustar ou remover proventos de um ativo já cadastrado, utilize o menu suspenso "Editar Ativo" que aparece ao lado do botão de adicionar. Selecione o ativo desejado na lista para abrir a tela de edição, onde você poderá fazer as alterações necessárias ou excluí-lo.
+*   **Editar ou Excluir Ativo Existente:** Se precisar ajustar os proventos de um ativo já cadastrado ou remover seus registros para um ano específico, utilize o menu suspenso "Editar Ativo" que aparece ao lado do botão de adicionar. Selecione o ativo desejado na lista para abrir a tela de edição. Lá, você poderá fazer as alterações necessárias. **Atenção:** Se optar por remover os proventos de um ativo para um ano específico, uma **janela de confirmação** será exibida. Isso garante que a exclusão seja intencional. Você precisará confirmar sua escolha para que a exclusão seja efetivada ou poderá cancelar a operação, se desejar.
 
 ---
 

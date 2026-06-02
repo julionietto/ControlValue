@@ -131,6 +131,21 @@ def render_proventos_historico_view():
             if st.button("Cancelar", use_container_width=True):
                 clear_state(); st.rerun()
 
+    @st.dialog("⚠️ Confirmar Exclusão", dismissible=False)
+    def dialog_confirmar_exclusao_provento(ano, ticker):
+        st.warning("Tem certeza que deseja excluir este ativo da tabela dos proventos deste ano?")
+        c_yes, c_no = st.columns(2)
+        with c_yes:
+            if st.button("Sim, confirmar", type="primary", use_container_width=True):
+                db.delete_proventos_ativo_ano(ano, ticker, st.session_state.user_id)
+                st.session_state.refresh_id += 1
+                if 'confirming_delete_provento' in st.session_state: del st.session_state['confirming_delete_provento']
+                st.rerun()
+        with c_no:
+            if st.button("Não, cancelar", use_container_width=True):
+                if 'confirming_delete_provento' in st.session_state: del st.session_state['confirming_delete_provento']
+                st.rerun()
+
     @st.dialog("➕ Adicionar Ativo", dismissible=False)
     def dialog_adicionar_ativo(ano):
         st.markdown(f"**Ano:** `{ano}`")
@@ -145,6 +160,10 @@ def render_proventos_historico_view():
                 st.rerun()
 
     # ---- Trigger Popups ----
+    if st.session_state.get('confirming_delete_provento'):
+        c_data = st.session_state['confirming_delete_provento']
+        dialog_confirmar_exclusao_provento(c_data['ano'], c_data['ticker'])
+
     if st.session_state.get('editing_provento'):
         edit_data = st.session_state['editing_provento']
         if edit_data['ticker'] == '__NOVO__': dialog_adicionar_ativo(edit_data['ano'])
