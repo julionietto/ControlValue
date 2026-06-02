@@ -57,16 +57,27 @@ Quer analisar um investimento específico? Selecione o ativo (ex: PETR4, WEGE3) 
 *   Lista de todas as compras e vendas realizadas daquele papel.
 
 ### 💵 Proventos (Rendimentos)
-Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalhado sobre seus recebimentos. As tabelas de proventos foram aprimoradas para uma visualização mais clara e consistente, apresentando todos os dados de forma unificada e fácil de ler.
+Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalhado sobre seus recebimentos. As tabelas de proventos foram aprimoradas para uma visualização ainda mais clara e consistente, apresentando todos os dados de forma unificada e fácil de ler.
 
 Ela é dividida em três visões principais:
 1.  **Histórico:** Veja mês a mês ou ano a ano quanto você já recebeu de dividendos, juros sobre capital próprio (JCP) ou rendimentos.
 2.  **Resumo de Recebimentos:** Tabelas organizadas consolidando os valores por ativo.
+    *   Para uma visão mais focada, a tabela agora exibe os valores mensais de cada ativo e um **Total Anual**. A coluna de "Média Mensal" individual foi removida para simplificar a visualização dos dados mais relevantes.
+    *   Uma nova linha **"Crescimento"** mostra a porcentagem de crescimento dos proventos de cada mês em relação ao mesmo mês do ano anterior, ajudando a identificar tendências na sua renda passiva.
+    *   A linha **"Valor Médio"** (anteriormente conhecida como "Média Acumulada") agora apresenta o valor médio acumulado dos proventos recebidos até o mês atual, oferecendo uma perspectiva clara do seu recebimento médio ao longo do tempo.
 3.  **Ranking:** Veja quais empresas ou fundos imobiliários mais pagaram dividendos para você no período selecionado.
 
 #### Gerenciando Ativos e Proventos
 *   **Adicionar Novo Ativo:** Para registrar proventos de um ativo que ainda não está na sua lista ou para um novo ano, clique no botão "➕ Adicionar Ativo".
 *   **Editar ou Excluir Ativo Existente:** Se precisar ajustar ou remover proventos de um ativo já cadastrado, utilize o menu suspenso "Editar Ativo" que aparece ao lado do botão de adicionar. Selecione o ativo desejado na lista para abrir a tela de edição, onde você poderá fazer as alterações necessárias ou excluí-lo.
+
+---
+
+**💡 Legenda:**
+*   **Crescimento:** Indica a porcentagem de crescimento dos proventos em comparação com o mesmo mês do ano anterior.
+*   **Valor Médio:** Representa o valor médio acumulado dos proventos recebidos até o mês atual, fornecendo uma visão da sua renda passiva mensal projetada.
+
+---
 
 ### 📉 Derivativos (Opções)
 Para usuários que realizam operações de proteção (hedge) ou rentabilização de carteira utilizando opções:

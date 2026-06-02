@@ -162,15 +162,10 @@ def render_proventos_historico_view():
         return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if not pd.isna(val) and val != 0 else "0,00"
 
     df_ano = proventos_df[proventos_df['ano'] == ano]
-    pivot_df = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
-    pivot_df = pivot_df.rename(columns=meses_nomes_dict)
-    for mes in meses_ordem:
-        if mes not in pivot_df.columns: pivot_df[mes] = 0.0
-    pivot_df = pivot_df[meses_ordem].sort_index()
     pivot_df['Valor Anual'] = pivot_df.sum(axis=1)
     pivot_df['Valor Mensal'] = pivot_df['Valor Anual'] / 12
-    col_order = meses_ordem + ['Valor Mensal', 'Valor Anual']
-    pivot_df = pivot_df[col_order]
+    col_order = meses_ordem + ['Valor Anual']
+    pivot_df = pivot_df[meses_ordem + ['Valor Mensal', 'Valor Anual']]
     totais_row = pivot_df.sum(axis=0)
     
     display_df = pivot_df.copy()
@@ -197,9 +192,7 @@ def render_proventos_historico_view():
             elif not is_active and is_current_year:
                 col_styles.append('color: #EF553B')
             else:
-                if col == 'Valor Mensal':
-                    col_styles.append('color: #00CC96')
-                elif col == 'Valor Anual':
+                if col == 'Valor Anual':
                     col_styles.append('color: #3d9df3')
             
             styles.append('; '.join(col_styles))
@@ -215,7 +208,6 @@ def render_proventos_historico_view():
     html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">Ativo</th>')
     for mes in meses_ordem:
         html_table.append(f'      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">{mes[:3].upper()}</th>')
-    html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Média</th>')
     html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Total</th>')
     html_table.append('    </tr>')
     html_table.append('  </thead>')
@@ -251,19 +243,16 @@ def render_proventos_historico_view():
                 val_color = default_val_color
             html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; {val_color}">{row[mes]}</td>')
         
-        html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; color: #00CC96; font-weight: 500;">{row["Valor Mensal"]}</td>')
         html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; color: #3d9df3; font-weight: 500;">{row["Valor Anual"]}</td>')
         html_table.append('    </tr>')
     
     # Linha TOTAL
     total_style = 'background-color: #16181d; font-weight: bold;'
     html_table.append(f'    <tr style="{total_style}">')
-    html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary);">TOTAL</td>')
+    html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 1.05rem; font-weight: bold;">TOTAL</td>')
     for col in col_order:
         val_fmt = format_provento(totais_row[col])
-        if col == 'Valor Mensal':
-            color_total = 'color: #00CC96;'
-        elif col == 'Valor Anual':
+        if col == 'Valor Anual':
             color_total = 'color: #3d9df3;'
         else:
             color_total = 'color: var(--text-primary);'
@@ -283,7 +272,7 @@ def render_proventos_historico_view():
         
         growth_style = 'background-color: #121316;'
         html_table.append(f'    <tr style="{growth_style}">')
-        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; font-weight: bold;">📈</td>')
+        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; font-weight: bold; color: var(--text-primary);">CRESCIMENTO</td>')
         
         for col in col_order:
             val_curr, val_prev = totais_row[col], tot_prev_full[col]
@@ -302,10 +291,10 @@ def render_proventos_historico_view():
             html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); {style_val}">{val_str}</td>')
         html_table.append('    </tr>')
         
-        # Linha MÉDIA ACUMULADA
+        # Linha MÉDIA ACUMULADA (Renomeada para VALOR MÉDIO)
         avg_style = 'background-color: #16181d; font-weight: bold;'
         html_table.append(f'    <tr style="{avg_style}">')
-        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; white-space: nowrap;">MÉDIA ACUMULADA</td>')
+        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.95rem; font-weight: bold; white-space: nowrap;">VALOR MÉDIO</td>')
         
         mes_limite = now.month if ano == now.year else 12
         for i, m in enumerate(meses_ordem):
@@ -315,7 +304,6 @@ def render_proventos_historico_view():
             else:
                 html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
         
-        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
         html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
         html_table.append('    </tr>')
         
@@ -341,4 +329,13 @@ def render_proventos_historico_view():
             original_ticker = available_tickers[sel_idx]
             st.session_state.editing_provento = {'ano': ano, 'ticker': original_ticker}
             st.rerun()
+            
+    st.markdown("---")
+    st.markdown("""
+        <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin-top: 10px;">
+            💡 <b>Legenda:</b><br>
+            • <b>Crescimento:</b> % de crescimento comparado com o mesmo mês do ano anterior.<br>
+            • <b>Valor Médio:</b> valor médio acumulado até o mês atual.
+        </div>
+    """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)

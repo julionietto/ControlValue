@@ -1,3 +1,4 @@
+```
 # Arquitetura do Sistema de Deploy Multiagente
 
 ## 1. Introdução
@@ -176,8 +177,9 @@ A apresentação de dados financeiros, como proventos, exige um alto grau de con
 
 *   **Renderização de Tabelas Customizadas em HTML (`views/proventos.py`, `views/proventos_historico.py`):**
     *   Anteriormente, a visualização de proventos utilizava o componente nativo `st.dataframe` do Streamlit, com estilização aplicada via métodos `.style.apply()`. Esta abordagem foi substituída pela geração direta de tabelas HTML customizadas.
-    *   Agora, as tabelas são construídas programaticamente em HTML (usando listas de strings que são unidas e passadas para `st.write(..., unsafe_allow_html=True)`). Isso permite um controle granular sobre cada aspecto visual da tabela, incluindo cabeçalhos, linhas de dados, e as linhas de rodapé (TOTAL, PERCENTUAL DE CRESCIMENTO, MÉDIA ACUMULADA), que agora são integradas de forma coesa na mesma estrutura de tabela HTML.
-    *   A estilização é aplicada diretamente nos atributos `style` do HTML e através de classes CSS (`.custom-table`), utilizando variáveis CSS (`var(--border-color)`, `var(--table-header-bg)`, etc.) para garantir a compatibilidade e consistência com o tema global da aplicação. Isso proporciona maior flexibilidade para aplicar cores condicionais (ex: verde para valores positivos, vermelho para negativos), alinhamentos específicos e fontes personalizadas, melhorando a legibilidade e a inteligência visual dos dados financeiros.
+    *   Agora, as tabelas são construídas programaticamente em HTML (usando listas de strings que são unidas e passadas para `st.write(..., unsafe_allow_html=True)`). Isso permite um controle granular sobre cada aspecto visual da tabela, incluindo cabeçalhos, linhas de dados, e as linhas de rodapé (TOTAL, CRESCIMENTO, VALOR MÉDIO), que agora são integradas de forma coesa na mesma estrutura de tabela HTML. Foi removida a coluna explícita de "Média Mensal" para focar a apresentação nos valores mensais e no total anual dos ativos.
+    *   A estilização é aplicada diretamente nos atributos `style` do HTML e através de classes CSS (`.custom-table`), utilizando variáveis CSS (`var(--border-color)`, `var(--table-header-bg)`, etc.) para garantir a compatibilidade e consistência com o tema global da aplicação. Isso proporciona maior flexibilidade para aplicar cores condicionais (ex: verde para valores positivos, vermelho para negativos), alinhamentos específicos e fontes personalizadas, melhorando a legibilidade e a inteligência visual dos dados financeiros. As linhas de sumário "TOTAL", "CRESCIMENTO" e "VALOR MÉDIO" receberam melhorias visuais para maior destaque e clareza.
+    *   Para melhorar a compreensão das métricas exibidas, uma legenda foi adicionada abaixo das tabelas, explicando os termos "Crescimento" (comparado ao mesmo mês do ano anterior) e "Valor Médio" (valor médio acumulado até o mês atual).
     *   Esta mudança resultou em uma visualização mais performática e com maior fidelidade ao design desejado, especialmente para tabelas complexas que requerem cálculos de totais, médias e percentuais de crescimento em suas linhas de sumário.
 
 *   **Interação de Edição e Adição de Ativos:**
