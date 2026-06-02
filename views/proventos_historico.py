@@ -162,6 +162,11 @@ def render_proventos_historico_view():
         return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if not pd.isna(val) and val != 0 else "0,00"
 
     df_ano = proventos_df[proventos_df['ano'] == ano]
+    pivot_df = df_ano.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
+    pivot_df = pivot_df.rename(columns=meses_nomes_dict)
+    for mes in meses_ordem:
+        if mes not in pivot_df.columns: pivot_df[mes] = 0.0
+    pivot_df = pivot_df[meses_ordem].sort_index()
     pivot_df['Valor Anual'] = pivot_df.sum(axis=1)
     pivot_df['Valor Mensal'] = pivot_df['Valor Anual'] / 12
     col_order = meses_ordem + ['Valor Anual']
