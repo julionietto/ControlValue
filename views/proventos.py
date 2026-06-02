@@ -431,7 +431,9 @@ def render_proventos_view():
                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin-top: 10px;">
                     💡 <b>Legenda:</b><br>
                     • <b>Crescimento:</b> % de crescimento comparado com o mesmo mês do ano anterior.<br>
-                    • <b>Valor Médio:</b> valor médio acumulado até o mês atual.
+                    • <b>Valor Médio:</b> valor médio acumulado até o mês atual.<br>
+                    • <b style="color: #EF553B;">Ativos em vermelho:</b> foram vendidos e serão tratados como dados históricos.<br>
+                    • <b style="color: #FFA726;">Valores em laranja:</b> são dados referentes ao mês corrente.
                 </div>
             """, unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
