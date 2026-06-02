@@ -286,79 +286,66 @@ def render_proventos_view():
             display_df['ticker'] = display_df['ticker'].apply(format_ticker_for_display)
             display_df.rename(columns={'ticker': 'Ativo'}, inplace=True)
             
-            key_df = f"prov_df_{ano}_{st.session_state.refresh_id}"
+            # Gerar a tabela unificada em HTML
+            html_table = []
+            html_table.append('<table class="custom-table" style="width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; margin-top: 15px; margin-bottom: 15px;">')
             
-            cols_right = [col for col in col_order]
+            # Cabeçalho da tabela
+            html_table.append('  <thead>')
+            html_table.append('    <tr style="background-color: var(--table-header-bg);">')
+            html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">Ativo</th>')
+            for mes in meses_ordem:
+                html_table.append(f'      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">{mes[:3].upper()}</th>')
+            html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Média</th>')
+            html_table.append('      <th style="padding: 12px 16px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Total</th>')
+            html_table.append('    </tr>')
+            html_table.append('  </thead>')
             
-            def style_row(row):
-                is_active = row['OriginalTicker'] in active_tickers
-                if not is_active and ano == ano_atual:
-                    return ['color: #EF553B'] * len(row)
+            # Corpo da tabela
+            html_table.append('  <tbody>')
+            
+            # Linhas dos Ativos
+            for idx, row in display_df.iterrows():
+                orig_ticker = row['OriginalTicker']
+                is_active = orig_ticker in active_tickers
                 
-                colors = []
-                for col in row.index:
-                    if col == 'Valor Mensal':
-                        colors.append('color: #00CC96')
-                    elif col == 'Valor Anual':
-                        colors.append('color: #3d9df3')
-                    else:
-                        colors.append('')
-                return colors
-
-            styled_df = display_df.style.apply(style_row, axis=1) \
-                                       .set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
-                                       .set_properties(**{'text-align': 'right'}, subset=cols_right)
-
-            selected = st.dataframe(
-                styled_df,
-                hide_index=True,
-                use_container_width=True,
-                on_select="rerun",
-                selection_mode="single-row",
-                column_config={"OriginalTicker": None},
-                key=key_df
-            )
+                row_style = 'background-color: var(--bg-card);'
+                ticker_style = 'text-align: center; font-weight: bold; color: var(--text-primary); font-family: monospace;'
+                
+                if not is_active and ano == ano_atual:
+                    val_color = 'color: #EF553B;'
+                    ticker_style = 'text-align: center; font-weight: bold; color: #EF553B; font-family: monospace;'
+                else:
+                    val_color = 'color: var(--text-primary);'
+                
+                html_table.append(f'    <tr style="{row_style} transition: background-color 0.2s ease;">')
+                html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); {ticker_style}">{row["Ativo"]}</td>')
+                
+                for mes in meses_ordem:
+                    html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; {val_color}">{row[mes]}</td>')
+                
+                html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; color: #00CC96; font-weight: 500;">{row["Valor Mensal"]}</td>')
+                html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; color: #3d9df3; font-weight: 500;">{row["Valor Anual"]}</td>')
+                html_table.append('    </tr>')
             
-            if selected.selection.rows:
-                row_idx = selected.selection.rows[0]
-                ticker_selecionado = display_df.iloc[row_idx]['OriginalTicker']
-                st.session_state.editing_provento = {'ano': ano, 'ticker': ticker_selecionado}
-                st.session_state.refresh_id += 1
-                st.rerun()
-
-            st.markdown("""
-                <style>
-                .growth-positive { color: #00CC96 !important; }
-                .growth-negative { color: #EF553B !important; }
-                th { font-weight: normal !important; font-size: 0.85rem; }
-                th:first-child { text-align: center !important; }
-                td { font-size: 0.85rem; }
-                </style>
-            """, unsafe_allow_html=True)
-
-            footer_rows = []
-            
-            # 1. Linha MÊS (Cabeçalho de colunas)
-            mes_row = {'MÊS': '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÊS</div>'}
-            for mes_nome in meses_ordem:
-                mes_row[mes_nome] = f'<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">{mes_nome[:3]}</div>'
-            mes_row['Valor Mensal'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">MÉDIA</div>'
-            mes_row['Valor Anual'] = '<div style="text-align: center; font-weight: bold; font-size: 0.8rem;">TOTAL</div>'
-            footer_rows.append(mes_row)
-
-            # 2. Linha TOTAL
-            tm_row = {'MÊS': '<div style="text-align: center; font-size: 0.85rem;">TOTAL</div>'}
+            # Linha TOTAL
+            total_style = 'background-color: #16181d; font-weight: bold;'
+            html_table.append(f'    <tr style="{total_style}">')
+            html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary);">TOTAL</td>')
             for col in col_order:
-                color_total = ''
-                if col == 'Valor Mensal': color_total = 'color: #00CC96;'
-                elif col == 'Valor Anual': color_total = 'color: #3d9df3;'
                 val_fmt = format_provento(totais_row[col])
-                tm_row[col] = f'<div style="text-align: right; font-size: 0.85rem; {color_total}">{val_fmt}</div>'
-            footer_rows.append(tm_row)
+                if col == 'Valor Mensal':
+                    color_total = 'color: #00CC96;'
+                elif col == 'Valor Anual':
+                    color_total = 'color: #3d9df3;'
+                else:
+                    color_total = 'color: var(--text-primary);'
+                html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; {color_total}">{val_fmt}</td>')
+            html_table.append('    </tr>')
             
             ano_mais_antigo = min(anos_disponiveis)
             if ano > ano_mais_antigo:
-                # 3. Linha PERCENTUAL DE CRESCIMENTO
+                # Linha PERCENTUAL DE CRESCIMENTO
                 prev_year = ano - 1
                 df_prev = proventos_df[proventos_df['ano'] == prev_year]
                 pivot_prev = df_prev.pivot_table(index='ticker', columns='mes', values='valor', aggfunc='sum').fillna(0)
@@ -374,24 +361,33 @@ def render_proventos_view():
                 totais_prev_full['Valor Mensal'] = media_prev
                 totais_prev_full['Valor Anual'] = res_final_prev
                 
-                growth_row = {'MÊS': f'<div style="text-align: center;">{growth_icon_tag}</div>'}
+                growth_style = 'background-color: #121316;'
+                html_table.append(f'    <tr style="{growth_style}">')
+                html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; vertical-align: middle;">{growth_icon_tag}</td>')
+                
                 for col in col_order:
                     val_curr = totais_row[col]
                     val_prev = totais_prev_full[col]
-                    style_val = 'font-weight: normal; font-size: 0.85rem; text-align: right;'
                     
                     if st.session_state.get('hide_values', False):
-                        growth_row[col] = f'<div style="{style_val}">••••••</div>'
+                        val_str = "••••••"
+                        style_val = 'color: var(--text-secondary); text-align: right;'
                     elif val_prev > 0:
                         pct = ((val_curr / val_prev) - 1) * 100
-                        color = "#00CC96" if pct >= 0 else "red"
-                        growth_row[col] = f'<div style="color: {color}; {style_val}">{pct:,.2f}%</div>'.replace('.', ',')
+                        color = "#00CC96" if pct >= 0 else "#EF553B"
+                        val_str = f"{pct:,.2f}%".replace('.', ',')
+                        style_val = f'color: {color}; text-align: right; font-weight: bold;'
                     else:
-                        growth_row[col] = f'<div style="{style_val}">0,00%</div>'
-                footer_rows.append(growth_row)
-
-                # 4. Linha MÉDIA ACUMULADA
-                avg_ytd_row = {'MÊS': f'<div style="text-align: center; font-size: 0.8rem; white-space: nowrap;">MÉDIA ACUMULADA</div>'}
+                        val_str = "0,00%"
+                        style_val = 'color: var(--text-secondary); text-align: right;'
+                    
+                    html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); {style_val}">{val_str}</td>')
+                html_table.append('    </tr>')
+                
+                # Linha MÉDIA ACUMULADA
+                avg_style = 'background-color: #16181d; font-weight: bold;'
+                html_table.append(f'    <tr style="{avg_style}">')
+                html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; white-space: nowrap;">MÉDIA ACUMULADA</td>')
                 
                 now = pd.Timestamp.now()
                 mes_limite = now.month if ano == ano_atual else 12
@@ -402,21 +398,35 @@ def render_proventos_view():
                         soma_acumulada = totais_row[meses_ordem[:num_meses]].sum()
                         media_mes = soma_acumulada / num_meses
                         val_fmt = format_provento(media_mes)
-                        avg_ytd_row[mes_nome] = f'<div style="font-size: 0.85rem; text-align: right; color: #00CC96;">{val_fmt}</div>'
+                        html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; color: #00CC96;">{val_fmt}</td>')
                     else:
-                        avg_ytd_row[mes_nome] = ''
+                        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
                 
-                avg_ytd_row['Valor Mensal'] = ''
-                avg_ytd_row['Valor Anual'] = ''
-                footer_rows.append(avg_ytd_row)
-
-            df_footer = pd.DataFrame(footer_rows)
-            st.write(df_footer.to_html(escape=False, index=False), unsafe_allow_html=True)
+                html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
+                html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
+                html_table.append('    </tr>')
+                
+            html_table.append('  </tbody>')
+            html_table.append('</table>')
             
-            if ano == ano_atual:
-                st.markdown("")
-                if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}"):
-                    st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
+            st.write('\n'.join(html_table), unsafe_allow_html=True)
+            
+            # Controles de Adição e Edição
+            st.markdown("")
+            col_add, col_edit = st.columns([1, 1])
+            with col_add:
+                if ano == ano_atual:
+                    if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}", use_container_width=True):
+                        st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
+                        st.rerun()
+            with col_edit:
+                available_tickers = sorted(display_df['OriginalTicker'].unique())
+                ticker_options = ["✏️ Selecionar Ativo para Editar/Excluir..."] + [f"{format_ticker_for_display(t)}" for t in available_tickers]
+                selected_option = st.selectbox("Editar Ativo", ticker_options, label_visibility="collapsed", key=f"sel_edit_ticker_{ano}")
+                if selected_option != "✏️ Selecionar Ativo para Editar/Excluir...":
+                    sel_idx = ticker_options.index(selected_option) - 1
+                    original_ticker = available_tickers[sel_idx]
+                    st.session_state.editing_provento = {'ano': ano, 'ticker': original_ticker}
                     st.rerun()
                     
             st.markdown("<br>", unsafe_allow_html=True)
