@@ -327,16 +327,15 @@ def render_proventos_view():
                 html_table.append('    </tr>')
             
             # Linha TOTAL
-            total_style = 'background-color: #16181d; font-weight: bold;'
-            html_table.append(f'    <tr style="{total_style}">')
-            html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">TOTAL</td>')
+            html_table.append('    <tr style="font-weight: bold;">')
+            html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-top: 2px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">TOTAL</td>')
             for col in col_order:
                 val_fmt = format_provento(totais_row[col])
                 if col == 'Valor Anual':
                     color_total = 'color: #3d9df3;'
                 else:
                     color_total = 'color: var(--text-primary);'
-                html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; {color_total}">{val_fmt}</td>')
+                html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-top: 2px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-align: right; {color_total}">{val_fmt}</td>')
             html_table.append('    </tr>')
             
             ano_mais_antigo = min(anos_disponiveis)
@@ -357,9 +356,8 @@ def render_proventos_view():
                 totais_prev_full['Valor Mensal'] = media_prev
                 totais_prev_full['Valor Anual'] = res_final_prev
                 
-                growth_style = 'background-color: #121316;'
-                html_table.append(f'    <tr style="{growth_style}">')
-                html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); text-transform: uppercase;">CRESCIMENTO</td>')
+                html_table.append('    <tr>')
+                html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-row-hover); border-bottom: 1px solid var(--border-color); text-align: center; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); text-transform: uppercase;">CRESCIMENTO</td>')
                 
                 for col in col_order:
                     val_curr = totais_row[col]
@@ -377,13 +375,12 @@ def render_proventos_view():
                         val_str = "0,00%"
                         style_val = 'color: var(--text-secondary); text-align: right;'
                     
-                    html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); {style_val}">{val_str}</td>')
+                    html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-row-hover); border-bottom: 1px solid var(--border-color); {style_val}">{val_str}</td>')
                 html_table.append('    </tr>')
                 
                 # Linha MÉDIA ACUMULADA (Renomeada para VALOR MÉDIO)
-                avg_style = 'background-color: #16181d; font-weight: bold;'
-                html_table.append(f'    <tr style="{avg_style}">')
-                html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; white-space: nowrap; text-transform: uppercase;">VALOR MÉDIO</td>')
+                html_table.append('    <tr style="font-weight: bold;">')
+                html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; white-space: nowrap; text-transform: uppercase;">VALOR MÉDIO</td>')
                 
                 now = pd.Timestamp.now()
                 mes_limite = now.month if ano == ano_atual else 12
@@ -394,11 +391,11 @@ def render_proventos_view():
                         soma_acumulada = totais_row[meses_ordem[:num_meses]].sum()
                         media_mes = soma_acumulada / num_meses
                         val_fmt = format_provento(media_mes)
-                        html_table.append(f'      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; color: #00CC96;">{val_fmt}</td>')
+                        html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color); text-align: right; color: #00CC96;">{val_fmt}</td>')
                     else:
-                        html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
+                        html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color);"></td>')
                 
-                html_table.append('      <td style="padding: 14px 16px; border-bottom: 1px solid var(--border-color);"></td>')
+                html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color);"></td>')
                 html_table.append('    </tr>')
                 
             html_table.append('  </tbody>')
