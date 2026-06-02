@@ -148,15 +148,15 @@ def generate_commit_message(diff_text, new_version):
         return f"[v{new_version}] Atualização automática do projeto com novos testes e relatórios"
 
 def main():
-    print("[START] Iniciando Auto Push Agent (Orquestrador)...")
+    print("[Push Agent] Iniciando execução autônoma do Push Agent (Orquestrador)...")
     
     # 1. Adicionar arquivos ao staging temporariamente para ver o diff
-    print("[GIT] Verificando modificações...")
+    print("[Push Agent] Verificando modificações no repositório...")
     run_git_command("git add .")
     
     diff = run_git_command("git diff --cached")
     if not diff:
-        print("[AVISO] Nenhuma alteração detectada para commitar.")
+        print("[Push Agent] [AVISO] Nenhuma alteração detectada para commitar.")
         sys.exit(0)
         
     # Limita o tamanho do diff se for gigante para não estourar o limite de tokens
@@ -167,26 +167,26 @@ def main():
         
     # 2. Chamar o Agente de Testes
     print("\n" + "="*40)
-    print("[Pipeline] Invocando o Agente de Testes...")
+    print("[Push Agent] Invocando o Agente de Testes...")
     python_exe = os.path.join("venv", "Scripts", "python.exe")
     if not os.path.exists(python_exe):
         python_exe = "python"
         
     test_result = subprocess.run([python_exe, "test_agent.py"])
     if test_result.returncode != 0:
-        print("[Pipeline] [ERRO] O Agente de Testes reportou falhas. O deploy foi abortado!")
+        print("[Push Agent] [ERRO] O Agente de Testes reportou falhas. O deploy foi abortado!")
         sys.exit(1)
-    print("[Pipeline] [OK] Agente de Testes passou.")
+    print("[Push Agent] [OK] Agente de Testes passou.")
     print("="*40 + "\n")
     
     # 3. Chamar o Agente de Documentação
     print("="*40)
-    print("[Pipeline] Invocando o Agente de Documentação...")
+    print("[Push Agent] Invocando o Agente de Documentação...")
     doc_result = subprocess.run([python_exe, "doc_agent.py"])
     if doc_result.returncode != 0:
-        print("[Pipeline] [ERRO] O Agente de Documentação falhou. O deploy foi abortado!")
+        print("[Push Agent] [ERRO] O Agente de Documentação falhou. O deploy foi abortado!")
         sys.exit(1)
-    print("[Pipeline] [OK] Agente de Documentação concluiu a atualização.")
+    print("[Push Agent] [OK] Agente de Documentação concluiu a atualização.")
     print("="*40 + "\n")
     
     # 4. Adicionar as documentações criadas/alteradas ao staging
@@ -210,37 +210,37 @@ def main():
     
     # 7. Gerar mensagem de commit por IA contendo a nova versão
     commit_message = generate_commit_message(full_diff_for_ai, new_version)
-    print(f"[MSG] Mensagem gerada: {commit_message}")
+    print(f"[Push Agent] Mensagem de commit gerada: {commit_message}")
     
     # 8. Commit
-    print("[GIT] Realizando commit...")
+    print("[Push Agent] Realizando commit das alterações...")
     # Usa array para evitar problemas com aspas na linha de comando
     subprocess.run(["git", "commit", "-m", commit_message], check=True)
     
     # 9. Push
-    print("[GIT] Enviando para o GitHub (git push origin master)...")
+    print("[Push Agent] Enviando alterações para o GitHub (git push origin master)...")
     run_git_command("git push origin master", capture_output=False) # Exibe o output no terminal
     
     # 10. Abrir Relatório no Microsoft Edge
     try:
         report_path = os.path.abspath("docs/test_report.html")
         if os.path.exists(report_path):
-            print(f"\n[Pipeline] Abrindo relatório de testes no Microsoft Edge: {report_path}")
+            print(f"\n[Push Agent] Abrindo relatório de testes no Microsoft Edge: {report_path}")
             url = f"file://{report_path}"
             # Tenta abrir especificamente no Microsoft Edge no Windows
             subprocess.Popen(f'start msedge "{url}"', shell=True)
         else:
-            print(f"\n[Pipeline] [AVISO] Relatório HTML não encontrado em: {report_path}")
+            print(f"\n[Push Agent] [AVISO] Relatório HTML não encontrado em: {report_path}")
     except Exception as e:
-        print(f"\n[Pipeline] Erro ao abrir no Microsoft Edge ({e}). Usando navegador padrão...")
+        print(f"\n[Push Agent] Erro ao abrir no Microsoft Edge ({e}). Usando navegador padrão...")
         try:
             import webbrowser
             webbrowser.open("file://" + report_path)
         except Exception as e2:
-            print(f"[Pipeline] Erro ao abrir o navegador padrão: {e2}")
+            print(f"[Push Agent] Erro ao abrir o navegador padrão: {e2}")
         
     print("\n" + "="*50)
-    print("[OK] PIPELINE MULTIAGENTE CONCLUÍDO COM SUCESSO!")
+    print("[Push Agent] PIPELINE MULTIAGENTE CONCLUÍDO COM SUCESSO!")
     print(f"Versão de Deploy: {new_version} ({increment_type})")
     print(f"Mensagem de Commit: {commit_message}")
     print("="*50 + "\n")
