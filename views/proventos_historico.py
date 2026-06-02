@@ -272,14 +272,14 @@ def render_proventos_historico_view():
     
     # Linha TOTAL
     html_table.append('    <tr style="font-weight: bold;">')
-    html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-top: 2px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">TOTAL</td>')
+    html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-top: 3px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">TOTAL</td>')
     for col in col_order:
         val_fmt = format_provento(totais_row[col])
         if col == 'Valor Anual':
             color_total = 'color: #3d9df3;'
         else:
             color_total = 'color: var(--text-primary);'
-        html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-top: 2px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-align: right; {color_total}">{val_fmt}</td>')
+        html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-top: 3px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-align: right; {color_total}">{val_fmt}</td>')
     html_table.append('    </tr>')
     
     ano_mais_antigo = min(anos_disponiveis)
