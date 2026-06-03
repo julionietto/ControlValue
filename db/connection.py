@@ -144,7 +144,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS opcoes (
             id SERIAL PRIMARY KEY,
             ativo TEXT NOT NULL,
-            strike REAL, tp_opcao TEXT, dt_operacao TEXT, dt_vencimento TEXT,
+            strike REAL, tp_opcao TEXT, dt_operacao DATE, dt_vencimento DATE,
             derivativo TEXT, quantidade INTEGER, vl_opcao REAL, vl_premio REAL,
             status TEXT, user_id INTEGER NOT NULL DEFAULT 1,
             tipo_operacao TEXT,
@@ -173,6 +173,13 @@ def init_db():
                 tipo_operacao = 'VENDA'
             WHERE status = 'Aberta' AND qtd_inicial IS NULL
         """)
+
+        # Migração das colunas dt_operacao e dt_vencimento para DATE
+        cursor.execute("SELECT data_type FROM information_schema.columns WHERE table_name='opcoes' AND column_name='dt_operacao'")
+        dt_type = cursor.fetchone()
+        if dt_type and dt_type[0] in ['text', 'character varying']:
+            cursor.execute("ALTER TABLE opcoes ALTER COLUMN dt_operacao TYPE DATE USING NULLIF(dt_operacao, '')::DATE")
+            cursor.execute("ALTER TABLE opcoes ALTER COLUMN dt_vencimento TYPE DATE USING NULLIF(dt_vencimento, '')::DATE")
     except Exception as e:
         import logging
         logging.warning(f"Aviso na migração da tabela opcoes: {e}")

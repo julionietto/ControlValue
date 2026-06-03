@@ -1,4 +1,3 @@
-```
 # Arquitetura do Sistema de Deploy Multiagente
 
 ## 1. Introdução
@@ -134,6 +133,7 @@ O orquestrador (`agent_push.py`) executa as seguintes etapas para cada deploy:
 *   **`subprocess`:** Módulo Python para a execução de comandos externos (ex: comandos Git, invocação de agentes e abertura de aplicativos específicos como o Microsoft Edge), com tratamento robusto de codificação (`errors='replace'`).
 *   **`xml.etree.ElementTree` (Python):** Módulo padrão do Python utilizado pelo Agente de Testes para parsear os resultados JUnit XML gerados pelo Pytest e construir o relatório HTML.
 *   **`webbrowser` (Python):** Módulo padrão do Python utilizado pelo Orquestrador como um mecanismo de fallback para abrir automaticamente o relatório de testes HTML no navegador web padrão do sistema, caso a abertura direta com o Microsoft Edge falhe.
+*   **`pandas`:** Biblioteca amplamente utilizada para manipulação e análise de dados, essencial em módulos como `db/options.py` e `utils/formatters.py` para tratamento eficiente de tabelas e datas/moedas.
 
 ## 5. Princípios de Design
 
@@ -188,3 +188,21 @@ A apresentação de dados financeiros, como proventos, exige um alto grau de con
     *   A lógica de `st.rerun()` é utilizada para reprocessar a visualização após a seleção de uma ação de adição ou edição, garantindo que o estado da aplicação seja atualizado e o formulário de edição/adição seja exibido conforme necessário.
 
 Esta refatoração da camada de apresentação para proventos exemplifica o compromisso com a criação de interfaces de usuário altamente otimizadas e ricas em dados, mantendo a flexibilidade e a extensibilidade da arquitetura.
+
+### 7.3. Gerenciamento de Operações com Opções e Tratamento de Dados Financeiros
+
+A gestão de operações financeiras com opções requer uma manipulação precisa de dados, especialmente datas e valores monetários. Recentemente, foram implementadas melhorias significativas nas camadas de acesso a dados e de utilitários para garantir a integridade, consistência e robustez no tratamento dessas informações.
+
+*   **Camada de Conexão e Migração de Banco de Dados (`db/connection.py`):**
+    *   A definição da tabela `opcoes` foi atualizada para alterar os tipos de dados das colunas `dt_operacao` e `dt_vencimento` de `TEXT` para `DATE`. Essa mudança otimiza o armazenamento, a indexação e a manipulação de datas no banco de dados, garantindo que operações de data e hora sejam realizadas de forma nativa e eficiente pelo PostgreSQL.
+    *   Foi introduzido um script de migração na função `init_db()` que verifica o tipo atual dessas colunas. Se ainda estiverem como `text` ou `character varying`, um `ALTER TABLE` é executado para convertê-las para `DATE`, tratando strings vazias (`NULLIF(dt_operacao, '')`) para evitar erros de conversão. Este mecanismo de migração automática assegura a compatibilidade retroativa e a transição suave para o novo esquema de dados.
+
+*   **Camada de Acesso a Dados de Opções (`db/options.py`):**
+    *   Foi adicionada uma nova função utilitária interna, `_parse_date_to_iso`, para padronizar a conversão de strings e objetos de data em vários formatos (`YYYY-MM-DD`, `DD/MM/YYYY`, `DD/MM/YY`) para o formato `YYYY-MM-DD` exigido pelas colunas `DATE` do banco de dados. Esta função é robusta e lida com valores nulos ou vazios, retornando `None` quando a conversão não é possível.
+    *   A função `get_opcoes_import`, responsável pela importação de dados de opções de arquivos, foi atualizada para utilizar `_parse_date_to_iso` nas colunas `dt_operacao` e `dt_vencimento`. Isso garante que as datas importadas sejam consistentemente formatadas e validadas antes da inserção no banco de dados, prevenindo erros de tipo de dado e assegurando a integridade dos registros. Um `ValueError` explícito é levantado se as datas parseadas forem inválidas.
+    *   A forma de acesso aos dados de linhas de DataFrame foi ajustada de `row[index]` para `row.iloc[index]` para maior clareza e robustez.
+
+*   **Utilitários de Formatação (`utils/formatters.py`):**
+    *   A função `parse_currency`, crucial para a conversão robusta de valores monetários em diversos formatos de string (com ou sem símbolos de moeda, separadores de milhar/decimal variados) para o tipo `float`, foi centralizada neste módulo. Isso promove a reutilização de código e garante uma abordagem unificada para o tratamento de valores financeiros em toda a aplicação. A função lida com valores nulos, vazios e diferentes convenções de formatação (e.g., `,` como separador decimal).
+
+Essas alterações em `db/connection.py`, `db/options.py` e `utils/formatters.py` reforçam a arquitetura da aplicação com uma manipulação de dados financeiros mais segura, padronizada e à prova de erros, essencial para a confiabilidade de um sistema de gestão de investimentos.

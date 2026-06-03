@@ -1,5 +1,24 @@
 from db.connection import get_db_connection, _query_to_df
 import pandas as pd
+from datetime import datetime, date
+
+def _parse_date_to_iso(date_val):
+    if pd.isna(date_val) or date_val is None:
+        return None
+    if isinstance(date_val, (pd.Timestamp, datetime, date)):
+        return date_val.strftime('%Y-%m-%d')
+    date_str = str(date_val).strip()
+    if not date_str or date_str.lower() == 'nan':
+        return None
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y'):
+        try:
+            return datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+    try:
+        return pd.to_datetime(date_str).strftime('%Y-%m-%d')
+    except:
+        return None
 
 def get_opcoes(user_id):
     with get_db_connection() as conn:
@@ -53,16 +72,19 @@ def get_opcoes_import(arquivo, user_id):
             cursor = conn.cursor()
             for _, row in df.iterrows():
                 try:
-                    ativo = str(row[0]).strip().upper()
-                    strike = parse_currency(row[1])
-                    tp_opcao = row[2].strip()
-                    dt_operacao = row[3].strip()
-                    dt_vencimento = row[4].strip()
-                    derivativo = row[5].strip()
-                    quantidade = int(row[6])
-                    vl_opcao = parse_currency(row[7])
-                    vl_premio = parse_currency(row[8])
-                    status = row[9].strip()
+                    ativo = str(row.iloc[0]).strip().upper()
+                    strike = parse_currency(row.iloc[1])
+                    tp_opcao = row.iloc[2].strip()
+                    dt_operacao = _parse_date_to_iso(row.iloc[3])
+                    dt_vencimento = _parse_date_to_iso(row.iloc[4])
+                    if not dt_operacao or not dt_vencimento:
+                        raise ValueError("Data de operação ou vencimento inválida.")
+
+                    derivativo = row.iloc[5].strip()
+                    quantidade = int(row.iloc[6])
+                    vl_opcao = parse_currency(row.iloc[7])
+                    vl_premio = parse_currency(row.iloc[8])
+                    status = row.iloc[9].strip()
                     
                     cursor.execute('''
                         INSERT INTO opcoes (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id)

@@ -86,3 +86,24 @@ def get_annual_proventos_summary(proventos_df, anos_disponiveis):
     if not resumo_df.empty:
         resumo_df = resumo_df.sort_values('Ano_Int', ascending=True).drop(columns=['Ano_Int'])
     return resumo_df
+
+def parse_currency(val):
+    if pd.isna(val) or val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    val_str = str(val).strip()
+    if not val_str:
+        return 0.0
+    # Remover símbolos de moeda e espaços
+    val_clean = val_str.replace('R$', '').replace('$', '').replace(' ', '')
+    # Se contiver pontos e vírgulas, ex: 1.250,50 -> 1250.50
+    if '.' in val_clean and ',' in val_clean:
+        val_clean = val_clean.replace('.', '').replace(',', '.')
+    # Se contiver apenas vírgula como separador decimal (formato BR), ex: 38,50 -> 38.50
+    elif ',' in val_clean:
+        val_clean = val_clean.replace(',', '.')
+    try:
+        return float(val_clean)
+    except ValueError:
+        return 0.0

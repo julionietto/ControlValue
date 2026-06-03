@@ -42,6 +42,8 @@ Em vez de cadastrar operação por operação manualmente, você pode importar s
 2. Assim como nos ativos, siga o modelo de arquivo fornecido (data de pagamento, ativo, tipo de provento e valor recebido).
 3. Faça o upload do arquivo CSV correspondente para registrar todo o histórico de rendimentos da sua carteira.
 
+**Importação Mais Flexível de Valores:** O ControlValue agora aceita uma variedade maior de formatos para valores monetários nas suas planilhas (CSV), como "R$ 1.250,50", "1.250,50", "38,50" ou simplesmente números. Isso torna a importação de ativos e proventos (e também de opções, se você as importa) ainda mais simples e com menos chance de erros de formatação.
+
 ---
 
 ## 4. Navegando Pelas Abas do Sistema
@@ -83,6 +85,7 @@ Ela é dividida em três visões principais:
 Para usuários que realizam operações de proteção (hedge) ou rentabilização de carteira utilizando opções:
 *   Acompanhe suas opções de Compra (Call) ou Venda (Put) abertas.
 *   Monitore os preços de exercício (*strikes*) e as datas de vencimento das operações.
+*   **Importação de Dados de Opções:** Para quem importa suas operações de opções através de planilhas (CSV), o sistema agora é mais flexível ao reconhecer as datas. Ele aceita e converte automaticamente diferentes formatos, como `DD/MM/AAAA`, `DD/MM/AA` (dia/mês/ano) e `AAAA-MM-DD` (ano-mês-dia), facilitando o registro das suas operações.
 
 ---
 
