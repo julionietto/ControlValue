@@ -1404,10 +1404,10 @@ def render_visao_geral_view():
                 
                 fii_prov_df = pd.DataFrame(fii_prov_data).sort_values(by='Total Proventos', ascending=True)
                 if not fii_prov_df.empty and fii_prov_df['Total Proventos'].sum() > 0:
-                    fii_prov_df['Ativo_display'] = fii_prov_df['Ativo'].apply(format_ticker_for_display)
+                    fii_prov_df['Ativo'] = fii_prov_df['Ativo'].apply(format_ticker_for_display)
                     fig_fii_p = px.bar(
                         fii_prov_df, 
-                        x='Ativo_display', 
+                        x='Ativo', 
                         y='Total Proventos', 
                         title='Proventos Fiis (Acumulado Histórico)',
                         text_auto='.2r',
@@ -1440,10 +1440,10 @@ def render_visao_geral_view():
                     # Definir cores: verde se positivo, vermelho se negativo
                     colors = ['#EF553B' if val < 0 else '#00CC96' for val in fii_return_df['Retorno Total']]
                     
-                    fii_return_df['Ativo_display'] = fii_return_df['Ativo'].apply(format_ticker_for_display)
+                    fii_return_df['Ativo'] = fii_return_df['Ativo'].apply(format_ticker_for_display)
                     fig_fii_ret = px.bar(
                         fii_return_df,
-                        x='Ativo_display',
+                        x='Ativo',
                         y='Retorno Total',
                         title='Retorno Total por Ativo (Capital + Proventos)',
                         text_auto='.2f',

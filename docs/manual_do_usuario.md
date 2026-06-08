@@ -22,7 +22,7 @@ Para a segurança dos seus dados financeiros, caso você deixe a página aberta 
 Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteira.
 
 *   **Cards de Resumo:** Na parte superior, você verá indicadores rápidos do seu patrimônio total, rentabilidade acumulada e os últimos proventos (dividendos) recebidos.
-*   **Gráficos Interativos:** Veja visualmente como seu dinheiro está dividido entre diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, Criptomoedas, Reits, etc.) e setores da economia. Passando o mouse por cima dos gráficos, você verá os detalhes e porcentagens de cada fatia.
+*   **Gráficos Interativos:** Veja visualmente como seu dinheiro está dividido entre diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, Criptomoedas, Reits, etc.) e setores da economia. Passando o mouse por cima dos gráficos, você verá os detalhes e porcentagens de cada fatia. A categorização dos Fundos Imobiliários (FIIs) por setor é continuamente atualizada para garantir que seus gráficos de alocação estejam sempre precisos, incluindo os ativos mais recentes.
 *   **Menu de Navegação:** Localizado na barra superior ou lateral, ele permite alternar entre as diferentes visões do sistema.
 
 ---

@@ -206,3 +206,15 @@ A gestão de operações financeiras com opções requer uma manipulação preci
     *   A função `parse_currency`, crucial para a conversão robusta de valores monetários em diversos formatos de string (com ou sem símbolos de moeda, separadores de milhar/decimal variados) para o tipo `float`, foi centralizada neste módulo. Isso promove a reutilização de código e garante uma abordagem unificada para o tratamento de valores financeiros em toda a aplicação. A função lida com valores nulos, vazios e diferentes convenções de formatação (e.g., `,` como separador decimal).
 
 Essas alterações em `db/connection.py`, `db/options.py` e `utils/formatters.py` reforçam a arquitetura da aplicação com uma manipulação de dados financeiros mais segura, padronizada e à prova de erros, essencial para a confiabilidade de um sistema de gestão de investimentos.
+
+### 7.4. Otimização da Visualização de Dados para Gráficos (Visão Geral)
+
+No módulo `views/geral.py`, responsável pela renderização da "Visão Geral", foram implementadas otimizações na preparação de dados para gráficos que exibem proventos e retornos totais de Fundos de Investimento Imobiliário (FIIs).
+
+*   **Simplificação da Preparação de Dados para Gráficos:** As funções `render_visao_geral_view` foram refatoradas para simplificar a manipulação de dados antes da plotagem. A coluna temporária `Ativo_display`, que antes era utilizada para formatar os tickers dos ativos (`fii_prov_df['Ativo'].apply(format_ticker_for_display)`) e então usada nos eixos dos gráficos `px.bar`, foi eliminada. Agora, a formatação é aplicada diretamente à coluna `Ativo` original do DataFrame, e esta coluna já formatada é utilizada nos gráficos. Esta mudança reduz a criação de colunas intermediárias, otimizando levemente o consumo de memória e a clareza do código na camada de apresentação, sem alterar o fluxo de dados fundamental ou a lógica de cálculo dos proventos e retornos.
+
+### 7.5. Mapeamento de Ativos Financeiros
+
+O módulo `services.py` atua como um repositório central para lógicas de negócio e mapeamentos de dados que são utilizados em diversas partes da aplicação.
+
+*   **Atualização do Mapeamento de Setores de FIIs:** O dicionário `FII_TICKER_OVERRIDE` em `services.py`, que define o setor de um Fundo de Investimento Imobiliário (FII) a partir de seu ticker, foi atualizado. Especificamente, o ticker `'KNUQ11.SA'` foi adicionado e associado ao setor `'Recebíveis'`. Essa atualização garante que novos ativos sejam corretamente classificados e exibidos conforme sua categoria, mantendo a integridade e precisão das informações financeiras apresentadas na aplicação.
