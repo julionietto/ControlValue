@@ -71,7 +71,10 @@ def confirm_delete_operation_dialog(op_data, asset_id):
 def dialog_assets_by_type(selected_type, assets_df):
     st.markdown(f"### Ativos na Categoria: {selected_type}")
     
-    filtered_df = assets_df[(assets_df['asset_type'] == selected_type) & (assets_df['quantity'] > 1e-5)].copy()
+    if selected_type == 'ETF/Cripto':
+        filtered_df = assets_df[assets_df['asset_type'].isin(['ETF', 'Cripto']) & (assets_df['quantity'] > 1e-5)].copy()
+    else:
+        filtered_df = assets_df[(assets_df['asset_type'] == selected_type) & (assets_df['quantity'] > 1e-5)].copy()
     
     if filtered_df.empty:
         st.info("Nenhum ativo encontrado nesta categoria.")
@@ -954,7 +957,10 @@ def render_visao_geral_view():
                 if current_total_value > 0:
                     # O Plotly/Streamlit não emite eventos on_select para gráficos de pizza.
                     # Utilizando um gráfico de barras horizontais (Treemap/Bar) para suportar a interatividade
-                    bar_df = assets_df[assets_df['current_value'] > 1e-5].groupby('asset_type', as_index=False)['current_value'].sum()
+                    plot_bar_df = assets_df[assets_df['current_value'] > 1e-5].copy()
+                    plot_bar_df['chart_asset_type'] = plot_bar_df['asset_type'].apply(lambda x: 'ETF/Cripto' if x in ['ETF', 'Cripto'] else x)
+                    
+                    bar_df = plot_bar_df.groupby('chart_asset_type', as_index=False)['current_value'].sum()
                     bar_df = bar_df.sort_values('current_value', ascending=True)
                     
                     bar_df['percentual'] = (bar_df['current_value'] / current_total_value) * 100
@@ -963,10 +969,10 @@ def render_visao_geral_view():
                     fig_type = px.bar(
                         bar_df, 
                         x='current_value', 
-                        y='asset_type', 
+                        y='chart_asset_type', 
                         orientation='h', 
                         title='Por Classe de Ativo', 
-                        color='asset_type',
+                        color='chart_asset_type',
                         text='text_pct'
                     )
                     fig_type.update_layout(
