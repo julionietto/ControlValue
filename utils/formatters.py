@@ -21,6 +21,9 @@ def format_brl(value):
 
 def infer_asset_type(ticker):
     ticker = ticker.upper()
+    from db.assets import CRYPTO_ETFS
+    if ticker in CRYPTO_ETFS:
+        return 'ETF'
     if ticker.endswith('.SA'):
         try:
             import yfinance as yf

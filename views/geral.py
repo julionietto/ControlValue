@@ -576,9 +576,13 @@ def render_visao_geral_view():
         # Calcula Percentuais Atuais por Classe para validar "Melhor Compra"
         current_allocs_pct = {}
         if current_total_value > 0:
-            current_allocs_pct['Ações'] = (assets_df[assets_df['asset_type'].isin(['Ações', 'ETF', 'Fundo CETIP'])]['current_value'].sum() / current_total_value) * 100
+            is_crypto_etf_mask = (assets_df['asset_type'] == 'ETF') & assets_df['ticker'].str.upper().isin(db.CRYPTO_ETFS)
+            is_acoes = assets_df['asset_type'].isin(['Ações', 'ETF', 'Fundo CETIP']) & ~is_crypto_etf_mask
+            is_criptos = (assets_df['asset_type'] == 'Cripto') | is_crypto_etf_mask
+            
+            current_allocs_pct['Ações'] = (assets_df[is_acoes]['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Fiis'] = (assets_df[assets_df['asset_type'] == 'Fiis']['current_value'].sum() / current_total_value) * 100
-            current_allocs_pct['Criptos'] = (assets_df[assets_df['asset_type'] == 'Cripto']['current_value'].sum() / current_total_value) * 100
+            current_allocs_pct['Criptos'] = (assets_df[is_criptos]['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Renda Fixa'] = (assets_df[assets_df['asset_type'] == 'Renda Fixa']['current_value'].sum() / current_total_value) * 100
             current_allocs_pct['Ativos Internacionais'] = (assets_df[assets_df['asset_type'].isin(['Stocks', 'Reits'])]['current_value'].sum() / current_total_value) * 100
         else:
@@ -814,7 +818,11 @@ def render_visao_geral_view():
         st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 0.5rem; margin-bottom: 1.5rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
     
         # Mapeamento do asset_type para a chave de user_targets
-        def get_target_class_key(a_type):
+        def get_target_class_key(row):
+            a_type = row['asset_type']
+            ticker = row['ticker'].upper()
+            if a_type == 'ETF' and ticker in db.CRYPTO_ETFS:
+                return 'Criptos'
             if a_type in ['Ações', 'ETF', 'Fundo CETIP']: return 'Ações'
             if a_type == 'Fiis': return 'Fiis'
             if a_type == 'Cripto': return 'Criptos'
@@ -830,7 +838,7 @@ def render_visao_geral_view():
                 if row['original_current_price'] >= row['price_ceiling']:
                     return False
             
-            target_key = get_target_class_key(row['asset_type'])
+            target_key = get_target_class_key(row)
             if target_key:
                 target_pct = user_targets.get(target_key, 0.0)
                 current_pct = current_allocs_pct.get(target_key, 0.0)

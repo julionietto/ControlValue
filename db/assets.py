@@ -185,9 +185,22 @@ def save_user_allocations(user_id, allocations_dict):
             """, (user_id, asset_class, percent))
         conn.commit()
 
+CRYPTO_ETFS = {
+    # B3 Crypto ETFs
+    'HASH11.SA', 'QBTC11.SA', 'QETH11.SA', 'BITH11.SA', 'ETHE11.SA', 
+    'DEFI11.SA', 'WEB311.SA', 'NFTS11.SA', 'CRPT11.SA', 'META11.SA',
+    'HASH11', 'QBTC11', 'QETH11', 'BITH11', 'ETHE11', 
+    'DEFI11', 'WEB311', 'NFTS11', 'CRPT11', 'META11',
+    # US Crypto ETFs
+    'IBIT', 'FBTC', 'ARKB', 'BITB', 'GBTC', 'BTCO', 
+    'EZBC', 'BRRR', 'HODL', 'BTCW'
+}
+
 def infer_asset_type(ticker):
     """Infere o tipo de ativo (Ações, FIIs, etc) com base no ticker."""
     ticker = ticker.upper()
+    if ticker in CRYPTO_ETFS:
+        return 'ETF'
     if ticker.endswith('.SA'):
         try:
             import yfinance as yf

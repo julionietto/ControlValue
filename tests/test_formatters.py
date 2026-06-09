@@ -27,3 +27,8 @@ def test_infer_asset_type_crypto():
 def test_infer_asset_type_reits():
     assert infer_asset_type("AAPL") == "Reits"
     assert infer_asset_type("MSFT") == "Reits"
+
+def test_infer_asset_type_crypto_etf():
+    assert infer_asset_type("HASH11.SA") == "ETF"
+    assert infer_asset_type("HASH11") == "ETF"
+    assert infer_asset_type("QBTC11.SA") == "ETF"
