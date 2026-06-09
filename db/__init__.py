@@ -45,7 +45,8 @@ from db.assets import (
     recalculate_asset_balance,
     infer_asset_type,
     update_asset,
-    import_assets_csv
+    import_assets_csv,
+    CRYPTO_ETFS
 )
 
 from db.dividends import (
