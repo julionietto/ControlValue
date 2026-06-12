@@ -82,9 +82,11 @@ Ela é dividida em três visões principais:
 ---
 
 ### 📉 Derivativos (Opções)
-Para usuários que realizam operações de proteção (hedge) ou rentabilização de carteira utilizando opções:
-*   Acompanhe suas opções de Compra (Call) ou Venda (Put) abertas.
-*   Monitore os preços de exercício (*strikes*) e as datas de vencimento das operações.
+Para usuários que realizam operações de proteção (hedge) ou rentabilização de carteira utilizando opções, o ControlValue agora oferece um acompanhamento ainda mais detalhado:
+
+*   **Rastreamento Completo de Operações:** Além de acompanhar suas opções de Compra (Call) ou Venda (Put) abertas, você pode agora visualizar os **detalhes completos de abertura e encerramento** de cada operação. Isso inclui a quantidade, valor da opção e prêmio inicial, bem como os mesmos dados no momento do encerramento.
+*   **Resultados por Operação:** Monitore o **lucro ou prejuízo (resultado)** de cada operação de opção, proporcionando uma visão clara do desempenho de suas estratégias com derivativos.
+*   **Detalhes de Vencimento:** Continue a acompanhar os preços de exercício (*strikes*) e as datas de vencimento das operações para um controle preciso.
 *   **Importação de Dados de Opções:** Para quem importa suas operações de opções através de planilhas (CSV), o sistema agora é mais flexível ao reconhecer as datas. Ele aceita e converte automaticamente diferentes formatos, como `DD/MM/AAAA`, `DD/MM/AA` (dia/mês/ano) e `AAAA-MM-DD` (ano-mês-dia), facilitando o registro das suas operações.
 
 ---

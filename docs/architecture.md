@@ -1,3 +1,4 @@
+```
 # Arquitetura do Sistema de Deploy Multiagente
 
 ## 1. Introdução
@@ -196,6 +197,12 @@ A gestão de operações financeiras com opções requer uma manipulação preci
 *   **Camada de Conexão e Migração de Banco de Dados (`db/connection.py`):**
     *   A definição da tabela `opcoes` foi atualizada para alterar os tipos de dados das colunas `dt_operacao` e `dt_vencimento` de `TEXT` para `DATE`. Essa mudança otimiza o armazenamento, a indexação e a manipulação de datas no banco de dados, garantindo que operações de data e hora sejam realizadas de forma nativa e eficiente pelo PostgreSQL.
     *   Foi introduzido um script de migração na função `init_db()` que verifica o tipo atual dessas colunas. Se ainda estiverem como `text` ou `character varying`, um `ALTER TABLE` é executado para convertê-las para `DATE`, tratando strings vazias (`NULLIF(dt_operacao, '')`) para evitar erros de conversão. Este mecanismo de migração automática assegura a compatibilidade retroativa e a transição suave para o novo esquema de dados.
+    *   **Melhorias na Gestão do Pool de Conexões (`init_connection_pool`):**
+        *   O tempo de vida (`ttl`) do cache do pool de conexões foi ajustado de 3600 segundos (1 hora) para 900 segundos (15 minutos), promovendo uma atualização mais frequente dos recursos de conexão.
+        *   Foi introduzido um callback `on_release` com a nova função `close_pool`. Esta função garante que todas as conexões no pool sejam fechadas de forma limpa quando o recurso em cache expira ou é liberado, prevenindo vazamentos de recursos e otimizando a utilização do banco de dados.
+        *   A configuração do `ThreadedConnectionPool` foi alterada para `minconn=0`. Isso permite que o pool libere todas as conexões físicas quando o sistema está ocioso, reduzindo o consumo de recursos e potencialmente os custos em ambientes de nuvem ao evitar conexões ociosas.
+    *   **Refatoração do Inicializador de Banco de Dados (`init_db`):**
+        *   A função `init_db()` foi refatorada para utilizar o *context manager* `with get_db_connection() as conn:`. Essa abordagem melhora a robustez na aquisição e liberação de conexões, garantindo que a conexão seja sempre gerenciada de forma segura e eficiente, prevenindo vazamentos de conexão e simplificando o código.
 
 *   **Camada de Acesso a Dados de Opções (`db/options.py`):**
     *   Foi adicionada uma nova função utilitária interna, `_parse_date_to_iso`, para padronizar a conversão de strings e objetos de data em vários formatos (`YYYY-MM-DD`, `DD/MM/YYYY`, `DD/MM/YY`) para o formato `YYYY-MM-DD` exigido pelas colunas `DATE` do banco de dados. Esta função é robusta e lida com valores nulos ou vazios, retornando `None` quando a conversão não é possível.
