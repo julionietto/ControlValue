@@ -56,7 +56,7 @@ Quer analisar um investimento específico? Selecione o ativo (ex: PETR4, WEGE3) 
 *   Preço médio de compra vs. preço atual de mercado.
 *   Lucro ou prejuízo (nominal e percentual).
 *   Histórico de dividendos pagos exclusivamente por aquele ativo.
-*   Lista de todas as compras e vendas realizadas daquele papel.
+*   Lista de todas as compras e vendas realizadas daquele papel. Para facilitar a sua análise, a tabela de histórico agora utiliza cores. Se você tem uma posição aberta (ainda não vendeu tudo) e essa operação está gerando **lucro**, a linha correspondente mostrará o **percentual de ganho, valor atualizado e lucro/prejuízo em verde**. Se estiver gerando **prejuízo**, esses mesmos valores aparecerão em **vermelho**, permitindo uma identificação rápida do desempenho de cada operação.
 
 ### 💵 Proventos (Rendimentos)
 Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalhado sobre seus recebimentos. As tabelas de proventos foram aprimoradas para uma visualização ainda mais clara e consistente, apresentando todos os dados de forma unificada e fácil de ler.

@@ -244,3 +244,12 @@ A robustez na classificação de ativos é crucial para a precisão dos cálculo
     *   A função interna `get_target_class_key`, utilizada para mapear o tipo de ativo à sua respectiva chave de target de usuário (para recomendações de rebalanceamento), também foi aprimorada. Ela agora aceita a linha completa do DataFrame (`row`) e verifica se um ativo é um ETF de criptomoeda (usando `db.CRYPTO_ETFS`) e, se for, o associa à categoria **'Criptos'** para o cálculo do balanceamento ideal. Isso assegura que as recomendações de compra/venda reflitam corretamente a alocação desejada para criptoativos, independentemente de estarem em formato de criptomoeda direta ou ETF.
 
 Essas modificações garantem que a aplicação principal categorize, visualize e forneça recomendações de balanceamento de portfólio para ETFs de Criptomoedas de forma inteligente e consistente, refletindo sua natureza híbrida entre ETFs e criptoativos e aprimorando a precisão da gestão de portfólio.
+
+### 7.7. Detalhe do Ativo e Visualização Histórica de Operações
+
+O módulo `views/asset_detail.py` é responsável por apresentar a visão detalhada de um ativo específico, incluindo seu histórico de operações. Melhorias foram implementadas para aprimorar a inteligência visual e a legibilidade da tabela de histórico de operações, permitindo que o usuário identifique rapidamente o desempenho de cada transação.
+
+*   **Estilização Condicional da Tabela de Histórico de Operações (`views/asset_detail.py`):**
+    *   Foi introduzida uma função auxiliar `color_row` dentro de `render_asset_detail_view`. Esta função aplica estilos CSS condicionalmente às linhas do DataFrame que exibe o histórico de operações do ativo.
+    *   A lógica de estilização é aplicada às colunas de desempenho (`% Ganho`, `Vlr Atualizado`, `Lucro/Prej`) para operações com quantidade positiva (`quantity > 0`). Se o lucro/prejuízo (`diff`) for positivo, a cor do texto nessas colunas é definida como verde (`#00CC96`). Se for negativo, a cor é definida como vermelho (`#EF553B`). Isso permite uma visualização imediata do resultado financeiro de cada operação.
+    *   A função `color_row` é aplicada ao DataFrame `display_hist` usando `styled_hist = display_hist.style.apply(color_row, axis=1)`, garantindo que a estilização seja aplicada linha a linha antes da renderização final da tabela via `st.dataframe`. Essa abordagem melhora significativamente a usabilidade e a interpretação dos dados históricos do ativo, destacando visualmente as operações lucrativas e deficitárias.

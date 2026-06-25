@@ -546,8 +546,33 @@ def render_asset_detail_view(asset_data):
                 axis=1
             )
         
+        def color_row(row):
+            idx = row.name
+            hist_row = history_df.iloc[idx]
+            styles = [''] * len(row)
+            if hist_row['quantity'] > 0:
+                if is_us_asset:
+                    diff = price_now_native - hist_row['unit_price']
+                else:
+                    diff = hist_row['lucro_prejuizo']
+                
+                if diff > 0:
+                    color = 'color: #00CC96;'
+                elif diff < 0:
+                    color = 'color: #EF553B;'
+                else:
+                    color = ''
+                    
+                if color:
+                    for col_name in ['% Ganho', 'Vlr Atualizado', 'Lucro/Prej']:
+                        if col_name in row.index:
+                            col_idx = row.index.get_loc(col_name)
+                            styles[col_idx] = color
+            return styles
+
         display_hist = display_hist.reset_index().rename(columns={'index': 'op_idx'})
-        styled_hist = display_hist.style.set_properties(**{'text-align': 'center'}, subset=['Data', 'Operação', 'Qtd']) \
+        styled_hist = display_hist.style.apply(color_row, axis=1) \
+                                       .set_properties(**{'text-align': 'center'}, subset=['Data', 'Operação', 'Qtd']) \
                                        .set_properties(**{'text-align': 'right'}, subset=['Preço', 'Valor Operação', '% Ganho', 'Vlr Atualizado', 'Lucro/Prej'])
         selected_op = st.dataframe(styled_hist, hide_index=True, use_container_width=True, on_select="rerun", selection_mode="single-row", column_config={"op_idx": None}, key=f"history_df_{asset_id}_{st.session_state.refresh_id}")
         if selected_op.selection.rows:
