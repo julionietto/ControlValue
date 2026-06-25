@@ -35,7 +35,7 @@ def close_pool(pool_obj):
         import logging
         logging.warning(f"Erro ao fechar o pool de conexões: {e}")
 
-@st.cache_resource(ttl=900, on_release=close_pool)
+@st.cache_resource(on_release=close_pool)
 def init_connection_pool():
     """Inicializa um Connection Pool com suporte a SSL para Cloud."""
     db_url = get_database_url()
