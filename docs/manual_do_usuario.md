@@ -61,12 +61,26 @@ Quer analisar um investimento específico? Selecione o ativo (ex: PETR4, WEGE3) 
 ### 💵 Proventos (Rendimentos)
 Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalhado sobre seus recebimentos. As tabelas de proventos foram aprimoradas para uma visualização ainda mais clara e consistente, apresentando todos os dados de forma unificada e fácil de ler.
 
-Ela é dividida em três visões principais:
+Para garantir a máxima precisão, o sistema agora registra proventos provisionados (que são valores a receber, mas ainda não pagos) **somente para os investimentos que você realmente possuía na data em que o direito ao provento foi estabelecido (a "data com")**. Isso assegura que sua contabilidade de rendimentos seja sempre exata, refletindo apenas o que lhe é devido.
+
+A aba de Proventos está organizada em três seções principais para facilitar sua análise:
+
 1.  **Histórico:** Veja mês a mês ou ano a ano quanto você já recebeu de dividendos, juros sobre capital próprio (JCP) ou rendimentos.
-2.  **Resumo de Recebimentos:** Tabelas organizadas consolidando os valores por ativo.
-    *   Para uma visão mais focada, a tabela agora exibe os valores mensais de cada ativo e um **Total Anual**. A coluna de "Média Mensal" individual foi removida para simplificar a visualização dos dados mais relevantes.
-    *   Uma nova linha **"Crescimento"** mostra a porcentagem de crescimento dos proventos de cada mês em relação ao mesmo mês do ano anterior, ajudando a identificar tendências na sua renda passiva.
-    *   A linha **"Valor Médio"** (anteriormente conhecida como "Média Acumulada") agora apresenta o valor médio acumulado dos proventos recebidos até o mês atual, oferecendo uma perspectiva clara do seu recebimento médio ao longo do tempo.
+
+2.  **Resumo de Recebimentos:** Esta seção foi aprimorada e agora conta com duas abas para diferentes perspectivas de análise:
+    *   **Aba "📅 Evolução Anual":**
+        *   Aqui você encontrará a tabela consolidada dos seus proventos, exibindo os valores mensais de cada ativo e um **Total Anual**.
+        *   Uma nova linha **"Crescimento"** mostra a porcentagem de crescimento dos proventos de cada mês em relação ao mesmo mês do ano anterior, ajudando a identificar tendências na sua renda passiva.
+        *   A linha **"Valor Médio"** (anteriormente conhecida como "Média Acumulada") agora apresenta o valor médio acumulado dos proventos recebidos até o mês atual, oferecendo uma perspectiva clara do seu recebimento médio ao longo do tempo.
+        *   **Proventos Dolarizados:** Se você possui investimentos internacionais (como Stocks e Reits) que pagam proventos em dólar, você encontrará um resumo separado desses valores, já convertidos para Reais (R$), nesta mesma aba.
+
+    *   **Aba "📂 Distribuição por Classe":**
+        *   Esta nova aba oferece uma visão detalhada de como seus proventos estão distribuídos entre as diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, etc.) para um mês e ano específicos.
+        *   **Filtros de Período:** Use as opções de seleção para escolher o **Ano** e o **Mês** que deseja analisar.
+        *   **Total Recebido no Mês:** Um painel destacado mostra o valor total dos proventos recebidos no período selecionado, facilitando a visualização rápida do seu rendimento mensal.
+        *   **Valores por Classe:** Uma tabela lista cada classe de ativo, o valor total de proventos recebidos dela no mês e sua respectiva porcentagem no total.
+        *   **Distribuição Percentual:** Um gráfico de pizza intuitivo exibe visualmente a proporção de cada classe de ativo no total de proventos do mês, permitindo entender rapidamente quais tipos de investimento mais contribuíram para sua renda passiva.
+
 3.  **Ranking:** Veja quais empresas ou fundos imobiliários mais pagaram dividendos para você no período selecionado.
 
 #### Gerenciando Ativos e Proventos

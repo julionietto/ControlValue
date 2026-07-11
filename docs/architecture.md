@@ -3,7 +3,7 @@
 
 ## 1. Introdução
 
-Este documento detalha a arquitetura do sistema de auto-push, que evoluiu para um robusto pipeline de deploy multiagente, agora formalmente identificado como **Push Agent (Orquestrador)**. O objetivo principal do sistema é automatizar e inteligentemente orquestrar o processo de integração contínua (CI) e entrega contínua (CD), desde a detecção de mudanças no código até o push final para o repositório, garantindo qualidade, consistência e conformidade com as práticas de versionamento semântico.
+Este documento detalha a arquitetura do sistema de auto-push, que evoluiu para um robusto pipeline de deploy multiagente, agora formalmente identificado como **Push Agent (Orquestrador)**. O objetivo principal do sistema é automatizar e inteligentemente orquestrar o processo de integração contínua (CI) e entrega contínua (CD), desde a detecção de mudanças no código até o push final para o repositório, garantindo qualidade, consistência e conformidade com as práticas de versionamento semântico. As regras para a execução automática deste pipeline são agora explicitamente definidas no arquivo `.agents/AGENTS.md`, servindo como um guia para o comportamento dos agentes.
 
 A arquitetura atual integra múltiplos "agentes" autônomos, cada um com uma responsabilidade específica, coordenados por um orquestrador central (o Push Agent). Essa abordagem visa aumentar a confiabilidade do deploy, automatizar tarefas repetitivas e incorporar inteligência artificial para decisões estratégicas, como o versionamento de releases e a geração de mensagens de commit. O sistema também incorpora melhorias para garantir sua robustez em diferentes ambientes operacionais, como a compatibilidade com a codificação UTF-8 em consoles do Windows, e agora oferece uma visão clara e imediata dos resultados dos testes através de relatórios HTML.
 
@@ -67,7 +67,7 @@ O sistema é concebido como um orquestrador que coordena uma série de agentes e
 
 ### 2.1. Componentes Principais
 
-*   **Orquestrador (`agent_push.py`):** Renomeado de `auto_push.py` para melhor refletir seu papel como o agente principal de push e orquestração. É o coração do sistema, gerenciando o fluxo de execução completo, *invocando* os agentes externos em sequência, lidando com a lógica central de versionamento e interagindo diretamente com o Git para operações de commit e push. Em seus logs, ele agora se identifica explicitamente com o prefixo "[Push Agent]", aumentando a clareza do fluxo de execução. Implementa a lógica para determinar o tipo de incremento de versão (major, minor, patch) e gerar a mensagem de commit, utilizando a IA. Possui tratamento para forçar a codificação UTF-8 na saída do console, melhorando a compatibilidade em diferentes sistemas operacionais. **Após a conclusão do pipeline, ele tenta abrir o relatório de testes HTML gerado em `docs/test_report.html` preferencialmente no Microsoft Edge (em sistemas Windows), ou no navegador padrão como fallback, proporcionando feedback imediato sobre a qualidade do código.**
+*   **Orquestrador (`agent_push.py`):** Renomeado de `auto_push.py` para melhor refletir seu papel como o agente principal de push e orquestração. É o coração do sistema, gerenciando o fluxo de execução completo, *invocando* os agentes externos em sequência, lidando com a lógica central de versionamento e interagindo diretamente com o Git para operações de commit e push. As diretrizes para a execução automática deste orquestrador e do pipeline são definidas no arquivo `.agents/AGENTS.md`. Em seus logs, ele agora se identifica explicitamente com o prefixo "[Push Agent]", aumentando a clareza do fluxo de execução. Implementa a lógica para determinar o tipo de incremento de versão (major, minor, patch) e gerar a mensagem de commit, utilizando a IA. Possui tratamento para forçar a codificação UTF-8 na saída do console, melhorando a compatibilidade em diferentes sistemas operacionais. **Após a conclusão do pipeline, ele tenta abrir o relatório de testes HTML gerado em `docs/test_report.html` preferencialmente no Microsoft Edge (em sistemas Windows), ou no navegador padrão como fallback, proporcionando feedback imediato sobre a qualidade do código.**
 *   **Agente de Testes (`test_agent.py`):** Um agente externo invocado pelo orquestrador. Responsável por executar os testes automatizados do projeto (`pytest`). O pipeline só prossegue se todos os testes forem aprovados, garantindo a qualidade e estabilidade do código. **Agora, o agente de testes não só executa os testes, mas também gera um relatório detalhado em formato JUnit XML (`tests/report.xml`) e, subsequentemente, um relatório HTML visualmente rico (`docs/test_report.html`), utilizando as funções `generate_html_report` e `escape_html` para este propósito.** Em caso de falha, ele utiliza a API do Google Gemini para analisar os logs de erro e fornecer um diagnóstico resumido e sugestões de correção. A cobertura de testes foi expandida para incluir módulos críticos como o de autenticação (`tests/test_auth.py`), assegurando a robustez das funcionalidades centrais. **Novos testes foram adicionados para validar a flexibilidade e a robustez do sistema de autenticação, incluindo login por nome de usuário e tratamento de case-insensitivity e espaços em branco nos identificadores, elevando o total de testes para 17.**
 *   **Agente de Documentação (`doc_agent.py`):** Um agente externo invocado pelo orquestrador. Encarregado de atualizar e/ou criar diversos arquivos de documentação do projeto (como `README.md`, `docs/architecture.md`, `docs/manual_do_usuario.md` e outros guias), baseando-se nas mudanças de código. Este agente assegura que a documentação esteja sempre sincronizada com o estado atual do software, utilizando a inteligência artificial para gerar e integrar o conteúdo de forma contextual, agora com diretrizes contextuais específicas para cada arquivo (e.g., perspectiva técnica para `architecture.md`, manual de usuário leigo) que guiam a IA na geração de conteúdo mais preciso e direcionado.
 *   **Agente de Versionamento (Lógica `determine_version_increment` e `increment_version` no Orquestrador):** A função `determine_version_increment` utiliza a inteligência artificial (Google Gemini) para analisar o `git diff` das alterações de código *originais* (antes da geração de documentação) e decidir qual parte do versionamento semântico (`major`, `minor`, `patch`) deve ser incrementada. Em caso de falha da IA ou chave de API não configurada, o incremento padrão é `patch`. A função `increment_version` então aplica esta decisão, realizando incrementos `major` e `minor` que resetam as partes seguintes (ex: `1.2.3` com `minor` vira `1.3.0`). Ele também inicializa o arquivo `.version` para "1.0.0" se não existir.
@@ -136,10 +136,11 @@ O orquestrador (`agent_push.py`) executa as seguintes etapas para cada deploy:
 *   **`xml.etree.ElementTree` (Python):** Módulo padrão do Python utilizado pelo Agente de Testes para parsear os resultados JUnit XML gerados pelo Pytest e construir o relatório HTML.
 *   **`webbrowser` (Python):** Módulo padrão do Python utilizado pelo Orquestrador como um mecanismo de fallback para abrir automaticamente o relatório de testes HTML no navegador web padrão do sistema, caso a abertura direta com o Microsoft Edge falhe.
 *   **`pandas`:** Biblioteca amplamente utilizada para manipulação e análise de dados, essencial em módulos como `db/options.py` e `utils/formatters.py` para tratamento eficiente de tabelas e datas/moedas.
+*   **`plotly.express`:** Biblioteca de visualização de dados em Python, integrada para gerar gráficos interativos (como gráficos de pizza) na interface de usuário, especialmente para a distribuição de proventos por classe de ativos.
 
 ## 5. Princípios de Design
 
-*   **Automação Inteligente:** Redução da intervenção manual em tarefas de deploy através da automação e uso de IA para decisões estratégicas (versionamento, commit, documentação) e diagnóstico de problemas.
+*   **Automação Inteligente:** Redução da intervenção manual em tarefas de deploy através da automação e uso de IA para decisões estratégicas (versionamento, commit, documentação) e diagnóstico de problemas. As regras para esta automação, incluindo a execução obrigatória do pipeline, são formalmente definidas em `.agents/AGENTS.md`.
 *   **Qualidade Assegurada:** Integração de uma etapa obrigatória de testes com `pytest` para garantir a estabilidade e funcionalidade do software antes do deploy. A inteligência artificial auxilia no diagnóstico e sugestão de correção para falhas, agilizando o desenvolvimento. A suíte de testes foi fortalecida com a adição de testes para funcionalidades críticas como autenticação (`tests/test_auth.py`), que agora incluem verificações para login por nome de usuário e tratamento de case-insensitivity/whitespace para e-mails e nomes de usuário, elevando o total de testes para 17. A exploração de testes de interface do usuário com `streamlit.testing.v1` (`scratch/test_apptest.py`) reforça o compromisso com a qualidade em todas as camadas da aplicação. A introdução de relatórios de testes em HTML detalhados e visualmente atraentes (`docs/test_report.html`), que agora são abertos automaticamente após o deploy (com preferência pelo Microsoft Edge em Windows), melhora significativamente a transparência e a facilidade de análise dos resultados dos testes, fornecendo um feedback imediato e compreensível sobre a qualidade do código após cada execução do pipeline. **Além disso, a cobertura de testes foi expandida para incluir a nova lógica de inferência de tipos de ativos, garantindo que a classificação de ETFs de Criptomoedas e outros ativos seja precisa e consistente (`tests/test_formatters.py`).**
 *   **Documentação Contínua:** Automação da atualização e geração de diversos documentos (`README.md`, `docs/architecture.md`, `docs/manual_do_usuario.md`, etc.) através do `doc_agent.py`, garantindo que ela esteja sempre alinhada com o código e sem a necessidade de intervenção manual, agora com a capacidade de direcionar a IA com contextos específicos para cada tipo de documento.
 *   **Versionamento Semântico Automatizado:** Aplicação automática das regras de SemVer (`major`, `minor`, `patch`) com base na análise do impacto das mudanças de código pela IA, com a lógica de incremento completa implementada no orquestrador.
@@ -173,9 +174,9 @@ A gestão de dados de usuários e sua apresentação em interfaces administrativ
 *   **Camada de Autenticação na Interface (`views/auth.py`):**
     *   O módulo `views/auth.py` recebeu atualizações para simplificar a interface de login. O `st.checkbox("Mostrar senha")` e a lógica associada de alteração dinâmica do tipo do campo de senha foram **removidos**. O campo de entrada de senha (`st.text_input("Senha", type="password")`) agora é sempre do tipo "password" por padrão, priorizando a segurança e uma experiência de usuário mais concisa. **Além disso, a interface de login foi refatorada para utilizar `st.form` e `st.form_submit_button`. Essa alteração encapsula os campos de entrada e o botão de submissão dentro de um formulário Streamlit, melhorando o gerenciamento de estado e a forma como as interações do usuário são processadas, garantindo que a lógica de autenticação seja acionada de forma explícita e controlada após a submissão do formulário.**
 
-### 7.2. Visualização e Gerenciamento de Proventos
+### 7.2. Visualização e Análise de Proventos (`views/proventos.py`, `views/proventos_historico.py`, `views/proventos_resumo.py`)
 
-A apresentação de dados financeiros, como proventos, exige um alto grau de controle sobre a formatação e a interação para garantir clareza e usabilidade. As recentes modificações nos módulos `views/proventos.py` e `views/proventos_historico.py` refletem uma evolução na estratégia de renderização de tabelas e na interação com os dados, visando uma experiência do usuário mais rica e consistente.
+A apresentação de dados financeiros, como proventos, exige um alto grau de controle sobre a formatação e a interação para garantir clareza e usabilidade. As recentes modificações nos módulos `views/proventos.py`, `views/proventos_historico.py` e `views/proventos_resumo.py` refletem uma evolução na estratégia de renderização de tabelas, na interação com os dados e na granularidade da análise, visando uma experiência do usuário mais rica e consistente.
 
 *   **Renderização de Tabelas Customizadas em HTML (`views/proventos.py`, `views/proventos_historico.py`):**
     *   Anteriormente, a visualização de proventos utilizava o componente nativo `st.dataframe` do Streamlit, com estilização aplicada via métodos `.style.apply()`. Esta abordagem foi substituída pela geração direta de tabelas HTML customizadas.
@@ -184,10 +185,22 @@ A apresentação de dados financeiros, como proventos, exige um alto grau de con
     *   Para melhorar a compreensão das métricas exibidas, uma legenda foi adicionada abaixo das tabelas, explicando os termos "Crescimento" (comparado ao mesmo mês do ano anterior) e "Valor Médio" (valor médio acumulado até o mês atual).
     *   Esta mudança resultou em uma visualização mais performática e com maior fidelidade ao design desejado, especialmente para tabelas complexas que requerem cálculos de totais, médias e percentuais de crescimento em suas linhas de sumário.
 
-*   **Interação de Edição e Adição de Ativos:**
+*   **Interação de Edição e Adição de Ativos (`views/proventos.py`, `views/proventos_historico.py`):**
     *   No módulo `views/proventos.py`, a seleção de ativos para edição, que antes era realizada implicitamente através da seleção de linhas no `st.dataframe`, foi refatorada para um componente `st.selectbox` explícito ("Editar Ativo"). Isso proporciona um controle mais direto e claro para o usuário ao iniciar o processo de edição.
     *   Ambos os módulos (`views/proventos.py` e `views/proventos_historico.py`) agora apresentam uma interface mais consistente e intuitiva para adicionar ou editar proventos. Um botão "➕ Adicionar Ativo" e um `st.selectbox` para "Editar Ativo" (ou "Selecionar Ativo para Editar/Excluir...") são utilizados, encapsulados em colunas (`st.columns`) para melhor organização do layout. Esta abordagem separa claramente a visualização da tabela das ações de gerenciamento de dados, melhorando a usabilidade.
     *   A lógica de `st.rerun()` é utilizada para reprocessar a visualização após a seleção de uma ação de adição ou edição, garantindo que o estado da aplicação seja atualizado e o formulário de edição/adição seja exibido conforme necessário.
+
+*   **Resumo de Proventos por Ano e Classe (`views/proventos_resumo.py`):**
+    *   A tela de resumo de proventos foi significativamente aprimorada para oferecer uma análise mais granular e visualmente rica. O título foi alterado para **"📊 Resumo de Proventos"**, com subtítulo expandido para "Consolidado histórico de proventos recebidos por ano, moeda e classe de ativos."
+    *   Agora, a visualização é dividida em duas abas (`st.tabs`):
+        *   **"📅 Evolução Anual":** Mantém a funcionalidade de "Consolidado por Ano", exibindo os proventos mensais e anuais. Também inclui a tabela de "Proventos Dolarizados (Valores em R$)" para ativos dos EUA, se aplicável, fornecendo uma visão contínua da evolução histórica.
+        *   **"📂 Distribuição por Classe":** Esta é uma nova aba que permite ao usuário analisar a distribuição dos proventos recebidos por classe de ativo.
+            *   **Filtros de Data:** O usuário pode selecionar o ano e o mês específicos através de `st.selectbox` para focar a análise.
+            *   **Mapeamento de Ativos:** Utiliza `db.get_all_assets` e `infer_asset_type` para classificar os tickers dos proventos no mês selecionado por seu respectivo tipo de ativo (Classe).
+            *   **Totalizador Mensal:** Um destaque visual na parte superior exibe o "💰 Total Recebido no Mês" em um formato estilizado em HTML, com a opção de ocultar valores.
+            *   **Tabela de Valores por Classe:** Apresenta um `st.dataframe` com o sumário dos proventos recebidos por cada classe de ativo, incluindo o valor total e o percentual de cada classe sobre o total mensal.
+            *   **Gráfico de Distribuição Percentual:** Um `plotly.express.pie` chart é gerado para visualizar a distribuição percentual das classes de ativos, oferecendo uma compreensão rápida da composição dos proventos do mês. O gráfico é interativo e ajusta a exibição com base no estado `hide_values`.
+    *   Essas melhorias em `views/proventos_resumo.py` proporcionam uma análise de proventos muito mais detalhada, flexível e visualmente intuitiva, permitindo que o usuário compreenda melhor a origem e a distribuição de seus rendimentos financeiros.
 
 Esta refatoração da camada de apresentação para proventos exemplifica o compromisso com a criação de interfaces de usuário altamente otimizadas e ricas em dados, mantendo a flexibilidade e a extensibilidade da arquitetura.
 
@@ -215,19 +228,30 @@ A gestão de operações financeiras com opções requer uma manipulação preci
 
 Essas alterações em `db/connection.py`, `db/options.py` e `utils/formatters.py` reforçam a arquitetura da aplicação com uma manipulação de dados financeiros mais segura, padronizada e à prova de erros, essencial para a confiabilidade de um sistema de gestão de investimentos.
 
-### 7.4. Otimização da Visualização de Dados para Gráficos (Visão Geral)
+### 7.4. Processamento de Proventos e Validação de Custódia (`sync_job.py`)
+
+O módulo `sync_job.py`, responsável pela sincronização e provisionamento de proventos, recebeu uma importante melhoria para garantir a precisão e a integridade na atribuição de rendimentos aos usuários.
+
+*   **Verificação de Quantidade em Custódia na Data-Com:**
+    *   Foi introduzida uma lógica no `run_sync()` que, antes de salvar (upsert) um provento provisionado, verifica se o usuário possuía uma quantidade positiva do ativo em custódia na `data_com` (data ex-dividendo).
+    *   A `data_com`, que pode vir como `date` ou `string` (em formatos `DD/MM/YYYY` ou `YYYY-MM-DD`), é parseada para o formato `YYYY-MM-DD` (`d_com_iso`) para garantir compatibilidade com a consulta SQL.
+    *   Uma consulta SQL é executada na tabela `asset_history` para somar a quantidade (`SUM(h.quantity)`) que o usuário (`user_id`) possuía do `db_ticker` até a `data_com`.
+    *   Se a quantidade em custódia na `data_com` for `0` ou negativa (`qty_on_date <= 0`), o provento não é provisionado para aquele usuário (`continue`), prevenindo a atribuição indevida de rendimentos a quem não era elegível.
+    *   Esta validação crítica garante que os registros de proventos sejam baseados na posse efetiva do ativo, aumentando a confiabilidade dos dados financeiros da aplicação.
+
+### 7.5. Otimização da Visualização de Dados para Gráficos (Visão Geral)
 
 No módulo `views/geral.py`, responsável pela renderização da "Visão Geral", foram implementadas otimizações na preparação de dados para gráficos que exibem proventos e retornos totais de Fundos de Investimento Imobiliário (FIIs).
 
 *   **Simplificação da Preparação de Dados para Gráficos:** As funções `render_visao_geral_view` foram refatoradas para simplificar a manipulação de dados antes da plotagem. A coluna temporária `Ativo_display`, que antes era utilizada para formatar os tickers dos ativos (`fii_prov_df['Ativo'].apply(format_ticker_for_display)`) e então usada nos eixos dos gráficos `px.bar`, foi eliminada. Agora, a formatação é aplicada diretamente à coluna `Ativo` original do DataFrame, e esta coluna já formatada é utilizada nos gráficos. Esta mudança reduz a criação de colunas intermediárias, otimizando levemente o consumo de memória e a clareza do código na camada de apresentação, sem alterar o fluxo de dados fundamental ou a lógica de cálculo dos proventos e retornos.
 
-### 7.5. Mapeamento de Ativos Financeiros
+### 7.6. Mapeamento de Ativos Financeiros
 
 O módulo `services.py` atua como um repositório central para lógicas de negócio e mapeamentos de dados que são utilizados em diversas partes da aplicação.
 
 *   **Atualização do Mapeamento de Setores de FIIs:** O dicionário `FII_TICKER_OVERRIDE` em `services.py`, que define o setor de um Fundo de Investimento Imobiliário (FII) a partir de seu ticker, foi atualizado. Especificamente, o ticker `'KNUQ11.SA'` foi adicionado e associado ao setor `'Recebíveis'`. Essa atualização garante que novos ativos sejam corretamente classificados e exibidos conforme sua categoria, mantendo a integridade e precisão das informações financeiras apresentadas na aplicação.
 
-### 7.6. Gerenciamento e Classificação de Ativos Financeiros
+### 7.7. Gerenciamento e Classificação de Ativos Financeiros
 
 A robustez na classificação de ativos é crucial para a precisão dos cálculos de portfólio, balanceamento e relatórios. Recentemente, a arquitetura de gerenciamento de ativos foi estendida para incluir uma categorização mais granular, especificamente para **ETFs de Criptomoedas**, e para garantir que essa nova categoria seja tratada corretamente em toda a aplicação.
 
@@ -246,7 +270,7 @@ A robustez na classificação de ativos é crucial para a precisão dos cálculo
 
 Essas modificações garantem que a aplicação principal categorize, visualize e forneça recomendações de balanceamento de portfólio para ETFs de Criptomoedas de forma inteligente e consistente, refletindo sua natureza híbrida entre ETFs e criptoativos e aprimorando a precisão da gestão de portfólio.
 
-### 7.7. Detalhe do Ativo e Visualização Histórica de Operações
+### 7.8. Detalhe do Ativo e Visualização Histórica de Operações
 
 O módulo `views/asset_detail.py` é responsável por apresentar a visão detalhada de um ativo específico, incluindo seu histórico de operações. Melhorias foram implementadas para aprimorar a inteligência visual e a legibilidade da tabela de histórico de operações, permitindo que o usuário identifique rapidamente o desempenho de cada transação.
 

@@ -148,6 +148,30 @@ def run_sync():
                     if asset_type in ['Stocks', 'Reits']:
                         user_valor = valor * usd_rate * 0.70
                         
+                    # Verifica se o usuário possuía quantidade em custódia na Data Com
+                    # data_com do scraper/dataframe costuma ser date ou string DD/MM/YYYY
+                    if isinstance(data_com, str):
+                        try:
+                            if '/' in data_com:
+                                d_com_iso = datetime.strptime(data_com, '%d/%m/%Y').strftime('%Y-%m-%d')
+                            else:
+                                d_com_iso = data_com
+                        except Exception:
+                            d_com_iso = data_com
+                    else:
+                        d_com_iso = data_com.strftime('%Y-%m-%d') if hasattr(data_com, 'strftime') else str(data_com)
+
+                    cursor.execute("""
+                        SELECT COALESCE(SUM(h.quantity), 0.0)
+                        FROM assets a
+                        JOIN asset_history h ON h.asset_id = a.id
+                        WHERE a.ticker = %s AND a.user_id = %s AND CAST(h.date AS DATE) <= CAST(%s AS DATE)
+                    """, (db_ticker, user_id, d_com_iso))
+                    qty_on_date = cursor.fetchone()[0] or 0.0
+
+                    if qty_on_date <= 0:
+                        continue
+
                     # Salva (upsert) respeitando o sufixo original do banco
                     db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, user_valor, user_id)
                     affected_users.add(user_id)
