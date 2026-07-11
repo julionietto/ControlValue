@@ -195,7 +195,7 @@ A apresentação de dados financeiros, como proventos, exige um alto grau de con
     *   Agora, a visualização é dividida em duas abas (`st.tabs`):
         *   **"📅 Evolução Anual":** Mantém a funcionalidade de "Consolidado por Ano", exibindo os proventos mensais e anuais. Também inclui a tabela de "Proventos Dolarizados (Valores em R$)" para ativos dos EUA, se aplicável, fornecendo uma visão contínua da evolução histórica.
         *   **"📂 Distribuição por Classe":** Esta é uma nova aba que permite ao usuário analisar a distribuição dos proventos recebidos por classe de ativo.
-            *   **Filtros de Data:** O usuário pode selecionar o ano e o mês específicos através de `st.selectbox` para focar a análise.
+            *   **Filtros de Data:** O usuário pode selecionar o ano e o mês específicos através de `st.selectbox` para focar a análise. **Esses filtros agora vêm com uma seleção padrão inteligente, pré-definindo o ano e o mês correntes, se disponíveis nos dados, para uma experiência de usuário mais conveniente.**
             *   **Mapeamento de Ativos:** Utiliza `db.get_all_assets` e `infer_asset_type` para classificar os tickers dos proventos no mês selecionado por seu respectivo tipo de ativo (Classe).
             *   **Totalizador Mensal:** Um destaque visual na parte superior exibe o "💰 Total Recebido no Mês" em um formato estilizado em HTML, com a opção de ocultar valores.
             *   **Tabela de Valores por Classe:** Apresenta um `st.dataframe` com o sumário dos proventos recebidos por cada classe de ativo, incluindo o valor total e o percentual de cada classe sobre o total mensal.
@@ -268,7 +268,7 @@ A robustez na classificação de ativos é crucial para a precisão dos cálculo
         *   A soma para a categoria **'Criptos'** agora inclui não apenas os ativos classificados diretamente como 'Cripto', mas também os ETFs identificados como de criptomoedas, consolidando-os sob a alocação de criptoativos para uma representação mais fiel do portfólio.
     *   A função interna `get_target_class_key`, utilizada para mapear o tipo de ativo à sua respectiva chave de target de usuário (para recomendações de rebalanceamento), também foi aprimorada. Ela agora aceita a linha completa do DataFrame (`row`) e verifica se um ativo é um ETF de criptomoeda (usando `db.CRYPTO_ETFS`) e, se for, o associa à categoria **'Criptos'** para o cálculo do balanceamento ideal. Isso assegura que as recomendações de compra/venda reflitam corretamente a alocação desejada para criptoativos, independentemente de estarem em formato de criptomoeda direta ou ETF.
 
-Essas modificações garantem que a aplicação principal categorize, visualize e forneça recomendações de balanceamento de portfólio para ETFs de Criptomoedas de forma inteligente e consistente, refletindo sua natureza híbrida entre ETFs e criptoativos e aprimorando a precisão da gestão de portfólio.
+Essas modificações garantem que a aplicação principal categorize, visualize e forneça recomendações de balanceamento de portfólio para ETFs de Criptomoedas de forma inteligente e consistente, refletindo sua natureza híbrida entre ETFs e criptoativos e aprimoramento a precisão da gestão de portfólio.
 
 ### 7.8. Detalhe do Ativo e Visualização Histórica de Operações
 

@@ -76,9 +76,14 @@ def render_proventos_resumo_view():
         # Filtros de seleção de Ano e Mês
         anos_disponiveis = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
         
+        # Determina o ano atual por padrão
+        from datetime import datetime
+        ano_atual = datetime.now().year
+        default_ano_idx = anos_disponiveis.index(ano_atual) if ano_atual in anos_disponiveis else 0
+        
         col_sel1, col_sel2 = st.columns(2)
         with col_sel1:
-            ano_selecionado = st.selectbox("📅 Selecione o Ano", anos_disponiveis, key="sel_ano_classe")
+            ano_selecionado = st.selectbox("📅 Selecione o Ano", anos_disponiveis, index=default_ano_idx, key="sel_ano_classe")
         
         df_ano = proventos_df[proventos_df['ano'] == ano_selecionado]
         meses_nomes_dict = {
@@ -89,8 +94,13 @@ def render_proventos_resumo_view():
         meses_disponiveis_nums = sorted(df_ano['mes'].unique())
         meses_opcoes = [meses_nomes_dict[m] for m in meses_disponiveis_nums]
         
+        # Determina o mês atual por padrão
+        mes_atual_num = datetime.now().month
+        mes_atual_nome = meses_nomes_dict.get(mes_atual_num, "")
+        default_mes_idx = meses_opcoes.index(mes_atual_nome) if mes_atual_nome in meses_opcoes else 0
+        
         with col_sel2:
-            mes_selecionado_nome = st.selectbox("🗓️ Selecione o Mês", meses_opcoes, key="sel_mes_classe")
+            mes_selecionado_nome = st.selectbox("🗓️ Selecione o Mês", meses_opcoes, index=default_mes_idx, key="sel_mes_classe")
             
         mes_selecionado_num = {v: k for k, v in meses_nomes_dict.items()}[mes_selecionado_nome]
         df_mes = df_ano[df_ano['mes'] == mes_selecionado_num].copy()

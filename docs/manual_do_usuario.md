@@ -56,7 +56,7 @@ Quer analisar um investimento específico? Selecione o ativo (ex: PETR4, WEGE3) 
 *   Preço médio de compra vs. preço atual de mercado.
 *   Lucro ou prejuízo (nominal e percentual).
 *   Histórico de dividendos pagos exclusivamente por aquele ativo.
-*   Lista de todas as compras e vendas realizadas daquele papel. Para facilitar a sua análise, a tabela de histórico agora utiliza cores. Se você tem uma posição aberta (ainda não vendeu tudo) e essa operação está gerando **lucro**, a linha correspondente mostrará o **percentual de ganho, valor atualizado e lucro/prejuízo em verde**. Se estiver gerando **prejuízo**, esses mesmos valores aparecerão em **vermelho**, permitindo uma identificação rápida do desempenho de cada operação.
+*   Lista de todas as compras e vendas realizadas daquele papel. Para facilitar a sua análise, a tabela de histórico agora utiliza cores. Se você tem uma posição aberta (aúnão vendeu tudo) e essa operação está gerando **lucro**, a linha correspondente mostrará o **percentual de ganho, valor atualizado e lucro/prejuízo em verde**. Se estiver gerando **prejuízo**, esses mesmos valores aparecerão em **vermelho**, permitindo uma identificação rápida do desempenho de cada operação.
 
 ### 💵 Proventos (Rendimentos)
 Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalhado sobre seus recebimentos. As tabelas de proventos foram aprimoradas para uma visualização ainda mais clara e consistente, apresentando todos os dados de forma unificada e fácil de ler.
@@ -76,7 +76,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
 
     *   **Aba "📂 Distribuição por Classe":**
         *   Esta nova aba oferece uma visão detalhada de como seus proventos estão distribuídos entre as diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, etc.) para um mês e ano específicos.
-        *   **Filtros de Período:** Use as opções de seleção para escolher o **Ano** e o **Mês** que deseja analisar.
+        *   **Filtros de Período:** Use as opções de seleção para escolher o **Ano** e o **Mês** que deseja analisar. Para sua conveniência, o sistema agora preenche automaticamente esses filtros com o **ano e o mês atual**, mostrando os dados mais recentes logo de cara. Você pode facilmente ajustá-los para explorar outros períodos.
         *   **Total Recebido no Mês:** Um painel destacado mostra o valor total dos proventos recebidos no período selecionado, facilitando a visualização rápida do seu rendimento mensal.
         *   **Valores por Classe:** Uma tabela lista cada classe de ativo, o valor total de proventos recebidos dela no mês e sua respectiva porcentagem no total.
         *   **Distribuição Percentual:** Um gráfico de pizza intuitivo exibe visualmente a proporção de cada classe de ativo no total de proventos do mês, permitindo entender rapidamente quais tipos de investimento mais contribuíram para sua renda passiva.
