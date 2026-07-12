@@ -75,11 +75,14 @@ A aba de Proventos está organizada em três seções principais para facilitar 
         *   **Proventos Dolarizados:** Se você possui investimentos internacionais (como Stocks e Reits) que pagam proventos em dólar, você encontrará um resumo separado desses valores, já convertidos para Reais (R$), nesta mesma aba.
 
     *   **Aba "📂 Distribuição por Classe":**
-        *   Esta nova aba oferece uma visão detalhada de como seus proventos estão distribuídos entre as diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, etc.) para um mês e ano específicos.
+        *   Esta aba oferece uma visão detalhada de como seus proventos estão distribuídos entre as diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, etc.) para um mês e ano específicos.
         *   **Filtros de Período:** Use as opções de seleção para escolher o **Ano** e o **Mês** que deseja analisar. Para sua conveniência, o sistema agora preenche automaticamente esses filtros com o **ano e o mês atual**, mostrando os dados mais recentes logo de cara. Você pode facilmente ajustá-los para explorar outros períodos.
-        *   **Total Recebido no Mês:** Um painel destacado mostra o valor total dos proventos recebidos no período selecionado, facilitando a visualização rápida do seu rendimento mensal.
-        *   **Valores por Classe:** Uma tabela lista cada classe de ativo, o valor total de proventos recebidos dela no mês e sua respectiva porcentagem no total.
-        *   **Distribuição Percentual:** Um gráfico de pizza intuitivo exibe visualmente a proporção de cada classe de ativo no total de proventos do mês, permitindo entender rapidamente quais tipos de investimento mais contribuíram para sua renda passiva.
+        *   **Visão Geral dos Recebimentos:** Agora, na parte superior, você encontrará **dois painéis destacados**: um mostrando o **Total Recebido no Mês** (para o mês e ano selecionados) e outro exibindo o **Total Acumulado no Ano** (todos os proventos recebidos até o momento no ano selecionado). Isso facilita a comparação rápida do seu rendimento mensal com o total anual.
+        *   **Valores por Classe Detalhados:** A tabela de "Valores por Classe" foi aprimorada para oferecer uma análise mais completa. Ela agora exibe, para cada classe de ativo (Ações, FIIs, etc.), tanto o **valor e a porcentagem de proventos recebidos no mês selecionado** quanto o **valor e a porcentagem acumulados no ano selecionado**. Isso permite uma visão clara da contribuição de cada tipo de investimento tanto no período mensal quanto no anual.
+        *   **Dupla Análise Gráfica:** Em vez de um único gráfico, agora você terá **dois gráficos de pizza** para uma análise visual mais aprofundada:
+            *   **"Distribuição Mensal":** Mostra como seus proventos estão divididos entre as classes de ativos para o **mês selecionado**.
+            *   **"Acumulado do Ano":** Apresenta a distribuição dos proventos por classe de ativo considerando o **total acumulado no ano selecionado**.
+            Ambos os gráficos permitem entender rapidamente quais investimentos mais contribuíram para sua renda passiva em cada período.
 
 3.  **Ranking:** Veja quais empresas ou fundos imobiliários mais pagaram dividendos para você no período selecionado.
 

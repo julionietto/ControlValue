@@ -103,7 +103,6 @@ def render_proventos_resumo_view():
             mes_selecionado_nome = st.selectbox("🗓️ Selecione o Mês", meses_opcoes, index=default_mes_idx, key="sel_mes_classe")
             
         mes_selecionado_num = {v: k for k, v in meses_nomes_dict.items()}[mes_selecionado_nome]
-        df_mes = df_ano[df_ano['mes'] == mes_selecionado_num].copy()
         
         # Mapeamento de tickers para tipo de ativo
         assets_df = db.get_all_assets(st.session_state.user_id)
@@ -112,49 +111,124 @@ def render_proventos_resumo_view():
         else:
             full_assets_map = {}
         
-        df_mes['tipo_ativo'] = df_mes['ticker'].apply(lambda t: full_assets_map.get(t, infer_asset_type(t)))
+        df_ano_filtered = df_ano.copy()
+        df_ano_filtered['tipo_ativo'] = df_ano_filtered['ticker'].apply(lambda t: full_assets_map.get(t, infer_asset_type(t)))
         
-        df_grouped = df_mes.groupby('tipo_ativo')['valor'].sum().reset_index()
-        df_grouped.columns = ['Classe', 'Valor']
-        df_grouped = df_grouped.sort_values(by='Valor', ascending=False)
+        df_grouped_ano = df_ano_filtered.groupby('tipo_ativo')['valor'].sum().reset_index()
+        df_grouped_ano.columns = ['Classe', 'Valor Ano']
+        df_grouped_ano = df_grouped_ano.sort_values(by='Valor Ano', ascending=False)
+        total_recebido_ano = df_grouped_ano['Valor Ano'].sum()
+        df_grouped_ano['% Ano'] = (df_grouped_ano['Valor Ano'] / total_recebido_ano) * 100 if total_recebido_ano > 0 else 0
         
-        total_recebido = df_grouped['Valor'].sum()
-        df_grouped['%'] = (df_grouped['Valor'] / total_recebido) * 100 if total_recebido > 0 else 0
-        
-        # Totalizador no topo
-        st.markdown("<br>", unsafe_allow_html=True)
-        total_fmt = "R$ ••••••" if st.session_state.get('hide_values', False) else f"R$ {total_recebido:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        st.markdown(
-            f"""
-            <div style='background-color: var(--table-header-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 20px;'>
-                <span style='font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;'>💰 Total Recebido no Mês</span>
-                <h2 style='color: #00CC96; margin: 5px 0 0 0; font-size: 2.2rem; font-weight: bold;'>{total_fmt}</h2>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        if df_grouped.empty or total_recebido == 0:
-            st.info(f"Nenhum provento recebido em {mes_selecionado_nome} de {ano_selecionado}.")
+        if df_grouped_ano.empty or total_recebido_ano == 0:
+            st.info(f"Nenhum provento recebido em {ano_selecionado}.")
         else:
-            col_tabela, col_grafico = st.columns([1, 1])
+            df_mes = df_ano[df_ano['mes'] == mes_selecionado_num].copy()
+            df_mes['tipo_ativo'] = df_mes['ticker'].apply(lambda t: full_assets_map.get(t, infer_asset_type(t)))
+            df_grouped_mes = df_mes.groupby('tipo_ativo')['valor'].sum().reset_index()
+            df_grouped_mes.columns = ['Classe', 'Valor Mês']
+            df_grouped_mes = df_grouped_mes.sort_values(by='Valor Mês', ascending=False)
+            total_recebido_mes = df_grouped_mes['Valor Mês'].sum()
+            df_grouped_mes['% Mês'] = (df_grouped_mes['Valor Mês'] / total_recebido_mes) * 100 if total_recebido_mes > 0 else 0
+            
+            # Merge
+            df_merged = pd.merge(df_grouped_ano[['Classe', 'Valor Ano', '% Ano']], df_grouped_mes[['Classe', 'Valor Mês', '% Mês']], on='Classe', how='outer').fillna(0)
+            df_merged = df_merged.sort_values(by='Valor Ano', ascending=False)
+            df_merged = df_merged[['Classe', 'Valor Mês', '% Mês', 'Valor Ano', '% Ano']]
+            
+            # Totalizadores no topo
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_tot1, col_tot2 = st.columns(2)
+            
+            total_fmt = "R$ ••••••" if st.session_state.get('hide_values', False) else f"R$ {total_recebido_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            total_ano_fmt = "R$ ••••••" if st.session_state.get('hide_values', False) else f"R$ {total_recebido_ano:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            
+            with col_tot1:
+                st.markdown(
+                    f"""
+                    <div style='background-color: var(--table-header-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 20px;'>
+                        <span style='font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;'>💰 Total Recebido no Mês</span>
+                        <h2 style='color: #00CC96; margin: 5px 0 0 0; font-size: 2.2rem; font-weight: bold;'>{total_fmt}</h2>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+                
+            with col_tot2:
+                st.markdown(
+                    f"""
+                    <div style='background-color: var(--table-header-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 20px;'>
+                        <span style='font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;'>📅 Total Recebido no Ano</span>
+                        <h2 style='color: #3d9df3; margin: 5px 0 0 0; font-size: 2.2rem; font-weight: bold;'>{total_ano_fmt}</h2>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+            
+            col_tabela, col_grafico_mes, col_grafico_ano = st.columns([1.2, 1, 1])
             
             with col_tabela:
                 st.markdown("<h4 style='margin-bottom: 10px;'>📂 Valores por Classe</h4>", unsafe_allow_html=True)
-                display_grouped = df_grouped.copy()
-                display_grouped['Valor'] = display_grouped['Valor'].apply(format_provento)
-                display_grouped['%'] = display_grouped['%'].apply(lambda x: f"{x:.1f}%")
+                display_grouped = df_merged.copy()
+                display_grouped['Valor Mês'] = display_grouped['Valor Mês'].apply(format_provento)
+                display_grouped['% Mês'] = display_grouped['% Mês'].apply(lambda x: f"{x:.1f}%" if x > 0 else "0,0%")
+                display_grouped['Valor Ano'] = display_grouped['Valor Ano'].apply(format_provento)
+                display_grouped['% Ano'] = display_grouped['% Ano'].apply(lambda x: f"{x:.1f}%" if x > 0 else "0,0%")
                 
-                styled_grouped = display_grouped.style.set_properties(**{'text-align': 'center'}, subset=['%']) \
-                                                     .set_properties(**{'text-align': 'right'}, subset=['Valor'])
+                styled_grouped = display_grouped.style.set_properties(**{'text-align': 'center'}, subset=['% Mês', '% Ano']) \
+                                                     .set_properties(**{'text-align': 'right'}, subset=['Valor Mês', 'Valor Ano']) \
+                                                     .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês']) \
+                                                     .set_properties(**{'color': '#3d9df3'}, subset=['Valor Ano'])
                 
                 st.dataframe(styled_grouped, hide_index=True, use_container_width=True)
                 
-            with col_grafico:
-                st.markdown("<h4 style='margin-bottom: 10px;'>📊 Distribuição Percentual</h4>", unsafe_allow_html=True)
-                import plotly.express as px
+            import plotly.express as px
+            classes_unicas = df_merged['Classe'].unique()
+            palette = px.colors.qualitative.Pastel
+            color_map = {cls: palette[i % len(palette)] for i, cls in enumerate(classes_unicas)}
+            
+            with col_grafico_mes:
+                st.markdown("<h4 style='margin-bottom: 10px;'>📊 Distribuição Mensal</h4>", unsafe_allow_html=True)
+                if total_recebido_mes == 0:
+                    st.info(f"Nenhum provento no mês.")
+                else:
+                    graph_df_mes = df_merged[df_merged['Valor Mês'] > 0].copy()
+                    if st.session_state.get('hide_values', False):
+                        hover_temp = "%{label}<br>%{percent}"
+                        label_info = "percent+label"
+                    else:
+                        hover_temp = "%{label}<br>R$ %{value:,.2f}<br>%{percent}"
+                        label_info = "percent+label"
+                        
+                    fig_mes = px.pie(
+                        graph_df_mes, 
+                        values='Valor Mês', 
+                        names='Classe', 
+                        hole=0.4,
+                        color='Classe',
+                        color_discrete_map=color_map
+                    )
+                    
+                    fig_mes.update_traces(
+                        textposition='inside', 
+                        textinfo=label_info,
+                        hovertemplate=hover_temp
+                    )
+                    
+                    fig_mes.update_layout(
+                        showlegend=True,
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+                        margin=dict(t=10, b=10, l=10, r=10),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='white')
+                    )
+                    st.plotly_chart(fig_mes, use_container_width=True)
+                    
+            with col_grafico_ano:
+                st.markdown("<h4 style='margin-bottom: 10px;'>📊 Acumulado do Ano</h4>", unsafe_allow_html=True)
+                graph_df_ano = df_merged[df_merged['Valor Ano'] > 0].copy()
                 
-                graph_df = df_grouped.copy()
                 if st.session_state.get('hide_values', False):
                     hover_temp = "%{label}<br>%{percent}"
                     label_info = "percent+label"
@@ -162,21 +236,22 @@ def render_proventos_resumo_view():
                     hover_temp = "%{label}<br>R$ %{value:,.2f}<br>%{percent}"
                     label_info = "percent+label"
                     
-                fig = px.pie(
-                    graph_df, 
-                    values='Valor', 
+                fig_ano = px.pie(
+                    graph_df_ano, 
+                    values='Valor Ano', 
                     names='Classe', 
                     hole=0.4,
-                    color_discrete_sequence=px.colors.qualitative.Pastel
+                    color='Classe',
+                    color_discrete_map=color_map
                 )
                 
-                fig.update_traces(
+                fig_ano.update_traces(
                     textposition='inside', 
                     textinfo=label_info,
                     hovertemplate=hover_temp
                 )
                 
-                fig.update_layout(
+                fig_ano.update_layout(
                     showlegend=True,
                     legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
                     margin=dict(t=10, b=10, l=10, r=10),
@@ -184,4 +259,4 @@ def render_proventos_resumo_view():
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(color='white')
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig_ano, use_container_width=True)
