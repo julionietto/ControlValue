@@ -80,7 +80,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
         *   **Visão Geral dos Recebimentos:** Agora, na parte superior, você encontrará **dois painéis destacados**: um mostrando o **Total Recebido no Mês** (para o mês e ano selecionados) e outro exibindo o **Total Acumulado no Ano** (todos os proventos recebidos até o momento no ano selecionado). Isso facilita a comparação rápida do seu rendimento mensal com o total anual.
         *   **Valores por Classe Detalhados:** A tabela de "Valores por Classe" foi aprimorada para oferecer uma análise mais completa. Ela agora exibe, para cada classe de ativo (Ações, FIIs, etc.), tanto o **valor e a porcentagem de proventos recebidos no mês selecionado** quanto o **valor e a porcentagem acumulados no ano selecionado**. Isso permite uma visão clara da contribuição de cada tipo de investimento tanto no período mensal quanto no anual.
         *   **Dupla Análise Gráfica:** Em vez de um único gráfico, agora você terá **dois gráficos de pizza** para uma análise visual mais aprofundada:
-            *   **"Distribuição Mensal":** Mostra como seus proventos estão divididos entre as classes de ativos para o **mês selecionado**.
+            *   **"Distribuição do Mês":** Mostra como seus proventos estão divididos entre as classes de ativos para o **mês selecionado**.
             *   **"Acumulado do Ano":** Apresenta a distribuição dos proventos por classe de ativo considerando o **total acumulado no ano selecionado**.
             Ambos os gráficos permitem entender rapidamente quais investimentos mais contribuíram para sua renda passiva em cada período.
 

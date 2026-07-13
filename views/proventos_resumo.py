@@ -188,7 +188,7 @@ def render_proventos_resumo_view():
             color_map = {cls: palette[i % len(palette)] for i, cls in enumerate(classes_unicas)}
             
             with col_grafico_mes:
-                st.markdown("<h4 style='margin-bottom: 10px;'>📊 Distribuição Mensal</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='margin-bottom: 10px;'>📊 Distribuição do Mês</h4>", unsafe_allow_html=True)
                 if total_recebido_mes == 0:
                     st.info(f"Nenhum provento no mês.")
                 else:
