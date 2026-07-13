@@ -207,13 +207,18 @@ def infer_asset_type(ticker):
             info = yf.Ticker(ticker).info
             sector = info.get('sector', '')
             industry = info.get('industry', '')
-            long_name = str(info.get('longName', '')).upper()
+            long_name_raw = info.get('longName')
+            long_name = str(long_name_raw).upper() if long_name_raw else ""
             if sector == 'Real Estate' and 'REIT' in str(industry): return 'Fiis'
-            fii_keywords = [' FII', 'FUNDO DE INVESTIMENTO IMOBILI', 'FUNDO INVESTIMETO IMOBILI', 'CREDITO IMOBILIARIO', 'FIAGRO', 'FUNDO DE INVEST IMOB']
+            fii_keywords = [' FII', 'FII ', 'FUNDO DE INVESTIMENTO IMOBILI', 'FUNDO INVESTIMENTO IMOBILI', 'CREDITO IMOBILIARIO', 'FIAGRO', 'FUNDO DE INVEST IMOB', 'IMOBIL']
             if any(k in long_name for k in fii_keywords): return 'Fiis'
             etf_keywords = ['ETF', 'FUNDO DE INDICE', 'INDEX FUND', 'ISHARES']
             if any(k in long_name for k in etf_keywords): return 'ETF'
-            if not sector and not industry: return 'ETF'
+            if not sector and not industry:
+                if not long_name:
+                    if '11.SA' in ticker or ticker.endswith('11'): return 'Fiis'
+                    return 'Ações'
+                return 'ETF'
             return 'Ações'
         except Exception:
             if '11.SA' in ticker: return 'Fiis'

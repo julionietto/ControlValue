@@ -32,3 +32,22 @@ def test_infer_asset_type_crypto_etf():
     assert infer_asset_type("HASH11.SA") == "ETF"
     assert infer_asset_type("HASH11") == "ETF"
     assert infer_asset_type("QBTC11.SA") == "ETF"
+
+def test_infer_asset_type_fii_fallback():
+    # Se falhar no yfinance, deve retornar Fiis pelo sufixo 11.SA
+    assert infer_asset_type("INVALID11.SA") == "Fiis"
+
+def test_infer_asset_type_fii_keywords(monkeypatch):
+    class MockTicker:
+        def __init__(self, ticker):
+            pass
+        @property
+        def info(self):
+            return {
+                "sector": None,
+                "industry": None,
+                "longName": "Fundo Investimento Imobiliario Iridium Recebiveis Imobiliarios"
+            }
+    import yfinance as yf
+    monkeypatch.setattr(yf, "Ticker", MockTicker)
+    assert infer_asset_type("IRDM11.SA") == "Fiis"

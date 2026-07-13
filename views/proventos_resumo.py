@@ -217,19 +217,22 @@ def render_proventos_resumo_view():
                                                      .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês']) \
                                                      .set_properties(**{'color': '#3d9df3'}, subset=['Valor Ano'])
                 
+                table_sel_key = st.session_state.get('table_key', 0)
                 selected_row = st.dataframe(
                     styled_grouped, 
                     hide_index=True, 
                     use_container_width=True,
                     on_select="rerun",
                     selection_mode="single-row",
-                    key=f"proventos_classe_table_{st.session_state.refresh_id}"
+                    key=f"proventos_classe_table_{st.session_state.refresh_id}_{table_sel_key}"
                 )
                 
                 if selected_row.selection.rows:
                     row_idx = selected_row.selection.rows[0]
                     classe_selecionada = df_merged.iloc[row_idx]['Classe']
                     show_proventos_classe_dialog(classe_selecionada, df_mes)
+                    st.session_state.table_key = table_sel_key + 1
+                    st.rerun()
                 
             import plotly.express as px
             classes_unicas = df_merged['Classe'].unique()
