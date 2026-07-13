@@ -17,7 +17,7 @@ def format_provento(val):
     if st.session_state.get('hide_values', False): return "••••••"
     return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if not pd.isna(val) and val != 0 else "0,00"
 
-@st.dialog("🔍 Detalhamento por Ativo no Mês", width="medium")
+@st.dialog("🔍 Detalhamento por Ativo no Mês", width="medium", dismissible=False)
 def show_proventos_classe_dialog(classe, df_mes):
     st.markdown(f"### Classe: **{classe}**")
     st.write("Detalhamento dos proventos recebidos por ativo nesta classe no mês.")
@@ -35,18 +35,25 @@ def show_proventos_classe_dialog(classe, df_mes):
         
     if df_mes_grouped.empty:
         st.info("Nenhum lançamento com valor recebido maior do que zero neste mês.")
-        return
+    else:
+        # Formatação
+        display_assets = df_mes_grouped.copy()
+        display_assets['Valor Mês'] = display_assets['Valor Mês'].apply(format_provento)
         
-    # Formatação
-    display_assets = df_mes_grouped.copy()
-    display_assets['Valor Mês'] = display_assets['Valor Mês'].apply(format_provento)
-    
-    styled_assets = display_assets.style.set_properties(**{'text-align': 'right'}, subset=['Valor Mês']) \
-                                         .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês'])
-    
-    st.dataframe(styled_assets, hide_index=True, use_container_width=True)
+        styled_assets = display_assets.style.set_properties(**{'text-align': 'right'}, subset=['Valor Mês']) \
+                                             .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês'])
+        
+        st.dataframe(styled_assets, hide_index=True, use_container_width=True)
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Fechar", use_container_width=True):
+        st.session_state.active_dialog_classe = None
+        st.rerun()
 
 def render_proventos_resumo_view():
+    if 'active_dialog_classe' not in st.session_state:
+        st.session_state.active_dialog_classe = None
+        
     render_top_header("📊 Resumo de Proventos", "Consolidado histórico de proventos recebidos por ano, moeda e classe de ativos.")
     
     proventos_df = get_cached_proventos(st.session_state.user_id)
@@ -230,9 +237,12 @@ def render_proventos_resumo_view():
                 if selected_row.selection.rows:
                     row_idx = selected_row.selection.rows[0]
                     classe_selecionada = df_merged.iloc[row_idx]['Classe']
-                    show_proventos_classe_dialog(classe_selecionada, df_mes)
+                    st.session_state.active_dialog_classe = classe_selecionada
                     st.session_state.table_key = table_sel_key + 1
                     st.rerun()
+                    
+                if st.session_state.get('active_dialog_classe'):
+                    show_proventos_classe_dialog(st.session_state.active_dialog_classe, df_mes)
                 
             import plotly.express as px
             classes_unicas = df_merged['Classe'].unique()
