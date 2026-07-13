@@ -13,6 +13,47 @@ def get_cached_proventos(user_id):
 def get_cached_assets(user_id):
     return db.get_all_assets(user_id)
 
+def format_provento(val):
+    if st.session_state.get('hide_values', False): return "••••••"
+    return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if not pd.isna(val) and val != 0 else "0,00"
+
+@st.dialog("🔍 Detalhamento por Ativo", width="medium")
+def show_proventos_classe_dialog(classe, df_ano, df_mes, full_assets_map):
+    st.markdown(f"### Classe: **{classe}**")
+    st.write("Detalhamento dos proventos recebidos por ativo nesta classe.")
+    
+    # Filtrar e agrupar mês
+    df_mes_classe = df_mes[df_mes['tipo_ativo'] == classe].copy() if not df_mes.empty else pd.DataFrame()
+    if not df_mes_classe.empty:
+        df_mes_grouped = df_mes_classe.groupby('ticker')['valor'].sum().reset_index()
+        df_mes_grouped.columns = ['Ativo', 'Valor Mês']
+    else:
+        df_mes_grouped = pd.DataFrame(columns=['Ativo', 'Valor Mês'])
+        
+    # Filtrar e agrupar ano
+    df_ano_classe = df_ano[df_ano['tipo_ativo'] == classe].copy() if not df_ano.empty else pd.DataFrame()
+    if not df_ano_classe.empty:
+        df_ano_grouped = df_ano_classe.groupby('ticker')['valor'].sum().reset_index()
+        df_ano_grouped.columns = ['Ativo', 'Valor Ano']
+    else:
+        df_ano_grouped = pd.DataFrame(columns=['Ativo', 'Valor Ano'])
+        
+    # Merge
+    df_merged_assets = pd.merge(df_ano_grouped, df_mes_grouped, on='Ativo', how='outer').fillna(0)
+    df_merged_assets = df_merged_assets.sort_values('Valor Ano', ascending=False)
+    df_merged_assets = df_merged_assets[['Ativo', 'Valor Mês', 'Valor Ano']]
+    
+    # Formatação
+    display_assets = df_merged_assets.copy()
+    display_assets['Valor Mês'] = display_assets['Valor Mês'].apply(format_provento)
+    display_assets['Valor Ano'] = display_assets['Valor Ano'].apply(format_provento)
+    
+    styled_assets = display_assets.style.set_properties(**{'text-align': 'right'}, subset=['Valor Mês', 'Valor Ano']) \
+                                         .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês']) \
+                                         .set_properties(**{'color': '#3d9df3'}, subset=['Valor Ano'])
+    
+    st.dataframe(styled_assets, hide_index=True, use_container_width=True)
+
 def render_proventos_resumo_view():
     render_top_header("📊 Resumo de Proventos", "Consolidado histórico de proventos recebidos por ano, moeda e classe de ativos.")
     
@@ -31,9 +72,6 @@ def render_proventos_resumo_view():
     # Usamos st.tabs para dividir as duas visões
     tab_consolidado, tab_classe = st.tabs(["📅 Evolução Anual", "📂 Distribuição por Classe"])
 
-    def format_provento(val):
-        if st.session_state.get('hide_values', False): return "••••••"
-        return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if not pd.isna(val) and val != 0 else "0,00"
 
     with tab_consolidado:
         anos_disponiveis = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
@@ -187,7 +225,19 @@ def render_proventos_resumo_view():
                                                      .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês']) \
                                                      .set_properties(**{'color': '#3d9df3'}, subset=['Valor Ano'])
                 
-                st.dataframe(styled_grouped, hide_index=True, use_container_width=True)
+                selected_row = st.dataframe(
+                    styled_grouped, 
+                    hide_index=True, 
+                    use_container_width=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key=f"proventos_classe_table_{st.session_state.refresh_id}"
+                )
+                
+                if selected_row.selection.rows:
+                    row_idx = selected_row.selection.rows[0]
+                    classe_selecionada = df_merged.iloc[row_idx]['Classe']
+                    show_proventos_classe_dialog(classe_selecionada, df_ano_filtered, df_mes, full_assets_map)
                 
             import plotly.express as px
             classes_unicas = df_merged['Classe'].unique()
