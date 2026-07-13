@@ -12,7 +12,9 @@ import traceback
 st.set_page_config(page_title="ControlValue", page_icon="static/icon-192x192.png", layout="wide")
 
 try:
-    db.init_db()
+    if 'db_initialized' not in st.session_state:
+        db.init_db()
+        st.session_state.db_initialized = True
     inject_pwa()
 
     # Injeção de CSS personalizado

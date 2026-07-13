@@ -61,6 +61,8 @@ Quer analisar um investimento específico? Selecione o ativo (ex: PETR4, WEGE3) 
 ### 💵 Proventos (Rendimentos)
 Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalhado sobre seus recebimentos. As tabelas de proventos foram aprimoradas para uma visualização ainda mais clara e consistente, apresentando todos os dados de forma unificada e fácil de ler.
 
+Para garantir uma experiência ainda mais fluida e rápida, otimizamos o carregamento de todas as informações de proventos. Isso significa que, ao navegar pelas diferentes abas e gráficos desta seção, os dados serão exibidos mais rapidamente, proporcionando uma análise mais ágil da sua renda passiva.
+
 Para garantir a máxima precisão, o sistema agora registra proventos provisionados (que são valores a receber, mas ainda não pagos) **somente para os investimentos que você realmente possuía na data em que o direito ao provento foi estabelecido (a "data com")**. Isso assegura que sua contabilidade de rendimentos seja sempre exata, refletindo apenas o que lhe é devido.
 
 A aba de Proventos está organizada em três seções principais para facilitar sua análise:
@@ -80,7 +82,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
         *   **Visão Geral dos Recebimentos:** Agora, na parte superior, você encontrará **dois painéis destacados**: um mostrando o **Total Recebido no Mês** (para o mês e ano selecionados) e outro exibindo o **Total Acumulado no Ano** (todos os proventos recebidos até o momento no ano selecionado). Isso facilita a comparação rápida do seu rendimento mensal com o total anual.
         *   **Valores por Classe Detalhados:** A tabela de "Valores por Classe" foi aprimorada para oferecer uma análise mais completa. Ela agora exibe, para cada classe de ativo (Ações, FIIs, etc.), tanto o **valor e a porcentagem de proventos recebidos no mês selecionado** quanto o **valor e a porcentagem acumulados no ano selecionado**. Isso permite uma visão clara da contribuição de cada tipo de investimento tanto no período mensal quanto no anual.
         *   **Dupla Análise Gráfica:** Em vez de um único gráfico, agora você terá **dois gráficos de pizza** para uma análise visual mais aprofundada:
-            *   **"Distribuição do Mês":** Mostra como seus proventos estão divididos entre as classes de ativos para o **mês selecionado**.
+            *   **"Distribuição do Mês":** Mostra como seus proventos estão divididos entre as classes de ativos para o **mes selecionado**.
             *   **"Acumulado do Ano":** Apresenta a distribuição dos proventos por classe de ativo considerando o **total acumulado no ano selecionado**.
             Ambos os gráficos permitem entender rapidamente quais investimentos mais contribuíram para sua renda passiva em cada período.
 

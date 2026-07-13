@@ -5,13 +5,28 @@ import db
 from utils.formatters import get_annual_proventos_summary, infer_asset_type
 from components.ui import render_top_header
 
+@st.cache_data(ttl=10)
+def get_cached_proventos(user_id):
+    return db.get_proventos(user_id)
+
+@st.cache_data(ttl=10)
+def get_cached_assets(user_id):
+    return db.get_all_assets(user_id)
+
 def render_proventos_resumo_view():
     render_top_header("📊 Resumo de Proventos", "Consolidado histórico de proventos recebidos por ano, moeda e classe de ativos.")
     
-    proventos_df = db.get_proventos(st.session_state.user_id)
+    proventos_df = get_cached_proventos(st.session_state.user_id)
     if proventos_df.empty:
         st.info("Nenhum dado de provento registrado.")
         return
+
+    # Otimização: Carrega os ativos apenas uma vez usando cache
+    assets_df = get_cached_assets(st.session_state.user_id)
+    if not assets_df.empty:
+        full_assets_map = dict(zip(assets_df['ticker'], assets_df['asset_type']))
+    else:
+        full_assets_map = {}
 
     # Usamos st.tabs para dividir as duas visões
     tab_consolidado, tab_classe = st.tabs(["📅 Evolução Anual", "📂 Distribuição por Classe"])
@@ -53,13 +68,10 @@ def render_proventos_resumo_view():
             )
 
             # ---- Proventos Stocks e Reits ----
-            assets_df_all = db.get_all_assets(st.session_state.user_id) 
-            has_us_assets = not assets_df_all[assets_df_all['asset_type'].isin(['Stocks', 'Reits'])].empty if not assets_df_all.empty else False
+            has_us_assets = not assets_df[assets_df['asset_type'].isin(['Stocks', 'Reits'])].empty if not assets_df.empty else False
             if has_us_assets:
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">💵 Proventos Dolarizados (Valores em R$)</h3>', unsafe_allow_html=True)
-                with db.get_db_connection() as conn:
-                    full_assets_map = {row['ticker']: row['asset_type'] for _, row in pd.read_sql_query("SELECT ticker, asset_type FROM assets", conn).iterrows()}
                 us_tickers = [t for t in proventos_df['ticker'].unique() if full_assets_map.get(t, infer_asset_type(t)) in ['Stocks', 'Reits']]
                 df_us_prov = proventos_df[proventos_df['ticker'].isin(us_tickers)]
                 
@@ -104,12 +116,7 @@ def render_proventos_resumo_view():
             
         mes_selecionado_num = {v: k for k, v in meses_nomes_dict.items()}[mes_selecionado_nome]
         
-        # Mapeamento de tickers para tipo de ativo
-        assets_df = db.get_all_assets(st.session_state.user_id)
-        if not assets_df.empty:
-            full_assets_map = dict(zip(assets_df['ticker'], assets_df['asset_type']))
-        else:
-            full_assets_map = {}
+        # Otimizado: full_assets_map já foi carregado e mapeado no início da view
         
         df_ano_filtered = df_ano.copy()
         df_ano_filtered['tipo_ativo'] = df_ano_filtered['ticker'].apply(lambda t: full_assets_map.get(t, infer_asset_type(t)))
