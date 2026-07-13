@@ -17,40 +17,32 @@ def format_provento(val):
     if st.session_state.get('hide_values', False): return "••••••"
     return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if not pd.isna(val) and val != 0 else "0,00"
 
-@st.dialog("🔍 Detalhamento por Ativo", width="medium")
-def show_proventos_classe_dialog(classe, df_ano, df_mes, full_assets_map):
+@st.dialog("🔍 Detalhamento por Ativo no Mês", width="medium")
+def show_proventos_classe_dialog(classe, df_mes):
     st.markdown(f"### Classe: **{classe}**")
-    st.write("Detalhamento dos proventos recebidos por ativo nesta classe.")
+    st.write("Detalhamento dos proventos recebidos por ativo nesta classe no mês.")
     
     # Filtrar e agrupar mês
     df_mes_classe = df_mes[df_mes['tipo_ativo'] == classe].copy() if not df_mes.empty else pd.DataFrame()
     if not df_mes_classe.empty:
         df_mes_grouped = df_mes_classe.groupby('ticker')['valor'].sum().reset_index()
         df_mes_grouped.columns = ['Ativo', 'Valor Mês']
+        # Trazer apenas os registros que tiveram valores maior do que zero
+        df_mes_grouped = df_mes_grouped[df_mes_grouped['Valor Mês'] > 0]
+        df_mes_grouped = df_mes_grouped.sort_values('Valor Mês', ascending=False)
     else:
         df_mes_grouped = pd.DataFrame(columns=['Ativo', 'Valor Mês'])
         
-    # Filtrar e agrupar ano
-    df_ano_classe = df_ano[df_ano['tipo_ativo'] == classe].copy() if not df_ano.empty else pd.DataFrame()
-    if not df_ano_classe.empty:
-        df_ano_grouped = df_ano_classe.groupby('ticker')['valor'].sum().reset_index()
-        df_ano_grouped.columns = ['Ativo', 'Valor Ano']
-    else:
-        df_ano_grouped = pd.DataFrame(columns=['Ativo', 'Valor Ano'])
+    if df_mes_grouped.empty:
+        st.info("Nenhum lançamento com valor recebido maior do que zero neste mês.")
+        return
         
-    # Merge
-    df_merged_assets = pd.merge(df_ano_grouped, df_mes_grouped, on='Ativo', how='outer').fillna(0)
-    df_merged_assets = df_merged_assets.sort_values('Valor Ano', ascending=False)
-    df_merged_assets = df_merged_assets[['Ativo', 'Valor Mês', 'Valor Ano']]
-    
     # Formatação
-    display_assets = df_merged_assets.copy()
+    display_assets = df_mes_grouped.copy()
     display_assets['Valor Mês'] = display_assets['Valor Mês'].apply(format_provento)
-    display_assets['Valor Ano'] = display_assets['Valor Ano'].apply(format_provento)
     
-    styled_assets = display_assets.style.set_properties(**{'text-align': 'right'}, subset=['Valor Mês', 'Valor Ano']) \
-                                         .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês']) \
-                                         .set_properties(**{'color': '#3d9df3'}, subset=['Valor Ano'])
+    styled_assets = display_assets.style.set_properties(**{'text-align': 'right'}, subset=['Valor Mês']) \
+                                         .set_properties(**{'color': '#00CC96'}, subset=['Valor Mês'])
     
     st.dataframe(styled_assets, hide_index=True, use_container_width=True)
 
@@ -237,7 +229,7 @@ def render_proventos_resumo_view():
                 if selected_row.selection.rows:
                     row_idx = selected_row.selection.rows[0]
                     classe_selecionada = df_merged.iloc[row_idx]['Classe']
-                    show_proventos_classe_dialog(classe_selecionada, df_ano_filtered, df_mes, full_assets_map)
+                    show_proventos_classe_dialog(classe_selecionada, df_mes)
                 
             import plotly.express as px
             classes_unicas = df_merged['Classe'].unique()
