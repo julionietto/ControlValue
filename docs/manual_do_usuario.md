@@ -73,7 +73,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
     *   **Aba "📅 Evolução Anual":**
         *   Aqui você encontrará a tabela consolidada dos seus proventos, exibindo os valores mensais de cada ativo e um **Total Anual**.
         *   Uma nova linha **"Crescimento"** mostra a porcentagem de crescimento dos proventos de cada mês em relação ao mesmo mês do ano anterior, ajudando a identificar tendências na sua renda passiva.
-        *   A linha **"Valor Médio"** (anteriormente conhecida como "Média Acumulada") agora apresenta o valor médio acumulado dos proventos recebidos até o mês atual, oferecendo uma perspectiva clara do seu recebimento médio ao longo do tempo.
+        *   A linha **"Valor Médio"** (anteriormente conhecida como "Média Acumulada") agora oferece uma visão mais precisa do seu recebimento médio. Para anos fechados, ela mostra a média mensal considerando o total do ano. **Já para o ano atual, o cálculo é ajustado para mostrar a média dos proventos recebidos apenas até o mês corrente, refletindo com mais exatidão o seu ritmo de recebimentos ao longo do tempo.**
         *   **Proventos Dolarizados:** Se você possui investimentos internacionais (como Stocks e Reits) que pagam proventos em dólar, você encontrará um resumo separado desses valores, já convertidos para Reais (R$), nesta mesma aba.
 
     *   **Aba "📂 Distribuição por Classe":**
@@ -96,7 +96,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
 
 **💡 Legenda:**
 *   **Crescimento:** Indica a porcentagem de crescimento dos proventos em comparação com o mesmo mês do ano anterior.
-*   **Valor Médio:** Representa o valor médio acumulado dos proventos recebidos até o mês atual, fornecendo uma visão da sua renda passiva mensal projetada.
+*   **Valor Médio:** Representa o valor médio mensal dos proventos. Para anos anteriores, é a média do total anual. Para o ano atual, é a média dos proventos recebidos até o mês corrente, oferecendo uma visão mais precisa da sua renda passiva mensal projetada.
 
 ---
 

@@ -51,3 +51,33 @@ def test_infer_asset_type_fii_keywords(monkeypatch):
     import yfinance as yf
     monkeypatch.setattr(yf, "Ticker", MockTicker)
     assert infer_asset_type("IRDM11.SA") == "Fiis"
+
+def test_get_annual_proventos_summary():
+    import pandas as pd
+    import datetime
+    from utils.formatters import get_annual_proventos_summary
+
+    current_date = datetime.date.today()
+    current_year = current_date.year
+    current_month = current_date.month
+
+    data = [
+        # Past year (always divided by 12)
+        {"ticker": "PETR4", "ano": current_year - 1, "mes": 1, "valor": 120.0},
+        # Current year (divided by current_month)
+        {"ticker": "PETR4", "ano": current_year, "mes": 1, "valor": 120.0 * current_month},
+    ]
+    df = pd.DataFrame(data)
+
+    resumo = get_annual_proventos_summary(df, [current_year - 1, current_year])
+
+    # Assert past year values
+    row_past = resumo[resumo["Ano"] == str(current_year - 1)].iloc[0]
+    assert row_past["Valor Anual"] == 120.0
+    assert row_past["Valor Mensal"] == 10.0  # 120 / 12
+
+    # Assert current year values
+    row_current = resumo[resumo["Ano"] == str(current_year)].iloc[0]
+    assert row_current["Valor Anual"] == 120.0 * current_month
+    assert row_current["Valor Mensal"] == 120.0  # (120 * current_month) / current_month
+

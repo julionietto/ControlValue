@@ -63,6 +63,11 @@ def infer_asset_type(ticker):
         return 'Reits'
 
 def get_annual_proventos_summary(proventos_df, anos_disponiveis):
+    import datetime
+    current_date = datetime.date.today()
+    current_year = current_date.year
+    current_month = current_date.month
+
     meses_ordem = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     meses_abrev = {
         1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr',
@@ -81,7 +86,11 @@ def get_annual_proventos_summary(proventos_df, anos_disponiveis):
 
         totais_mes = pivot_ano[meses_ordem].sum(axis=0)
         retorno_total = totais_mes.sum()
-        media_mensal = retorno_total / 12
+        
+        if int(ano) == current_year:
+            media_mensal = retorno_total / current_month
+        else:
+            media_mensal = retorno_total / 12
 
         row = {'Ano': str(ano), 'Ano_Int': int(ano)}
         for mes_num, abrev in meses_abrev.items():
