@@ -88,7 +88,8 @@ def get_annual_proventos_summary(proventos_df, anos_disponiveis):
         retorno_total = totais_mes.sum()
         
         if int(ano) == current_year:
-            media_mensal = retorno_total / current_month
+            soma_ate_atual = sum(totais_mes[m] for m in range(1, current_month + 1))
+            media_mensal = soma_ate_atual / current_month
         else:
             media_mensal = retorno_total / 12
 

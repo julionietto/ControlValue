@@ -96,7 +96,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
 
 **💡 Legenda:**
 *   **Crescimento:** Indica a porcentagem de crescimento dos proventos em comparação com o mesmo mês do ano anterior.
-*   **Valor Médio:** Representa o valor médio mensal dos proventos. Para anos anteriores, é a média do total anual. Para o ano atual, é a média dos proventos recebidos até o mês corrente, oferecendo uma visão mais precisa da sua renda passiva mensal projetada.
+*   **Valor Médio:** Representa o valor médio mensal dos proventos. Para anos anteriores, é a média do total anual. Para o ano atual, é a média dos proventos recebidos apenas até o mês corrente, oferecendo uma visão mais precisa da sua renda passiva mensal projetada.
 
 ---
 

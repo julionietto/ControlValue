@@ -67,6 +67,10 @@ def test_get_annual_proventos_summary():
         # Current year (divided by current_month)
         {"ticker": "PETR4", "ano": current_year, "mes": 1, "valor": 120.0 * current_month},
     ]
+    if current_month < 12:
+        # Add a dividend in a future month of the current year (should not affect Valor Mensal)
+        data.append({"ticker": "PETR4", "ano": current_year, "mes": current_month + 1, "valor": 500.0})
+
     df = pd.DataFrame(data)
 
     resumo = get_annual_proventos_summary(df, [current_year - 1, current_year])
@@ -78,6 +82,9 @@ def test_get_annual_proventos_summary():
 
     # Assert current year values
     row_current = resumo[resumo["Ano"] == str(current_year)].iloc[0]
-    assert row_current["Valor Anual"] == 120.0 * current_month
+    expected_anual = 120.0 * current_month
+    if current_month < 12:
+        expected_anual += 500.0
+    assert row_current["Valor Anual"] == expected_anual
     assert row_current["Valor Mensal"] == 120.0  # (120 * current_month) / current_month
 
