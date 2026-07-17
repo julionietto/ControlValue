@@ -104,7 +104,7 @@ def dialog_assets_by_type(selected_type, assets_df):
         st.rerun()
 
 @st.dialog("Ativos por Setor", dismissible=True)
-def dialog_assets_by_sector(selected_sector, assets_df):
+def dialog_rv_assets_by_sector(selected_sector, assets_df):
     st.markdown(f"<h3 style='text-align: center;'>Ativos no Setor: {selected_sector}</h3>", unsafe_allow_html=True)
     
     filtered_df = assets_df[(assets_df['sector'] == selected_sector) & (assets_df['quantity'] > 1e-5)].copy()
@@ -131,8 +131,40 @@ def dialog_assets_by_sector(selected_sector, assets_df):
                                     
         st.dataframe(styled_df, hide_index=True, use_container_width=True)
         
-    if st.button("Fechar", use_container_width=True):
-        st.session_state.sector_dialog_handled = True
+    if st.button("Fechar", use_container_width=True, key="btn_close_rv_sector_dialog"):
+        st.session_state.rv_sector_dialog_handled = True
+        st.rerun()
+
+@st.dialog("FIIs por Segmento", dismissible=True)
+def dialog_fii_assets_by_sector(selected_sector, assets_df):
+    st.markdown(f"<h3 style='text-align: center;'>FIIs no Segmento: {selected_sector}</h3>", unsafe_allow_html=True)
+    
+    filtered_df = assets_df[(assets_df['sector'] == selected_sector) & (assets_df['quantity'] > 1e-5)].copy()
+    
+    if filtered_df.empty:
+        st.info("Nenhum ativo encontrado neste setor.")
+    else:
+        display_df = pd.DataFrame()
+        display_df['Ticker'] = filtered_df['ticker'].apply(format_ticker_for_display)
+        
+        def format_qty_hist(qty, a_type):
+            if a_type == 'Cripto':
+                formatted = f"{qty:,.8f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                if "," in formatted: formatted = formatted.rstrip('0').rstrip(',')
+                return formatted
+            return f"{qty:,.0f}".replace(",", ".")
+            
+        display_df['Quantidade'] = filtered_df.apply(lambda x: format_qty_hist(x['quantity'], x['asset_type']), axis=1)
+        display_df['Saldo Atual'] = filtered_df['current_value'].apply(format_brl)
+        
+        styled_df = display_df.style.set_properties(**{'text-align': 'center'}, subset=['Ticker', 'Quantidade']) \
+                                    .set_properties(**{'text-align': 'right'}, subset=['Saldo Atual']) \
+                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+                                    
+        st.dataframe(styled_df, hide_index=True, use_container_width=True)
+        
+    if st.button("Fechar", use_container_width=True, key="btn_close_fii_sector_dialog"):
+        st.session_state.fii_sector_dialog_handled = True
         st.rerun()
 
 @st.dialog("FIIs por Classe", dismissible=True)
@@ -1243,11 +1275,11 @@ def render_visao_geral_view():
                     selected_sector = event_sect.selection.points[0].get("x", "")
                     
                     if selected_sector and st.session_state.get('last_sector_selection') != selected_sector:
-                        st.session_state.sector_dialog_handled = False
+                        st.session_state.rv_sector_dialog_handled = False
                         st.session_state.last_sector_selection = selected_sector
                         
-                    if not st.session_state.get('sector_dialog_handled'):
-                        dialog_assets_by_sector(selected_sector, rv_assets)
+                    if not st.session_state.get('rv_sector_dialog_handled'):
+                        dialog_rv_assets_by_sector(selected_sector, rv_assets)
             else:
                 st.info("Adicione ativos de Renda Variável para visualizar esta distribuição.")
                 
@@ -1375,10 +1407,10 @@ def render_visao_geral_view():
                         if event_fii_sect and event_fii_sect.selection and event_fii_sect.selection.points:
                             selected_sector = event_fii_sect.selection.points[0].get("x", "")
                             if selected_sector and st.session_state.get('last_fii_sect_selection') != selected_sector:
-                                st.session_state.sector_dialog_handled = False
+                                st.session_state.fii_sector_dialog_handled = False
                                 st.session_state.last_fii_sect_selection = selected_sector
-                            if not st.session_state.get('sector_dialog_handled'):
-                                dialog_assets_by_sector(selected_sector, fii_assets_active)
+                            if not st.session_state.get('fii_sector_dialog_handled'):
+                                dialog_fii_assets_by_sector(selected_sector, fii_assets_active)
                     with col_fii3:
                         class_df = chart_df.groupby('classe')['current_value'].sum().reset_index()
                         total_fii_value = class_df['current_value'].sum()

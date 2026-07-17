@@ -22,7 +22,11 @@ Para a segurança dos seus dados financeiros, caso você deixe a página aberta 
 Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteira.
 
 *   **Cards de Resumo:** Na parte superior, você verá indicadores rápidos do seu patrimônio total, rentabilidade acumulada e os últimos proventos (dividendos) recebidos.
-*   **Gráficos Interativos:** Veja visualmente como seu dinheiro está dividido entre diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, Reits, etc.) e setores da economia. **Para simplificar a visualização, os ativos do tipo ETF (Exchange Traded Funds) e Criptomoedas agora são agrupados em uma única categoria chamada "ETF/Cripto" nos gráficos de alocação.** Passando o mouse por cima dos gráficos, você verá os detalhes e porcentagens de cada fatia. A categorização dos Fundos Imobiliários (FIIs) por setor é continuamente atualizada para garantir que seus gráficos de alocação estejam sempre precisos, incluindo os ativos mais recentes.
+*   **Gráficos Interativos:** Veja visualmente como seu dinheiro está dividido entre diferentes classes de ativos (Ações, Fundos Imobiliários, Renda Fixa, Reits, etc.) e setores/segmentos da economia.
+    *   **Para simplificar a visualização, os ativos do tipo ETF (Exchange Traded Funds) e Criptomoedas agora são agrupados em uma única categoria chamada "ETF/Cripto" nos gráficos de alocação.**
+    *   **Detalhes Rápidos:** Passando o mouse por cima das fatias dos gráficos, você verá os detalhes e porcentagens de cada parte da sua carteira.
+    *   **Análise Detalhada (Novidade!):** Para uma visão ainda mais aprofundada, você pode **clicar nas fatias de alguns gráficos** de distribuição, como os de **Renda Variável por Setor** (para Ações, ETFs, BDRs, etc.) e **FIIs por Segmento**. Ao clicar, uma pequena janela será exibida, mostrando a lista detalhada dos ativos que compõem aquela parte específica da sua carteira (por exemplo, todas as suas ações do setor de Tecnologia ou todos os seus FIIs do segmento de Shoppings), com a quantidade e o valor atual. Isso facilita a identificação rápida dos seus investimentos em cada área.
+    *   A categorização dos Fundos Imobiliários (FIIs) por setor é continuamente atualizada para garantir que seus gráficos de alocação estejam sempre precisos, incluindo os ativos mais recentes.
 *   **Menu de Navegação:** Localizado na barra superior ou lateral, ele permite alternar entre as diferentes visões do sistema.
 
 ---

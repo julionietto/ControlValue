@@ -244,11 +244,17 @@ O módulo `sync_job.py`, responsável pela sincronização e provisionamento de 
     *   Se a quantidade em custódia na `data_com` for `0` ou negativa (`qty_on_date <= 0`), o provento não é provisionado para aquele usuário (`continue`), prevenindo a atribuição indevida de rendimentos a quem não era elegível.
     *   Esta validação crítica garante que os registros de proventos sejam baseados na posse efetiva do ativo, aumentando a confiabilidade dos dados financeiros da aplicação.
 
-### 7.5. Otimização da Visualização de Dados para Gráficos (Visão Geral)
+### 7.5. Otimização da Visualização e Interação de Dados para a Visão Geral
 
-No módulo `views/geral.py`, responsável pela renderização da "Visão Geral", foram implementadas otimizações na preparação de dados para gráficos que exibem proventos e retornos totais de Fundos de Investimento Imobiliário (FIIs).
+No módulo `views/geral.py`, responsável pela renderização da "Visão Geral", foram implementadas otimizações na preparação de dados para gráficos que exibem proventos e retornos totais de Fundos de Investimento Imobiliário (FIIs), **juntamente com melhorias na interação para exploração detalhada dos ativos.**
 
 *   **Simplificação da Preparação de Dados para Gráficos:** As funções `render_visao_geral_view` foram refatoradas para simplificar a manipulação de dados antes da plotagem. A coluna temporária `Ativo_display`, que antes era utilizada para formatar os tickers dos ativos (`fii_prov_df['Ativo'].apply(format_ticker_for_display)`) e então usada nos eixos dos gráficos `px.bar`, foi eliminada. Agora, a formatação é aplicada diretamente à coluna `Ativo` original do DataFrame, e esta coluna já formatada é utilizada nos gráficos. Esta mudança reduz a criação de colunas intermediárias, otimizando levemente o consumo de memória e a clareza do código na camada de apresentação, sem alterar o fluxo de dados fundamental ou a lógica de cálculo dos proventos e retornos.
+*   **Diálogos Interativos para Detalhamento de Ativos por Setor/Segmento:** Para aprimorar a capacidade de exploração dos dados na Visão Geral, foram introduzidos e refatorados diálogos (`st.dialog`) que permitem ao usuário visualizar os ativos pertencentes a um setor ou segmento específico, selecionado a partir dos gráficos de distribuição.
+    *   A função `dialog_assets_by_sector` foi renomeada para `dialog_rv_assets_by_sector`, focando agora especificamente nos ativos de **Renda Variável (RV)**.
+    *   Uma nova função, `dialog_fii_assets_by_sector`, foi criada para lidar com o detalhamento dos **Fundos de Investimento Imobiliário (FIIs)** por segmento. Essa separação garante lógica e apresentação específicas para cada tipo de ativo.
+    *   Ambos os diálogos são acionados interativamente por cliques nos gráficos de pizza de distribuição (Setores de RV e Segmentos de FIIs), utilizando `plotly_events`. Eles filtram os ativos ativos (`quantity > 1e-5`) pertencentes ao setor/segmento selecionado e os exibem em um `st.dataframe` estilizado.
+    *   Para o `st.dataframe` dentro desses diálogos, foi implementada uma formatação customizada para a coluna 'Quantidade' (`format_qty_hist`), que ajusta a exibição para ativos de criptomoedas (maior precisão decimal) e outros ativos (inteiros), além de formatar o 'Saldo Atual' em BRL.
+    *   O gerenciamento do estado dos diálogos é feito através de chaves no `st.session_state` (`rv_sector_dialog_handled` e `fii_sector_dialog_handled`), garantindo que os diálogos sejam abertos e reabertos de forma controlada após a interação do usuário. Botões de fechamento específicos (`key="btn_close_rv_sector_dialog"` e `key="btn_close_fii_sector_dialog"`) foram adicionados para cada diálogo, permitindo um controle mais preciso da interação.
 
 ### 7.6. Mapeamento de Ativos Financeiros
 
