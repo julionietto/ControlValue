@@ -6,11 +6,55 @@ import services as svc
 from utils.formatters import format_ticker_for_display
 from components.ui import render_top_header
 
+def obter_dados_consulta_comparativa(proventos_df, ano_a, mes_a, ano_b, mes_b):
+    """
+    Retorna os dados dos proventos comparativos entre dois períodos (ano_a/mes_a vs ano_b/mes_b).
+    Retorno: (rows, total_a, total_b, total_diff)
+    Onde rows é uma lista de dicts ordenados alfabeticamente pelo nome do ativo:
+    [{'ticker': orig, 'display_ticker': disp, 'valor_a': val_a, 'valor_b': val_b, 'diferenca': val_a - val_b}]
+    """
+    if proventos_df.empty:
+        return [], 0.0, 0.0, 0.0
+
+    df_a = proventos_df[(proventos_df['ano'] == ano_a) & (proventos_df['mes'] == mes_a)]
+    df_b = proventos_df[(proventos_df['ano'] == ano_b) & (proventos_df['mes'] == mes_b)]
+
+    dict_a = df_a.groupby('ticker')['valor'].sum().to_dict() if not df_a.empty else {}
+    dict_b = df_b.groupby('ticker')['valor'].sum().to_dict() if not df_b.empty else {}
+
+    all_tickers = {t for t, v in dict_a.items() if v > 0} | {t for t, v in dict_b.items() if v > 0}
+
+    sorted_tickers = sorted(list(all_tickers), key=lambda t: format_ticker_for_display(t))
+
+    rows = []
+    total_a = 0.0
+    total_b = 0.0
+
+    for t in sorted_tickers:
+        val_a = float(dict_a.get(t, 0.0))
+        val_b = float(dict_b.get(t, 0.0))
+        total_a += val_a
+        total_b += val_b
+        rows.append({
+            'ticker': t,
+            'display_ticker': format_ticker_for_display(t),
+            'valor_a': val_a,
+            'valor_b': val_b,
+            'diferenca': val_a - val_b
+        })
+
+    total_diff = total_a - total_b
+    return rows, total_a, total_b, total_diff
+
 def render_proventos_historico_view():
     render_top_header("🗓️ Histórico Mensal", "Detalhamento de proventos recebidos por ativo e ano.")
     
-    # --- Bloco de Consulta Investidor10 ---
-    col_bt1, col_bt2 = st.columns([2, 1])
+    # --- Bloco de Consulta Investidor10 & Consulta Comparativa ---
+    col_bt1, col_bt2 = st.columns([1, 1])
+    with col_bt1:
+        if st.button("📊 Consulta Comparativa", key="btn_consulta_comparativa", use_container_width=True):
+            st.session_state.show_consulta_comparativa = True
+
     with col_bt2:
         last_sync = db.get_last_sync_log()
         sync_msg = "Ainda não sincronizado."
@@ -89,6 +133,79 @@ def render_proventos_historico_view():
     meses_nums = list(meses_nomes_dict.keys())
 
     # ---- Dialogs ----
+    @st.dialog("📊 Consulta Comparativa", dismissible=False)
+    def dialog_consulta_comparativa(df_prov, anos_disp):
+        st.markdown("Selecione o **Ano e Mês** para comparar os proventos recebidos entre o **Lado A** e o **Lado B**.")
+        st.markdown("---")
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("##### 🔹 Lado A")
+            ano_a = st.selectbox("Ano (A)", anos_disp, key="comp_sel_ano_a")
+            mes_a_nome = st.selectbox("Mês (A)", meses_ordem, key="comp_sel_mes_a")
+        with col_b:
+            st.markdown("##### 🔸 Lado B")
+            default_idx_b = 1 if len(anos_disp) > 1 else 0
+            ano_b = st.selectbox("Ano (B)", anos_disp, index=default_idx_b, key="comp_sel_ano_b")
+            mes_b_nome = st.selectbox("Mês (B)", meses_ordem, key="comp_sel_mes_b")
+
+        mes_a_num = {v: k for k, v in meses_nomes_dict.items()}[mes_a_nome]
+        mes_b_num = {v: k for k, v in meses_nomes_dict.items()}[mes_b_nome]
+
+        rows, total_a, total_b, total_diff = obter_dados_consulta_comparativa(df_prov, ano_a, mes_a_num, ano_b, mes_b_num)
+
+        st.markdown("---")
+        if not rows:
+            st.info(f"Nenhum provento registrado em {mes_a_nome}/{ano_a} (Lado A) ou {mes_b_nome}/{ano_b} (Lado B).")
+        else:
+            is_hidden = st.session_state.get('hide_values', False)
+
+            def fmt_val(v):
+                if is_hidden:
+                    return "R$ ••••••"
+                return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            html = []
+            html.append('<table class="custom-table" style="width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px;">')
+            html.append('  <thead>')
+            html.append('    <tr style="background-color: var(--table-header-bg);">')
+            html.append('      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">Ativo</th>')
+            html.append(f'      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Lado A ({mes_a_nome[:3]}/{ano_a})</th>')
+            html.append(f'      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Lado B ({mes_b_nome[:3]}/{ano_b})</th>')
+            html.append('      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Diferença</th>')
+            html.append('    </tr>')
+            html.append('  </thead>')
+            html.append('  <tbody>')
+
+            for r in rows:
+                diff_color = "color: #00CC96;" if r['diferenca'] >= 0 else "color: #EF553B;"
+                html.append('    <tr style="background-color: var(--bg-card);">')
+                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: center; font-weight: bold; color: var(--text-primary); font-family: monospace;">{r["display_ticker"]}</td>')
+                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(r["valor_a"])}</td>')
+                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(r["valor_b"])}</td>')
+                diff_str = fmt_val(r['diferenca']) if not is_hidden else "R$ ••••••"
+                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; font-weight: 500; {diff_color}">{diff_str}</td>')
+                html.append('    </tr>')
+
+            diff_tot_color = "color: #00CC96;" if total_diff >= 0 else "color: #EF553B;"
+            html.append('    <tr style="font-weight: bold; background-color: var(--table-header-bg);">')
+            html.append('      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; text-transform: uppercase;">TOTAL</td>')
+            html.append(f'      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(total_a)}</td>')
+            html.append(f'      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(total_b)}</td>')
+            diff_tot_str = fmt_val(total_diff) if not is_hidden else "R$ ••••••"
+            html.append(f'      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; {diff_tot_color}">{diff_tot_str}</td>')
+            html.append('    </tr>')
+
+            html.append('  </tbody>')
+            html.append('</table>')
+
+            st.write('\n'.join(html), unsafe_allow_html=True)
+
+        st.markdown("")
+        if st.button("❌ Fechar", key="btn_close_consulta_comparativa", use_container_width=True):
+            st.session_state.show_consulta_comparativa = False
+            st.rerun()
+
     @st.dialog("✏️ Editar Provento", dismissible=False)
     def dialog_editar_provento(ano, ticker, df_prov):
         st.markdown(f"**Ativo:** `{format_ticker_for_display(ticker)}`  |  **Ano:** `{ano}`")
@@ -160,6 +277,10 @@ def render_proventos_historico_view():
                 st.rerun()
 
     # ---- Trigger Popups ----
+    if st.session_state.get('show_consulta_comparativa'):
+        anos_disp = sorted([int(a) for a in proventos_df['ano'].unique()], reverse=True)
+        dialog_consulta_comparativa(proventos_df, anos_disp)
+
     if st.session_state.get('confirming_delete_provento'):
         c_data = st.session_state['confirming_delete_provento']
         dialog_confirmar_exclusao_provento(c_data['ano'], c_data['ticker'])

@@ -1,3 +1,6 @@
+Para o arquivo `docs/manual_do_usuario.md`:
+
+```markdown
 # Manual do Usuário - ControlValue 📈
 
 Bem-vindo ao **ControlValue**, a sua plataforma pessoal para consolidação, acompanhamento e análise de investimentos! Este guia foi feito para ajudar você a navegar e utilizar todos os recursos do sistema, mesmo se você não tiver conhecimento técnico em informática.
@@ -68,6 +71,23 @@ Esta aba é dedicada a quem busca viver de renda, permitindo um controle detalha
 Para garantir uma experiência ainda mais fluida e rápida, otimizamos o carregamento de todas as informações de proventos. Isso significa que, ao navegar pelas diferentes abas e gráficos desta seção, os dados serão exibidos mais rapidamente, proporcionando uma análise mais ágil da sua renda passiva.
 
 Para garantir a máxima precisão, o sistema agora registra proventos provisionados (que são valores a receber, mas ainda não pagos) **somente para os investimentos que você realmente possuía na data em que o direito ao provento foi estabelecido (a "data com")**. Isso assegura que sua contabilidade de rendimentos seja sempre exata, refletindo apenas o que lhe é devido.
+
+#### 📊 **Consulta Comparativa de Proventos (Novidade!)**
+Para quem busca entender a evolução dos seus rendimentos ao longo do tempo, adicionamos uma ferramenta de **Consulta Comparativa** na aba de **Proventos**. Com ela, você pode comparar lado a lado os proventos recebidos de seus ativos entre dois meses e anos distintos, identificando rapidamente crescimentos ou quedas.
+
+**Como usar:**
+1.  Na aba **Proventos (Rendimentos)**, clique no botão **"📊 Consulta Comparativa"** (localizado próximo ao botão de sincronização).
+2.  Uma janela pop-up será exibida, onde você deverá selecionar:
+    *   **Lado A:** O ano e o mês do primeiro período que deseja analisar.
+    *   **Lado B:** O ano e o mês do segundo período para comparação.
+3.  Após selecionar os períodos, o sistema apresentará uma tabela detalhada com:
+    *   **Ativo:** O nome do seu investimento (ex: VALE3, MXRF11).
+    *   **Lado A (Mês/Ano):** O valor total de proventos recebidos daquele ativo no período do Lado A.
+    *   **Lado B (Mês/Ano):** O valor total de proventos recebidos daquele ativo no período do Lado B.
+    *   **Diferença:** A diferença entre os valores do Lado A e do Lado B. Esta coluna será exibida em **verde** se o valor do Lado A for igual ou maior que o do Lado B (indicando um crescimento ou manutenção) e em **vermelho** se o valor do Lado A for menor (indicando uma queda).
+4.  No final da tabela, você verá os **Totais** de proventos para o Lado A, Lado B e a Diferença Total entre os dois períodos, facilitando uma visão geral do desempenho da sua carteira.
+
+Essa ferramenta é ideal para acompanhar a performance dos seus ativos e da sua carteira de renda passiva em diferentes momentos do ano ou entre anos.
 
 A aba de Proventos está organizada em três seções principais para facilitar sua análise:
 
