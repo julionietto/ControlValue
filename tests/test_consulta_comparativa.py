@@ -21,7 +21,18 @@ def test_obter_dados_consulta_comparativa_ordem_alfabetica():
 
     assert total_a == 175.0  # 100 + 50 + 25
     assert total_b == 280.0  # 80 + 200
-    assert total_diff == 175.0 - 280.0
+    assert total_diff == 280.0 - 175.0
+
+    # Testar diferenca individual (Lado B - Lado A)
+    # BBAS3: B=0, A=50 -> diff = -50
+    # ITSA4: B=0, A=25 -> diff = -25
+    # PETR4: B=200, A=0 -> diff = 200
+    # VALE3: B=80, A=100 -> diff = -20
+    diffs = {r['display_ticker']: r['diferenca'] for r in rows}
+    assert diffs['BBAS3'] == -50.0
+    assert diffs['ITSA4'] == -25.0
+    assert diffs['PETR4'] == 200.0
+    assert diffs['VALE3'] == -20.0
 
 def test_obter_dados_consulta_comparativa_apenas_um_lado():
     data = [
@@ -36,10 +47,12 @@ def test_obter_dados_consulta_comparativa_apenas_um_lado():
     assert rows[0]['display_ticker'] == 'HGLG11'
     assert rows[0]['valor_a'] == 30.0
     assert rows[0]['valor_b'] == 0.0
+    assert rows[0]['diferenca'] == -30.0
     
     assert rows[1]['display_ticker'] == 'MXRF11'
     assert rows[1]['valor_a'] == 15.0
     assert rows[1]['valor_b'] == 0.0
+    assert rows[1]['diferenca'] == -15.0
 
 def test_obter_dados_consulta_comparativa_vazio():
     df = pd.DataFrame(columns=['ano', 'mes', 'ticker', 'valor'])
@@ -48,3 +61,4 @@ def test_obter_dados_consulta_comparativa_vazio():
     assert total_a == 0.0
     assert total_b == 0.0
     assert total_diff == 0.0
+

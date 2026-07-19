@@ -11,7 +11,7 @@ def obter_dados_consulta_comparativa(proventos_df, ano_a, mes_a, ano_b, mes_b):
     Retorna os dados dos proventos comparativos entre dois períodos (ano_a/mes_a vs ano_b/mes_b).
     Retorno: (rows, total_a, total_b, total_diff)
     Onde rows é uma lista de dicts ordenados alfabeticamente pelo nome do ativo:
-    [{'ticker': orig, 'display_ticker': disp, 'valor_a': val_a, 'valor_b': val_b, 'diferenca': val_a - val_b}]
+    [{'ticker': orig, 'display_ticker': disp, 'valor_a': val_a, 'valor_b': val_b, 'diferenca': val_b - val_a}]
     """
     if proventos_df.empty:
         return [], 0.0, 0.0, 0.0
@@ -40,10 +40,10 @@ def obter_dados_consulta_comparativa(proventos_df, ano_a, mes_a, ano_b, mes_b):
             'display_ticker': format_ticker_for_display(t),
             'valor_a': val_a,
             'valor_b': val_b,
-            'diferenca': val_a - val_b
+            'diferenca': val_b - val_a
         })
 
-    total_diff = total_a - total_b
+    total_diff = total_b - total_a
     return rows, total_a, total_b, total_diff
 
 def render_proventos_historico_view():

@@ -82,7 +82,7 @@ Para quem busca entender a evolução dos seus rendimentos ao longo do tempo, ad
     *   **Ativo:** O nome do seu investimento (ex: VALE3, MXRF11).
     *   **Lado A (Mês/Ano):** O valor total de proventos recebidos daquele ativo no período do Lado A.
     *   **Lado B (Mês/Ano):** O valor total de proventos recebidos daquele ativo no período do Lado B.
-    *   **Diferença:** A diferença entre os valores do Lado A e do Lado B. Esta coluna será exibida em **verde** se o valor do Lado A for igual ou maior que o do Lado B (indicando um crescimento ou manutenção) e em **vermelho** se o valor do Lado A for menor (indicando uma queda).
+    *   **Diferença:** A diferença entre os valores do Lado B e do Lado A (ou seja, `Valor do Lado B - Valor do Lado A`). Esta coluna será exibida em **verde** se o valor do Lado B for igual ou maior que o do Lado A (indicando um crescimento ou manutenção) e em **vermelho** se o valor do Lado B for menor (indicando uma queda).
 4.  No final da tabela, você verá os **Totais** de proventos para o Lado A, Lado B e a Diferença Total entre os dois períodos, facilitando uma visão geral do desempenho da sua carteira.
 
 Essa ferramenta é ideal para acompanhar a performance dos seus ativos e da sua carteira de renda passiva em diferentes momentos do ano ou entre anos.
