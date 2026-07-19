@@ -192,11 +192,11 @@ A apresentação de dados financeiros, como proventos, exige um alto grau de con
     *   A lógica de `st.rerun()` é utilizada para reprocessar a visualização após a seleção de uma ação de adição ou edição, garantindo que o estado da aplicação seja atualizado e o formulário de edição/adição seja exibido conforme necessário.
 
 *   **Consulta Comparativa de Proventos (`views/proventos_historico.py`):**
-    *   Uma nova funcionalidade de **"Consulta Comparativa"** foi integrada na visão de histórico de proventos, permitindo aos usuários comparar os proventos recebidos por ativo entre dois períodos (mês/ano) distintos.
-    *   A funcionalidade é acionada por um botão "📊 Consulta Comparativa" que abre um diálogo interativo (`st.dialog`).
-    *   Dentro do diálogo, o usuário pode selecionar o ano e mês para o "Lado A" e o "Lado B" da comparação.
+    *   A funcionalidade de **"Consulta Comparativa"** permite aos usuários comparar os proventos recebidos por ativo entre dois períodos (mês/ano) distintos.
+    *   Esta funcionalidade agora é mais acessível, sendo acionada por um botão "📊 Consulta Comparativa" localizado **contextualmente para cada grupo anual de proventos**, que abre um diálogo interativo (`st.dialog`).
+    *   Dentro do diálogo, o usuário pode selecionar o ano e mês para o "Lado A" e o "Lado B" da comparação. **Para maior conveniência, a seleção padrão para o "Lado B" agora é automaticamente preenchida com o ano e mês correntes, se disponíveis nos dados.**
     *   A função `obter_dados_consulta_comparativa` é responsável por processar os dados, agrupando os proventos por ticker para cada período selecionado e calculando os valores (`valor_a`, `valor_b`) e a diferença (`diferenca`). Os resultados são então ordenados alfabeticamente pelo nome do ativo para uma visualização consistente.
-    *   Os dados comparativos são exibidos em uma tabela HTML customizada, similar às outras tabelas de proventos, com colunas para "Ativo", "Lado A", "Lado B" e "Diferença". A coluna "Diferença" utiliza estilização condicional (verde para positivo, vermelho para negativo) e a tabela inclui linhas de totalizadores para os valores totais e a diferença total entre os períodos.
+    *   Os dados comparativos são exibidos em uma tabela HTML customizada, similar às outras tabelas de proventos, com colunas para "Ativo", "Lado A", "Lado B" e "Diferença". **A renderização desta tabela foi aprimorada para incluir um container com rolagem vertical (`overflow-y: auto`), além de cabeçalhos e a linha de totalizadores que permanecem "fixos" ou "sticky" durante a rolagem (usando `position: sticky`), melhorando significativamente a usabilidade para comparações com muitos ativos.** A coluna "Diferença" utiliza estilização condicional (verde para positivo, vermelho para negativo) e a tabela inclui linhas de totalizadores para os valores totais e a diferença total entre os períodos.
     *   A funcionalidade suporta a opção de ocultar valores para privacidade e inclui um botão de fechamento para o diálogo.
 
 *   **Resumo de Proventos por Ano e Classe (`views/proventos_resumo.py`):**

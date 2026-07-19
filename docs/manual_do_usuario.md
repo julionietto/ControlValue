@@ -1,6 +1,3 @@
-Para o arquivo `docs/manual_do_usuario.md`:
-
-```markdown
 # Manual do Usuário - ControlValue 📈
 
 Bem-vindo ao **ControlValue**, a sua plataforma pessoal para consolidação, acompanhamento e análise de investimentos! Este guia foi feito para ajudar você a navegar e utilizar todos os recursos do sistema, mesmo se você não tiver conhecimento técnico em informática.
@@ -76,11 +73,12 @@ Para garantir a máxima precisão, o sistema agora registra proventos provisiona
 Para quem busca entender a evolução dos seus rendimentos ao longo do tempo, adicionamos uma ferramenta de **Consulta Comparativa** na aba de **Proventos**. Com ela, você pode comparar lado a lado os proventos recebidos de seus ativos entre dois meses e anos distintos, identificando rapidamente crescimentos ou quedas.
 
 **Como usar:**
-1.  Na aba **Proventos (Rendimentos)**, clique no botão **"📊 Consulta Comparativa"** (localizado próximo ao botão de sincronização).
+1.  Na aba **Proventos (Rendimentos)**, role a tela até a parte inferior, onde você encontrará os botões para "Adicionar Ativo" e "Editar Ativo". Clique no botão **"📊 Consulta Comparativa"** localizado nesta área.
 2.  Uma janela pop-up será exibida, onde você deverá selecionar:
     *   **Lado A:** O ano e o mês do primeiro período que deseja analisar.
-    *   **Lado B:** O ano e o mês do segundo período para comparação.
-3.  Após selecionar os períodos, o sistema apresentará uma tabela detalhada com:
+    *   **Lado B:** O ano e o mês do segundo período para comparação. **Para sua comodidade, o sistema agora preenche automaticamente o "Lado B" com o mês e ano atuais, facilitando a comparação com o período mais recente.**
+3.  Após selecionar os períodos, o sistema apresentará uma tabela detalhada com os resultados. **Esta tabela foi aprimorada para ser mais fácil de usar:**
+    *   Se houver muitos ativos, você poderá **rolar a tela dentro da janela** para ver todos eles, sem perder o cabeçalho (que mostra os nomes das colunas) ou o total geral na parte inferior.
     *   **Ativo:** O nome do seu investimento (ex: VALE3, MXRF11).
     *   **Lado A (Mês/Ano):** O valor total de proventos recebidos daquele ativo no período do Lado A.
     *   **Lado B (Mês/Ano):** O valor total de proventos recebidos daquele ativo no período do Lado B.

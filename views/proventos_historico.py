@@ -49,12 +49,8 @@ def obter_dados_consulta_comparativa(proventos_df, ano_a, mes_a, ano_b, mes_b):
 def render_proventos_historico_view():
     render_top_header("🗓️ Histórico Mensal", "Detalhamento de proventos recebidos por ativo e ano.")
     
-    # --- Bloco de Consulta Investidor10 & Consulta Comparativa ---
-    col_bt1, col_bt2 = st.columns([1, 1])
-    with col_bt1:
-        if st.button("📊 Consulta Comparativa", key="btn_consulta_comparativa", use_container_width=True):
-            st.session_state.show_consulta_comparativa = True
-
+    # --- Bloco de Consulta Investidor10 ---
+    col_bt1, col_bt2 = st.columns([2, 1])
     with col_bt2:
         last_sync = db.get_last_sync_log()
         sync_msg = "Ainda não sincronizado."
@@ -135,8 +131,11 @@ def render_proventos_historico_view():
     # ---- Dialogs ----
     @st.dialog("📊 Consulta Comparativa", dismissible=False)
     def dialog_consulta_comparativa(df_prov, anos_disp):
-        st.markdown("Selecione o **Ano e Mês** para comparar os proventos recebidos entre o **Lado A** e o **Lado B**.")
-        st.markdown("---")
+        st.markdown("Selecione ano e mês para comparar proventos")
+
+        now_dt = pd.Timestamp.now()
+        curr_year = now_dt.year
+        curr_month_idx = now_dt.month - 1
 
         col_a, col_b = st.columns(2)
         with col_a:
@@ -145,16 +144,15 @@ def render_proventos_historico_view():
             mes_a_nome = st.selectbox("Mês (A)", meses_ordem, key="comp_sel_mes_a")
         with col_b:
             st.markdown("##### 🔸 Lado B")
-            default_idx_b = 1 if len(anos_disp) > 1 else 0
-            ano_b = st.selectbox("Ano (B)", anos_disp, index=default_idx_b, key="comp_sel_ano_b")
-            mes_b_nome = st.selectbox("Mês (B)", meses_ordem, key="comp_sel_mes_b")
+            ano_b_idx = anos_disp.index(curr_year) if curr_year in anos_disp else 0
+            ano_b = st.selectbox("Ano (B)", anos_disp, index=ano_b_idx, key="comp_sel_ano_b")
+            mes_b_nome = st.selectbox("Mês (B)", meses_ordem, index=curr_month_idx, key="comp_sel_mes_b")
 
         mes_a_num = {v: k for k, v in meses_nomes_dict.items()}[mes_a_nome]
         mes_b_num = {v: k for k, v in meses_nomes_dict.items()}[mes_b_nome]
 
         rows, total_a, total_b, total_diff = obter_dados_consulta_comparativa(df_prov, ano_a, mes_a_num, ano_b, mes_b_num)
 
-        st.markdown("---")
         if not rows:
             st.info(f"Nenhum provento registrado em {mes_a_nome}/{ano_a} (Lado A) ou {mes_b_nome}/{ano_b} (Lado B).")
         else:
@@ -166,38 +164,40 @@ def render_proventos_historico_view():
                 return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
             html = []
-            html.append('<table class="custom-table" style="width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px;">')
-            html.append('  <thead>')
-            html.append('    <tr style="background-color: var(--table-header-bg);">')
-            html.append('      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color);">Ativo</th>')
-            html.append(f'      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Lado A ({mes_a_nome[:3]}/{ano_a})</th>')
-            html.append(f'      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Lado B ({mes_b_nome[:3]}/{ano_b})</th>')
-            html.append('      <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color);">Diferença</th>')
-            html.append('    </tr>')
-            html.append('  </thead>')
-            html.append('  <tbody>')
+            html.append('<div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-top: 10px; margin-bottom: 15px;">')
+            html.append('  <table class="custom-table" style="width: 100%; border-collapse: collapse; overflow: hidden;">')
+            html.append('    <thead>')
+            html.append('      <tr style="background-color: var(--table-header-bg); position: sticky; top: 0; z-index: 1;">')
+            html.append('        <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; border-bottom: 1px solid var(--border-color); background-color: var(--table-header-bg);">Ativo</th>')
+            html.append(f'        <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color); background-color: var(--table-header-bg);">Lado A ({mes_a_nome[:3]}/{ano_a})</th>')
+            html.append(f'        <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color); background-color: var(--table-header-bg);">Lado B ({mes_b_nome[:3]}/{ano_b})</th>')
+            html.append('        <th style="padding: 10px 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: right; border-bottom: 1px solid var(--border-color); background-color: var(--table-header-bg);">Diferença</th>')
+            html.append('      </tr>')
+            html.append('    </thead>')
+            html.append('    <tbody>')
 
             for r in rows:
                 diff_color = "color: #00CC96;" if r['diferenca'] >= 0 else "color: #EF553B;"
-                html.append('    <tr style="background-color: var(--bg-card);">')
-                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: center; font-weight: bold; color: var(--text-primary); font-family: monospace;">{r["display_ticker"]}</td>')
-                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(r["valor_a"])}</td>')
-                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(r["valor_b"])}</td>')
+                html.append('      <tr style="background-color: var(--bg-card);">')
+                html.append(f'        <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: center; font-weight: bold; color: var(--text-primary); font-family: monospace;">{r["display_ticker"]}</td>')
+                html.append(f'        <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(r["valor_a"])}</td>')
+                html.append(f'        <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(r["valor_b"])}</td>')
                 diff_str = fmt_val(r['diferenca']) if not is_hidden else "R$ ••••••"
-                html.append(f'      <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; font-weight: 500; {diff_color}">{diff_str}</td>')
-                html.append('    </tr>')
+                html.append(f'        <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; font-weight: 500; {diff_color}">{diff_str}</td>')
+                html.append('      </tr>')
 
             diff_tot_color = "color: #00CC96;" if total_diff >= 0 else "color: #EF553B;"
-            html.append('    <tr style="font-weight: bold; background-color: var(--table-header-bg);">')
-            html.append('      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; text-transform: uppercase;">TOTAL</td>')
-            html.append(f'      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(total_a)}</td>')
-            html.append(f'      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; color: var(--text-primary);">{fmt_val(total_b)}</td>')
+            html.append('      <tr style="font-weight: bold; background-color: var(--table-header-bg); position: sticky; bottom: 0;">')
+            html.append('        <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: center; color: var(--text-primary); font-size: 0.8rem; text-transform: uppercase; background-color: var(--table-header-bg);">TOTAL</td>')
+            html.append(f'        <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; color: var(--text-primary); background-color: var(--table-header-bg);">{fmt_val(total_a)}</td>')
+            html.append(f'        <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; color: var(--text-primary); background-color: var(--table-header-bg);">{fmt_val(total_b)}</td>')
             diff_tot_str = fmt_val(total_diff) if not is_hidden else "R$ ••••••"
-            html.append(f'      <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; {diff_tot_color}">{diff_tot_str}</td>')
-            html.append('    </tr>')
+            html.append(f'        <td style="padding: 12px; border-top: 2px solid var(--border-color); text-align: right; {diff_tot_color} background-color: var(--table-header-bg);">{diff_tot_str}</td>')
+            html.append('      </tr>')
 
-            html.append('  </tbody>')
-            html.append('</table>')
+            html.append('    </tbody>')
+            html.append('  </table>')
+            html.append('</div>')
 
             st.write('\n'.join(html), unsafe_allow_html=True)
 
@@ -444,7 +444,7 @@ def render_proventos_historico_view():
                 media_mes = totais_row[meses_ordem[:i+1]].sum() / (i+1)
                 html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color); text-align: right; color: #00CC96;">{format_provento(media_mes)}</td>')
             else:
-                html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color);"></td>')
+                html_table.append(f'      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color);"></td>')
         
         html_table.append('      <td style="padding: 14px 16px; background-color: var(--table-header-bg); border-bottom: 1px solid var(--border-color);"></td>')
         html_table.append('    </tr>')
@@ -454,7 +454,7 @@ def render_proventos_historico_view():
     
     st.write('\n'.join(html_table), unsafe_allow_html=True)
     
-    # Controles de Adição e Edição
+    # Controles de Adição, Consulta Comparativa e Edição
     st.markdown("")
     col_add, col_edit = st.columns([1, 1])
     with col_add:
@@ -462,6 +462,9 @@ def render_proventos_historico_view():
             if st.button("➕ Adicionar Ativo", key=f"add_ativo_{ano}", use_container_width=True):
                 st.session_state.editing_provento = {'ano': ano, 'ticker': '__NOVO__'}
                 st.rerun()
+        if st.button("📊 Consulta Comparativa", key=f"btn_consulta_comparativa_{ano}", use_container_width=True):
+            st.session_state.show_consulta_comparativa = True
+
     with col_edit:
         available_tickers = sorted(display_df['OriginalTicker'].unique())
         ticker_options = ["✏️ Selecionar Ativo para Editar/Excluir..."] + [f"{format_ticker_for_display(t)}" for t in available_tickers]
