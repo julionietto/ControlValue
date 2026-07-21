@@ -464,6 +464,7 @@ def render_proventos_historico_view():
                 st.rerun()
         if st.button("📊 Consulta Comparativa", key=f"btn_consulta_comparativa_{ano}", use_container_width=True):
             st.session_state.show_consulta_comparativa = True
+            st.rerun()
 
     with col_edit:
         available_tickers = sorted(display_df['OriginalTicker'].unique())
