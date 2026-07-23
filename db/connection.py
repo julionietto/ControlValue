@@ -27,32 +27,51 @@ def get_database_url():
         logging.warning(f"Aviso ao acessar DATABASE_URL no st.secrets: {e}")
     return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/controlvalue")
 
-def close_pool(pool_obj):
-    """Fecha todas as conexões do pool quando o cache expira ou é limpo."""
-    try:
-        pool_obj.closeall()
-    except Exception as e:
-        import logging
-        logging.warning(f"Erro ao fechar o pool de conexões: {e}")
+# ==============================================================================
+# PREMISSA ARQUITETURAL OBRIGATÓRIA - NEON.TECH AUTO-SUSPEND
+# ==============================================================================
+# O banco de dados PostgreSQL deste projeto está hospedado na Neon.tech.
+# REGRA INVIOLÁVEL: O banco de dados NÃO PODE ter conexões ativas ou mantidas em pool
+# de forma permanente. Cada função de leitura ou alteração DEVE abrir uma conexão
+# e encerrá-la imediatamente (conn.close()) ao finalizar o bloco de execução.
+# Isso garante que a Neon.tech coloque o serviço em Auto-Suspend quando o sistema
+# estiver ocioso, evitando estouro do limite mensal de 100 horas de computação.
+# NÃO REINTRODUZIR POOLS DE CONEXÃO PERSISTENTES SEM ENCERRAMENTO FÍSICO DAS CONEXÕES.
+# ==============================================================================
 
-@st.cache_resource(on_release=close_pool)
+def close_pool(pool_obj=None):
+    """Função legada de fechamento de pool (mantida para compatibilidade)."""
+    if pool_obj:
+        try:
+            pool_obj.closeall()
+        except Exception as e:
+            import logging
+            logging.warning(f"Erro ao fechar o pool de conexões: {e}")
+
 def init_connection_pool():
-    """Inicializa um Connection Pool com suporte a SSL para Cloud."""
-    db_url = get_database_url()
-    if "127.0.0.1" not in db_url and "localhost" not in db_url and "sslmode=" not in db_url:
-        db_url += "?sslmode=require" if "?" not in db_url else "&sslmode=require"
-    # minconn=0 permite ao pool liberar todas as conexões físicas quando o sistema estiver ocioso.
-    return pool.ThreadedConnectionPool(0, 20, db_url)
+    """Função legada de inicialização de pool (mantida para compatibilidade)."""
+    return None
 
 @contextmanager
 def get_db_connection():
-    """Gerenciador de contexto para obter uma conexão do pool."""
-    pool_obj = init_connection_pool()
-    conn = pool_obj.getconn()
+    """
+    Gerenciador de contexto para obter uma conexão direta com o banco de dados.
+    A conexão é criada ao entrar no contexto e OBRIGATORIAMENTE FECHADA ao sair (conn.close()),
+    garantindo que nenhuma conexão TCP permaneça aberta e permitindo o Auto-Suspend da Neon.tech.
+    """
+    db_url = get_database_url()
+    if "127.0.0.1" not in db_url and "localhost" not in db_url and "sslmode=" not in db_url:
+        db_url += "?sslmode=require" if "?" not in db_url else "&sslmode=require"
+    
+    conn = psycopg2.connect(db_url)
     try:
         yield conn
     finally:
-        pool_obj.putconn(conn)
+        try:
+            conn.close()
+        except Exception as e:
+            import logging
+            logging.warning(f"Erro ao fechar conexão com o banco de dados: {e}")
 
 def init_db():
     """Inicializa as tabelas do banco de dados e executa migrações de schema."""
