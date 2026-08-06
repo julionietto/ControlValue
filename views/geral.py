@@ -918,7 +918,8 @@ def render_visao_geral_view():
                 display_radar['Ticker'] = radar_df['ticker'].apply(format_ticker_for_display)
                 
                 is_hidden = st.session_state.get('hide_values', False)
-                display_radar['Valor do Ativo'] = radar_df['current_value'].apply(lambda x: "R$ ••••••" if is_hidden else format_brl_custom(x))
+                brl_col = "Valor em Real" if show_usd else "Valor do Ativo"
+                display_radar[brl_col] = radar_df['current_value'].apply(lambda x: "R$ ••••••" if is_hidden else format_brl_custom(x))
                 
                 if show_usd:
                     def calc_usd_val(row):
@@ -939,7 +940,7 @@ def render_visao_geral_view():
                         return 'color: #00CC96; font-weight: bold; text-align: center;'
                     return 'color: #a1a1aa; text-align: center;'
                 
-                right_cols = ['Valor do Ativo']
+                right_cols = [brl_col]
                 if show_usd:
                     right_cols.append('Valor em Dólar')
 

@@ -1,4 +1,3 @@
-```
 # Manual do Usuário - ControlValue 📈
 
 Bem-vindo ao **ControlValue**, a sua plataforma pessoal para consolidação, acompanhamento e análise de investimentos! Este guia foi feito para ajudar você a navegar e utilizar todos os recursos do sistema, mesmo se você não tiver conhecimento técnico em informática.
@@ -29,7 +28,7 @@ Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteir
     *   **Análise Detalhada (Novidade!):** Para uma visão ainda mais aprofundada, você pode **clicar nas fatias de alguns gráficos** de distribuição, como os de **Renda Variável por Setor** (para Ações, ETFs, BDRs, etc.) e **FIIs por Segmento. Ao clicar, uma pequena janela será exibida, mostrando a lista detalhada dos ativos que compõem aquela parte específica da sua carteira (por exemplo, todas as suas ações do setor de Tecnologia ou todos os seus FIIs do segmento de Shoppings), com a quantidade e o valor atual. Isso facilita a identificação rápida dos seus investimentos em cada área.
     *   A categorização dos Fundos Imobiliários (FIIs) por setor é continuamente atualizada para garantir que seus gráficos de alocação estejam sempre precisos, incluindo os ativos mais recentes.
 *   **Radar de Alocação (Novidade!):** Abaixo dos gráficos, você encontrará o "Radar de Alocação", uma tabela que compara seus ativos atuais com seus objetivos de alocação. Essa funcionalidade ajuda a identificar rapidamente quais investimentos estão acima ou abaixo do seu plano.
-    *   **Visão Detalhada de Ativos Internacionais:** Para seus investimentos nos Estados Unidos (como **Stocks** e **Reits**), agora você verá uma coluna adicional chamada **"Valor em Dólar"**, que mostra o valor atual desses ativos diretamente na moeda original (USD), além do valor já exibido em Reais. Isso proporciona uma visão mais clara e direta do seu patrimônio internacional, permitindo um acompanhamento mais preciso sem a necessidade de conversões manuais.
+    *   **Visão Detalhada de Ativos Internacionais:** Para seus investimentos nos Estados Unidos (como **Stocks** e **Reits**), a tabela agora se ajusta para oferecer uma visão ainda mais clara. Seus ativos internacionais serão exibidos com uma coluna para o **"Valor em Dólar"**, mostrando o valor atual desses ativos diretamente na moeda original (USD). Além disso, a coluna de valor em Reais passará a se chamar **"Valor em Real"**, facilitando a identificação dos valores na moeda local e na moeda original lado a lado. Isso proporciona uma visão mais clara e direta do seu patrimônio internacional, permitindo um acompanhamento mais preciso sem a necessidade de conversões manuais.
 *   **Menu de Navegação:** Localizado na barra superior ou lateral, ele permite alternar entre as diferentes visões do sistema.
 
 ---
