@@ -708,6 +708,12 @@ def render_visao_geral_view():
                 return "R$ 0,00" if is_currency else "0,00"
             formatted = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             return f"R$ {formatted}" if is_currency else formatted
+
+        def format_usd_custom(val, is_currency=True):
+            if pd.isna(val) or val == 0: 
+                return "$ 0,00" if is_currency else "0,00"
+            formatted = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            return f"$ {formatted}" if is_currency else formatted
     
         def format_qty_table(row):
             if row['asset_type'] == 'Cripto':
@@ -889,7 +895,7 @@ def render_visao_geral_view():
         if not any_eligible and not full_radar_df.empty:
             st.warning("Considere aportar em Renda Fixa ou revise os percentuais de alocação na opção de Alocação de Ativos")
 
-        def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct):
+        def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct, show_usd=False):
             st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;'>{title}</h3>", unsafe_allow_html=True)
             radar_df = df[(df['asset_type'].isin(asset_types)) & (df['quantity'] > 1e-5) & (df['current_value'] > 1e-5)].copy()
             
@@ -913,6 +919,18 @@ def render_visao_geral_view():
                 
                 is_hidden = st.session_state.get('hide_values', False)
                 display_radar['Valor do Ativo'] = radar_df['current_value'].apply(lambda x: "R$ ••••••" if is_hidden else format_brl_custom(x))
+                
+                if show_usd:
+                    def calc_usd_val(row):
+                        orig_price = row.get('original_current_price', 0.0)
+                        if orig_price > 0:
+                            return row['quantity'] * orig_price
+                        if usd_to_brl_rate > 0:
+                            return row['current_value'] / usd_to_brl_rate
+                        return 0.0
+                    radar_df['current_value_usd'] = radar_df.apply(calc_usd_val, axis=1)
+                    display_radar['Valor em Dólar'] = radar_df['current_value_usd'].apply(lambda x: "$ ••••••" if is_hidden else format_usd_custom(x))
+
                 display_radar['Indicação de Compra'] = radar_df['Indicação de Compra']
                 
                 # Estilização
@@ -921,9 +939,13 @@ def render_visao_geral_view():
                         return 'color: #00CC96; font-weight: bold; text-align: center;'
                     return 'color: #a1a1aa; text-align: center;'
                 
+                right_cols = ['Valor do Ativo']
+                if show_usd:
+                    right_cols.append('Valor em Dólar')
+
                 styled_radar = display_radar.style.map(style_indication, subset=['Indicação de Compra']) \
                                                  .set_properties(**{'text-align': 'center'}, subset=['Ticker']) \
-                                                 .set_properties(**{'text-align': 'right'}, subset=['Valor do Ativo'])
+                                                 .set_properties(**{'text-align': 'right'}, subset=right_cols)
                 
                 st.dataframe(
                     styled_radar, 
@@ -940,7 +962,7 @@ def render_visao_geral_view():
             with col_radar1:
                 show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP'], assets_df, user_targets, current_allocs_pct)
             with col_radar2:
-                show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df, user_targets, current_allocs_pct)
+                show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df, user_targets, current_allocs_pct, show_usd=True)
         else:
             show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP'], assets_df, user_targets, current_allocs_pct)
     

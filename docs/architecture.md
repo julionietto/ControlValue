@@ -263,6 +263,9 @@ No módulo `views/geral.py`, responsável pela renderização da "Visão Geral",
     *   Ambos os diálogos são acionados interativamente por cliques nos gráficos de pizza de distribuição (Setores de RV e Segmentos de FIIs), utilizando `plotly_events`. Eles filtram os ativos ativos (`quantity > 1e-5`) pertencentes ao setor/segmento selecionado e os exibem em um `st.dataframe` estilizado.
     *   Para o `st.dataframe` dentro desses diálogos, foi implementada uma formatação customizada para a coluna 'Quantidade' (`format_qty_hist`), que ajusta a exibição para ativos de criptomoedas (maior precisão decimal) e outros ativos (inteiros), além de formatar o 'Saldo Atual' em BRL.
     *   O gerenciamento do estado dos diálogos é feito através de chaves no `st.session_state` (`rv_sector_dialog_handled` e `fii_sector_dialog_handled`), garantindo que os diálogos sejam abertos e reabertos de forma controlada após a interação do usuário. Botões de fechamento específicos (`key="btn_close_rv_sector_dialog"` e `key="btn_close_fii_sector_dialog"`) foram adicionados para cada diálogo, permitindo um control mais preciso da interação.
+*   **Exibição de Valores em Dólar para Ativos dos EUA:**
+    *   A função `format_usd_custom` foi introduzida para padronizar a formatação de valores monetários em dólar (`$ X.XXX,XX`), garantindo consistência na apresentação.
+    *   A tabela "Ativos nos Estados Unidos", localizada na seção "Radar de Balanceamento" da Visão Geral, agora exibe uma nova coluna "Valor em Dólar". Esta coluna calcula o valor atual dos ativos dos EUA em USD, utilizando o `original_current_price` (preço original do ativo em dólar, se disponível) ou, como fallback, convertendo o `current_value` em BRL usando a taxa de câmbio USD/BRL. Essa funcionalidade oferece uma visão mais direta e contextualizada do patrimônio em moeda estrangeira, aprimorando a clareza e a utilidade da Visão Geral para portfólios globais.
 
 ### 7.6. Mapeamento de Ativos Financeiros
 
