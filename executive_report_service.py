@@ -46,6 +46,8 @@ def get_user_portfolio_data(user_id):
         assets_df['invested_brl_est'] = assets_df.apply(
             lambda r: r['invested_val'] * 5.5 if r.get('currency') == 'USD' else r['invested_val'], axis=1
         )
+        tot_brl = assets_df['invested_brl_est'].sum()
+        assets_df['weight_%'] = (assets_df['invested_brl_est'] / tot_brl * 100) if tot_brl > 0 else 0
     
     # 2. Proventos
     cursor.execute("""

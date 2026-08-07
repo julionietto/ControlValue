@@ -106,7 +106,13 @@ def render_report_executivo_view():
         with tab_portfolio:
             st.markdown("### 📊 Posição Atual dos Ativos")
             if not rep['active_df'].empty:
-                display_df = rep['active_df'][['ticker', 'asset_type', 'quantity', 'average_price', 'currency', 'invested_val', 'weight_%']].copy()
+                df_curr = rep['active_df'].copy()
+                if 'invested_val' not in df_curr.columns:
+                    df_curr['invested_val'] = df_curr['quantity'] * df_curr['average_price']
+                if 'weight_%' not in df_curr.columns:
+                    tot_inv = df_curr['invested_brl_est'].sum() if 'invested_brl_est' in df_curr.columns else df_curr['invested_val'].sum()
+                    df_curr['weight_%'] = (df_curr['invested_val'] / tot_inv * 100) if tot_inv > 0 else 0
+                display_df = df_curr[['ticker', 'asset_type', 'quantity', 'average_price', 'currency', 'invested_val', 'weight_%']].copy()
                 display_df.columns = ["Ticker", "Classe", "Quantidade", "Preço Médio", "Moeda", "Total Investido", "Peso na Carteira (%)"]
                 st.dataframe(display_df, use_container_width=True)
             else:
