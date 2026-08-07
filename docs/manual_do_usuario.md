@@ -36,6 +36,7 @@ Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteir
 ## 3. Como Importar seus Investimentos (Ativos e Proventos)
 
 Em vez de cadastrar operação por operação manualmente, você pode importar seus dados em lote de forma muito simples.
+Essas e outras ferramentas de análise estão acessíveis no **menu do seu perfil** (o ícone com seu nome ou foto no canto superior direito da tela).
 
 ### 📥 Importando Ativos (Suas Compras e Vendas)
 1. Clique no menu de perfil ou no botão de importação no topo da tela e selecione **Importar Ativos (CSV)**.
@@ -78,7 +79,7 @@ Para quem busca entender a evolução dos seus rendimentos ao longo do tempo, ad
 1.  Na aba **Proventos (Rendimentos)**, role a tela até a parte inferior, onde você encontrará os botões para "Adicionar Ativo" e "Editar Ativo". Clique no botão **"📊 Consulta Comparativa"** localizado nesta área.
 2.  Uma janela pop-up será exibida, onde você deverá selecionar o ano e o mês para os dois períodos que deseja comparar. **Para sua comodidade, o sistema agora preenche automaticamente as opções de comparação com sugestões inteligentes:**
     *   **Lado A (primeiro período):** Será preenchido com o **mês atual do ano anterior**, por exemplo, "Março de 2023" se o mês atual for Março de 2024.
-    *   **Lado B (segundo período):** Será preenchido com o **mês e ano atuais**, por exemplo, "Março de 2024".
+    *   **Lado B (segundo período):** Será preenchido com o **mes e ano atuais**, por exemplo, "Março de 2024".
     Isso facilita a comparação imediata do seu desempenho de proventos do mês atual em relação ao mesmo mês do ano anterior. Você pode, claro, ajustar esses períodos conforme sua necessidade, escolhendo entre todos os anos em que você possui registro de proventos, incluindo o ano atual e o anterior.
 3.  Após selecionar os períodos, o sistema apresentará uma tabela detalhada com os resultados. **Esta tabela foi aprimorada para ser mais fácil de usar:**
     *   Se houver muitos ativos, você poderá **rolar a tela dentro da janela** para ver todos eles, sem perder o cabeçalho (que mostra os nomes das colunas) ou o total geral na parte inferior.
@@ -135,7 +136,28 @@ Para usuários que realizam operações de proteção (hedge) ou rentabilizaçã
 
 ---
 
-## 5. Personalizando sua Experiência (Temas)
+## 5. Relatório Executivo Inteligente (Novo!)
+
+O **Report Executivo** é uma poderosa ferramenta de análise profunda e personalizada da sua carteira de investimentos, potencializada por inteligência artificial. Ele oferece uma visão estratégica do seu patrimônio e orientações claras, mesmo para quem não é especialista em mercado financeiro.
+
+### Como Acessar o Report Executivo
+Clique no **menu do seu perfil** (o ícone do seu nome ou foto no canto superior direito da tela) e selecione a opção **📄 Report Executivo**.
+
+### O que o Report Executivo oferece?
+
+Ao emitir um novo relatório, o sistema ControlValue realiza uma análise completa e apresenta as seguintes informações:
+
+*   **Diagnóstico de Perfil e Objetivo:** O sistema avalia a composição da sua carteira e infere automaticamente qual é o seu **perfil de investidor** (Conservador, Moderado ou Arrojado) e o seu **principal objetivo patrimonial** (Foco em Renda Passiva, em Crescimento e Valorização Patrimonial, ou um Perfil Misto).
+*   **Panorama Macroeconômico Inteligente:** Você recebe uma análise atualizada do cenário econômico global, focando nos mercados do **Brasil** (com informações sobre a Taxa Selic, inflação IPCA, etc.) e dos **Estados Unidos** (considerando a taxa de juros do Fed, dólar/câmbio, e o impacto nos seus investimentos internacionais).
+*   **Ativos sob Análise e Fatos Relevantes:** O relatório identifica quais ativos da sua carteira podem estar "sob pressão" ou com um preço médio acima do seu "preço teto" ou "valor justo" estipulado. Para cada um, ele oferece explicações claras e resumidas sobre os motivos por trás dessa situação (ex: como juros altos afetam Fundos Imobiliários, a volatilidade de commodities, ou o ciclo de juros americanos nos REITs).
+*   **Orientação Estratégica Personalizada:** Com base no seu perfil e objetivos, o sistema fornece uma visão estratégica e recomendações sobre os próximos passos para alinhar sua carteira. Isso pode incluir sugestões de rebalanceamento, onde concentrar novos aportes ou como otimizar sua renda passiva.
+*   **Relatório em PDF para Download:** Após toda a análise ser exibida na tela, você pode facilmente baixar um documento profissional em formato PDF com todas essas informações. É ideal para você ter um registro detalhado, revisar offline ou compartilhar com seu consultor financeiro.
+
+Essa ferramenta é projetada para te ajudar a tomar decisões mais informadas e estratégicas, oferecendo uma visão clara e objetiva do desempenho e do potencial da sua carteira, mesmo que você não possua um conhecimento aprofundado do mercado financeiro.
+
+---
+
+## 6. Personalizando sua Experiência (Temas)
 
 Você pode mudar a aparência do ControlValue para o estilo que mais lhe agrada:
 1.  Acesse as **Preferências** (no menu superior ou ícone de engrenagem).

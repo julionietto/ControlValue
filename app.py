@@ -168,6 +168,10 @@ try:
     if current_view == "Derivativos":
         render_derivativos_view()
 
+    if current_view == "Report_Executivo":
+        from views.report_executivo import render_report_executivo_view
+        render_report_executivo_view()
+
     if current_view == "Detalhe do Ativo":
         from views.asset_detail import render_asset_detail_view
         render_asset_detail_view(st.session_state.viewing_history)
