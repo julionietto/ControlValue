@@ -76,9 +76,10 @@ Para quem busca entender a evolução dos seus rendimentos ao longo do tempo, ad
 
 **Como usar:**
 1.  Na aba **Proventos (Rendimentos)**, role a tela até a parte inferior, onde você encontrará os botões para "Adicionar Ativo" e "Editar Ativo". Clique no botão **"📊 Consulta Comparativa"** localizado nesta área.
-2.  Uma janela pop-up será exibida, onde você deverá selecionar:
-    *   **Lado A:** O ano e o mês do primeiro período que deseja analisar.
-    *   **Lado B:** O ano e o mês do segundo período para comparação. **Para sua comodidade, o sistema agora preenche automaticamente o "Lado B" com o mês e ano atuais, facilitando a comparação com o período mais recente.**
+2.  Uma janela pop-up será exibida, onde você deverá selecionar o ano e o mês para os dois períodos que deseja comparar. **Para sua comodidade, o sistema agora preenche automaticamente as opções de comparação com sugestões inteligentes:**
+    *   **Lado A (primeiro período):** Será preenchido com o **mês atual do ano anterior**, por exemplo, "Março de 2023" se o mês atual for Março de 2024.
+    *   **Lado B (segundo período):** Será preenchido com o **mês e ano atuais**, por exemplo, "Março de 2024".
+    Isso facilita a comparação imediata do seu desempenho de proventos do mês atual em relação ao mesmo mês do ano anterior. Você pode, claro, ajustar esses períodos conforme sua necessidade, escolhendo entre todos os anos em que você possui registro de proventos, incluindo o ano atual e o anterior.
 3.  Após selecionar os períodos, o sistema apresentará uma tabela detalhada com os resultados. **Esta tabela foi aprimorada para ser mais fácil de usar:**
     *   Se houver muitos ativos, você poderá **rolar a tela dentro da janela** para ver todos eles, sem perder o cabeçalho (que mostra os nomes das colunas) ou o total geral na parte inferior.
     *   **Ativo:** O nome do seu investimento (ex: VALE3, MXRF11).

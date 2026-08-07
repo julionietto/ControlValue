@@ -135,17 +135,22 @@ def render_proventos_historico_view():
 
         now_dt = pd.Timestamp.now()
         curr_year = now_dt.year
+        prev_year = curr_year - 1
         curr_month_idx = now_dt.month - 1
+
+        anos_opcoes = sorted(list(set(anos_disp + [curr_year, prev_year])), reverse=True) if anos_disp else [curr_year, prev_year]
+
+        ano_a_idx = anos_opcoes.index(prev_year) if prev_year in anos_opcoes else 0
+        ano_b_idx = anos_opcoes.index(curr_year) if curr_year in anos_opcoes else 0
 
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown("##### 🔹 Lado A")
-            ano_a = st.selectbox("Ano (A)", anos_disp, key="comp_sel_ano_a")
-            mes_a_nome = st.selectbox("Mês (A)", meses_ordem, key="comp_sel_mes_a")
+            ano_a = st.selectbox("Ano (A)", anos_opcoes, index=ano_a_idx, key="comp_sel_ano_a")
+            mes_a_nome = st.selectbox("Mês (A)", meses_ordem, index=curr_month_idx, key="comp_sel_mes_a")
         with col_b:
             st.markdown("##### 🔸 Lado B")
-            ano_b_idx = anos_disp.index(curr_year) if curr_year in anos_disp else 0
-            ano_b = st.selectbox("Ano (B)", anos_disp, index=ano_b_idx, key="comp_sel_ano_b")
+            ano_b = st.selectbox("Ano (B)", anos_opcoes, index=ano_b_idx, key="comp_sel_ano_b")
             mes_b_nome = st.selectbox("Mês (B)", meses_ordem, index=curr_month_idx, key="comp_sel_mes_b")
 
         mes_a_num = {v: k for k, v in meses_nomes_dict.items()}[mes_a_nome]
