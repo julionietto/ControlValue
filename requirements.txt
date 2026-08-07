@@ -15,5 +15,9 @@ curl-cffi>=0.15.0
 beautifulsoup4>=4.12.0
 cloudscraper>=1.2.71
 google-genai>=0.1.0
+google-generativeai>=0.8.0
+matplotlib>=3.8.0
+reportlab>=4.0.0
 pytest>=8.0.0
+
 

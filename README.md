@@ -24,11 +24,13 @@ Para executar este projeto, você precisará ter instalado:
 *   **pip:** Gerenciador de pacotes do Python (geralmente incluído com o Python).
 *   **Git:** Sistema de controle de versão.
 *   **Chave de API do Google AI Studio (Gemini API):** Para a funcionalidade de IA.
-*   **Pytest:** Usado pelo Agente de Testes para executar os testes do projeto.
+*   **Pytest:** Usado pelo Agente de Testes para executar os testes do projeto (versão 8.0.0 ou superior).
 *   **Streamlit:** Framework para criação de aplicações web interativas, utilizado para as interfaces do projeto.
 *   **PostgreSQL:** O banco de dados PostgreSQL é utilizado para persistência de dados.
 *   **psycopg2:** Driver Python para PostgreSQL, listado em `requirements.txt`.
-*   **reportlab:** Biblioteca para geração de documentos PDF.
+*   **reportlab:** Biblioteca para geração de documentos PDF (versão 4.0.0 ou superior).
+*   **matplotlib:** Biblioteca para criação de gráficos e visualizações de dados (versão 3.8.0 ou superior).
+*   **google-generativeai:** Biblioteca oficial do Google para interagir com modelos generativos (versão 0.8.0 ou superior).
 
 ## Instalação
 
