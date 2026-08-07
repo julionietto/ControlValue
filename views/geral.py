@@ -404,6 +404,21 @@ def render_visao_geral_view():
     # HEADER INTERNALIZED - This forces a native scroll reset on navigation
     render_top_header("Ativos Financeiros", "Controle de investimentos e análise de performance em tempo real.")
 
+    # Banner de Acesso Rápido ao Report Executivo Inteligente
+    col_rep1, col_rep2 = st.columns([0.75, 0.25], vertical_alignment="center")
+    with col_rep1:
+        st.markdown("""
+        <div style='background: linear-gradient(90deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 64, 175, 0.4) 100%); padding: 8px 14px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 10px;'>
+            <span style='color: #60a5fa; font-weight: bold; font-size: 0.95rem;'>📄 Report Executivo Inteligente</span>
+            <span style='color: #94a3b8; font-size: 0.85rem;'> — Análise Macroeconômica Viva, Diagnóstico de Perfil e PDF</span>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_rep2:
+        if st.button("📊 Abrir Report Executivo", type="primary", use_container_width=True, key="btn_quick_report_exec"):
+            st.session_state.navigation_tab = "Report_Executivo"
+            st.session_state.viewing_history = None
+            st.rerun()
+
     # Renderiza Visão Geral
 
     assets_df = db.get_all_assets(st.session_state.user_id)
