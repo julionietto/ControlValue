@@ -137,6 +137,9 @@ try:
         dialog_alocacao_ativos()
     if st.session_state.pop('trigger_dialog_preferencias', False):
         dialog_preferencias()
+    if st.session_state.pop('trigger_dialog_report_executivo', False):
+        from views.report_executivo import dialog_report_executivo
+        dialog_report_executivo()
 
     # ==============================
     # ADMIN DASHBOARD
