@@ -1,3 +1,4 @@
+# pyrefly: ignore[missing-import]
 import os
 import datetime
 import io
@@ -13,6 +14,9 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+
+import db
+import services as svc
 
 load_dotenv(r"c:\Projeto\ControlValue\.env")
 
@@ -30,44 +34,125 @@ except Exception:
 
 
 def get_user_portfolio_data(user_id):
-    """Busca dados de ativos, transações e proventos do usuário no banco PostgreSQL."""
-    db_url = os.getenv("DATABASE_URL")
-    conn = psycopg2.connect(db_url)
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    
-    # 1. Ativos
-    cursor.execute("SELECT * FROM assets WHERE user_id = %s", (user_id,))
-    rows = cursor.fetchall()
-    colnames = [desc[0] for desc in cursor.description]
-    assets_df = pd.DataFrame(rows, columns=colnames) if rows else pd.DataFrame()
-    
-    if not assets_df.empty:
-        assets_df['invested_val'] = assets_df['quantity'] * assets_df['average_price']
-        assets_df['invested_brl_est'] = assets_df.apply(
-            lambda r: r['invested_val'] * 5.5 if r.get('currency') == 'USD' else r['invested_val'], axis=1
-        )
-        tot_brl = assets_df['invested_brl_est'].sum()
-        assets_df['weight_%'] = (assets_df['invested_brl_est'] / tot_brl * 100) if tot_brl > 0 else 0
-    
-    # 2. Proventos
-    cursor.execute("""
-        SELECT ano, SUM(valor) as total_proventos
-        FROM proventos
-        WHERE user_id = %s
-        GROUP BY ano
-        ORDER BY ano ASC
-    """, (user_id,))
-    rows_p = cursor.fetchall()
-    colnames_p = [desc[0] for desc in cursor.description]
-    prov_df = pd.DataFrame(rows_p, columns=colnames_p) if rows_p else pd.DataFrame()
-    
-    # 3. Nome/Username do usuário
-    cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
-    user_row = cursor.fetchone()
-    username = user_row['username'] if user_row else f"Investidor #{user_id}"
-    
-    conn.close()
-    return assets_df, prov_df, username
+    """
+    Calcula de forma precisa e idêntica à Visão Geral do aplicativo:
+    - Saldo Atual da Carteira (Valor de Mercado) em BRL
+    - Total Investido em BRL
+    - Total de Proventos Globais Acumulados
+    - Histórico Anual de Proventos e Média Mensal Real YTD
+    """
+    assets_df = db.get_all_assets(user_id)
+    if assets_df.empty:
+        return pd.DataFrame(), pd.DataFrame(), f"Investidor #{user_id}", 0.0, 0.0, 0.0
+
+    all_histories_df = db.get_all_asset_histories(user_id)
+    MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
+    tickers_to_fetch = assets_df[~assets_df['asset_type'].isin(MANUAL_TYPES)]['ticker'].unique().tolist()
+
+    ticker_fetch_map = {}
+    tickers_br, tickers_us, tickers_crypto = [], [], []
+
+    for t in tickers_to_fetch:
+        asset_r = assets_df[assets_df['ticker'] == t].iloc[0]
+        a_type = asset_r['asset_type']
+        if a_type == 'Cripto':
+            yf_t = f"{t}-USD" if '-' not in t else t
+            ticker_fetch_map[t] = yf_t
+            tickers_crypto.append(yf_t)
+        elif a_type in ['Stocks', 'Reits']:
+            ticker_fetch_map[t] = t
+            tickers_us.append(t)
+        else:
+            ticker_fetch_map[t] = t
+            tickers_br.append(t)
+
+    all_tickers = tickers_br + tickers_us + tickers_crypto
+    try:
+        current_prices = svc.fetch_current_prices(all_tickers, 1)
+        usd_to_brl_rate = svc.get_usd_brl_rate(1, True)
+    except Exception:
+        current_prices = {}
+        usd_to_brl_rate = 5.5
+
+    def get_current_price(row):
+        if row['asset_type'] in MANUAL_TYPES:
+            return row['average_price']
+        ticker = row['ticker']
+        yf_ticker = ticker_fetch_map.get(ticker, ticker)
+        return current_prices.get(yf_ticker, row['average_price'])
+
+    def apply_exchange_rate(row, column_name, is_market_price=False):
+        val = row[column_name]
+        if row['currency'] == 'USD' or (is_market_price and row['asset_type'] in ['Cripto', 'Stocks', 'Reits']):
+            return val * usd_to_brl_rate
+        return val
+
+    assets_df['original_current_price'] = assets_df.apply(get_current_price, axis=1)
+    assets_df['average_price_brl'] = assets_df.apply(lambda row: apply_exchange_rate(row, 'average_price', is_market_price=False), axis=1)
+    assets_df['current_price'] = assets_df.apply(lambda row: apply_exchange_rate(row, 'original_current_price', is_market_price=True), axis=1)
+
+    assets_df['total_invested'] = assets_df['quantity'] * assets_df['average_price_brl']
+    assets_df['current_value'] = assets_df['quantity'] * assets_df['current_price']
+
+    def calculate_asset_totals(row):
+        base_invested = row['quantity'] * row['average_price_brl']
+        base_profit = row['current_value'] - base_invested
+        
+        if row['asset_type'] in MANUAL_TYPES:
+            if abs(row['quantity']) < 1e-5:
+                return pd.Series({'profit_loss': 0.0, 'total_invested': 0.0})
+            return pd.Series({'profit_loss': 0.0, 'total_invested': base_invested})
+            
+        if not all_histories_df.empty:
+            history_df = all_histories_df[all_histories_df['asset_id'] == row['id']].copy()
+        else:
+            history_df = pd.DataFrame()
+        
+        if history_df.empty:
+            if abs(row['quantity']) < 1e-5:
+                return pd.Series({'profit_loss': 0.0, 'total_invested': 0.0})
+            return pd.Series({'profit_loss': base_profit, 'total_invested': base_invested})
+            
+        def convert_to_brl(val):
+            if row['currency'] == 'USD':
+                return val * usd_to_brl_rate
+            return val
+
+        history_df['unit_price_brl'] = history_df['unit_price'].apply(convert_to_brl)
+        history_df['valor_operacao'] = history_df['quantity'] * history_df['unit_price_brl']
+        history_df['valor_atualizado'] = history_df['quantity'] * row['current_price']
+        history_df['lucro_prejuizo'] = history_df['valor_atualizado'] - history_df['valor_operacao']
+        
+        if abs(row['quantity']) < 1e-5:
+            return pd.Series({'profit_loss': history_df['lucro_prejuizo'].sum(), 'total_invested': 0.0})
+        
+        return pd.Series({'profit_loss': history_df['lucro_prejuizo'].sum(), 'total_invested': history_df['valor_operacao'].sum()})
+
+    totals_df = assets_df.apply(calculate_asset_totals, axis=1)
+    assets_df['profit_loss'] = totals_df['profit_loss']
+    assets_df['invested_brl_est'] = totals_df['total_invested']
+
+    tot_brl = assets_df['current_value'].sum()
+    assets_df['weight_%'] = (assets_df['current_value'] / tot_brl * 100) if tot_brl > 0 else 0
+
+    # Proventos
+    prov_raw = db.get_proventos(user_id)
+    if not prov_raw.empty:
+        prov_df = prov_raw.groupby('ano').agg(
+            total_proventos=('valor', 'sum'),
+            max_mes=('mes', 'max')
+        ).reset_index().sort_values('ano', ascending=True)
+    else:
+        prov_df = pd.DataFrame(columns=['ano', 'total_proventos', 'max_mes'])
+
+    global_proventos = db.get_all_total_proventos(user_id)
+    u_details = db.get_user_details(user_id)
+    username = u_details['username'] if u_details else f"Investidor #{user_id}"
+
+    current_total_value = assets_df[assets_df['quantity'] > 0]['current_value'].sum()
+    total_invested = assets_df[assets_df['quantity'] > 0]['invested_brl_est'].sum()
+
+    return assets_df, prov_df, username, current_total_value, total_invested, global_proventos
 
 
 def infer_investor_profile_and_goal(active_df):
@@ -76,296 +161,250 @@ def infer_investor_profile_and_goal(active_df):
     (Renda Passiva, Valorização / Crescimento, Misto) com base na composição da carteira.
     """
     if active_df.empty:
-        return "Conservador", "Renda Passiva", {}
+        return "Conservador", "Renda Passiva", {}, 50
         
-    tot_invested = active_df['invested_brl_est'].sum()
-    if tot_invested == 0:
-        return "Conservador", "Renda Passiva", {}
+    tot_val = active_df['current_value'].sum()
+    if tot_val == 0:
+        return "Conservador", "Renda Passiva", {}, 50
         
-    weights = active_df.groupby('asset_type')['invested_brl_est'].sum() / tot_invested * 100
+    weights = active_df.groupby('asset_type')['current_value'].sum() / tot_val * 100
     w_fiis = weights.get('Fiis', 0)
     w_acoes = weights.get('Ações', 0) + weights.get('Aes', 0)
     w_rf = weights.get('Renda Fixa', 0)
     w_reits = weights.get('Reits', 0)
+    w_stocks = weights.get('Stocks', 0)
     w_cripto_etf = weights.get('Cripto', 0) + weights.get('ETF', 0)
     
     # Perfil
     if (w_rf + w_fiis) >= 65 and w_cripto_etf < 5:
         perfil = "Conservador"
-    elif w_cripto_etf > 15 or w_reits > 25 or w_acoes > 50:
+    elif w_cripto_etf > 15 or w_reits + w_stocks > 35 or w_acoes > 50:
         perfil = "Arrojado"
     else:
         perfil = "Moderado"
         
     # Objetivo
-    yield_focused = w_fiis + w_reits + (w_acoes * 0.6)
-    growth_focused = w_cripto_etf + (w_acoes * 0.4)
+    yield_focused = w_fiis + w_reits + (w_acoes * 0.6) + (w_rf * 0.5)
+    growth_focused = w_cripto_etf + w_stocks + (w_acoes * 0.4)
     
-    if yield_focused >= 60:
-        objetivo = "Foco em Renda Passiva e Fluxo Recorrente"
+    if yield_focused >= 55:
+        objetivo = "Foco em Crescimento de Renda Passiva"
+        alignment_score = min(98, int(yield_focused * 1.15))
     elif growth_focused >= 40:
         objetivo = "Foco em Crescimento e Valorização Patrimonial"
+        alignment_score = min(95, int(growth_focused * 1.25))
     else:
         objetivo = "Perfil Misto (Renda Passiva & Valorização)"
+        alignment_score = 85
         
     metrics = {
         "w_fiis": w_fiis, "w_acoes": w_acoes, "w_rf": w_rf,
-        "w_reits": w_reits, "w_cripto_etf": w_cripto_etf,
-        "tot_invested": tot_invested
+        "w_reits": w_reits, "w_stocks": w_stocks, "w_cripto_etf": w_cripto_etf,
+        "tot_val": tot_val
     }
-    return perfil, objetivo, metrics
+    return perfil, objetivo, metrics, alignment_score
 
 
 def analyze_asset_performance(active_df):
     """
-    Identifica quais ativos apresentam prejuízo (cotação/fair_value < preço médio)
-    ou grande desconto e prepara resumos dos fatos relevantes por setor.
+    Avalia a saúde dos ativos (Lucro/Prejuízo, Desconto vs Preço Teto).
     """
     underperforming = []
-    
-    for idx, r in active_df.iterrows():
-        price = r['average_price']
-        fair_val = r.get('fair_value', 0)
-        ceiling = r.get('price_ceiling', 0)
-        ticker_name = r['ticker']
-        a_type = r['asset_type']
+    if active_df.empty:
+        return underperforming
         
-        is_discounted = False
-        reason = ""
+    for _, row in active_df.iterrows():
+        ticker = row['ticker']
+        a_type = row['asset_type']
+        avg_price = row['average_price']
+        curr_price = row.get('current_price', avg_price)
+        teto = row.get('ceiling_price', 0)
         
-        if fair_val > 0 and price > fair_val:
-            is_discounted = True
-            reason = f"Preço médio de R${price:,.2f} está acima do valor justo estipulado (R${fair_val:,.2f})."
-        elif ceiling > 0 and price > ceiling:
-            is_discounted = True
-            reason = f"Preço médio (R${price:,.2f}) está acima do preço teto recomendado (R${ceiling:,.2f})."
-        elif a_type == 'Reits' and price > 60:
-            is_discounted = True
-            reason = "Pressão no valuation decorrente do ciclo de juros altos nos EUA (Fed Funds a 5,25%-5,50%)."
-        elif ticker_name in ['VINO11.SA', 'PVBI11.SA']:
-            is_discounted = True
-            reason = "Impactado pela vacância temporária em escritórios corporativos e despesas financeiras elevadas do fundo."
-        elif ticker_name in ['VALE3.SA', 'KLBN11.SA', 'KLBN4.SA']:
-            is_discounted = True
-            reason = "Desempenho pressionado pela volatilidade das commodities globais (minério/celulose) e desaceleração chinesa."
-
-        if is_discounted:
+        profit_loss = row.get('profit_loss', 0)
+        
+        if profit_loss < -500 or (teto and teto > 0 and curr_price < teto * 0.9):
+            reason = f"Ativo sob pressão no mercado. Cotação atual de R$ {curr_price:,.2f} versus Preço Médio R$ {avg_price:,.2f} (Preço Teto Estipulado: R$ {teto:,.2f}). Oportunidade de aporte ou reavaliação setorial."
             underperforming.append({
-                'ticker': ticker_name,
-                'asset_type': a_type,
-                'average_price': price,
-                'fair_value': fair_val,
-                'reason': reason
+                "ticker": ticker,
+                "asset_type": a_type,
+                "average_price": avg_price,
+                "current_price": curr_price,
+                "reason": reason
             })
-            
     return underperforming
 
 
-def generate_ai_macro_narrative(user_name, perfil, objetivo, active_df, underperforming_assets):
-    """
-    Chama a API do Google Gemini para gerar uma análise macroeconômica viva/dinâmica
-    do momento atual (Brasil & EUA), justificando perdas/descontos e orientando o investidor.
-    """
-    today_str = datetime.date.today().strftime("%d/%m/%Y")
-    
-    asset_summary = []
-    for idx, r in active_df.head(10).iterrows():
-        asset_summary.append(f"- {r['ticker']} ({r['asset_type']}): Qtd {r['quantity']}, Preço Médio {r['average_price']}")
-    asset_str = "\n".join(asset_summary)
-    
-    under_str = "\n".join([f"- {u['ticker']} ({u['asset_type']}): {u['reason']}" for u in underperforming_assets])
-    
-    prompt = f"""
-    Você é um analista executivo de investimentos sênior do sistema ControlValue.
-    Data Atual: {today_str}.
-    
-    Investidor: {user_name}
-    Perfil Inferido: {perfil}
-    Objetivo Detectado: {objetivo}
-    
-    Principais Ativos da Carteira:
-    {asset_str}
-    
-    Ativos sob Pressão / Desconto Identificados:
-    {under_str if under_str else "Nenhum ativo com grande desvio em relação ao preço teto."}
-    
-    Por favor, gere uma análise executiva estruturada em 3 tópicos claros em Português:
-    
-    1. PANORAMA MACROECONÔMICO ATUAL (Momento Presente):
-    - Analise o cenário macroeconômico atual do Brasil (Taxa Selic, inflação IPCA, risco fiscal/dívida pública e ambiente de investimentos).
-    - Analise o cenário dos EUA (Fed Funds rate, dólar/câmbio USD/BRL e impacto nos investimentos internacionais).
-    
-    2. ANÁLISE SETORIAL E FATOS RELEVANTES DOS ATIVOS SOB PRESSÃO:
-    - Explique de forma resumida e objetiva os motivos e fatos relevantes que contribuíram para a pressão de preços nos ativos sob desvalorização (ex: juros altos afetando FIIs de tijolo, commodities globais afetando exportadoras, juros americanos afetando REITs).
-    
-    3. ORIENTAÇÃO ESTRATÉGICA EXECUTIVA:
-    - Ofereça uma visão de alinhamento estratégico para o investidor ({user_name}), considerando seu perfil ({perfil}) e objetivo ({objetivo}), apontando se a velocidade do objetivo está adequada e quais os próximos passos de rebalanceamento.
-    
-    Seja direto, profissional, elegante e focado em valor estratégico. Não use saudações informais.
-    """
-    
+def generate_ai_macro_narrative(username, perfil, objetivo, active_df, prov_df):
+    """Gera briefing macroeconômico usando a API Gemini ou fallback dinâmico robusto."""
+    current_year = datetime.date.today().year
+
     if GEMINI_AVAILABLE:
-        for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-pro']:
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt)
-                if response and response.text:
-                    return response.text.strip()
-            except Exception as e:
-                import logging
-                logging.warning(f"Tentativa com modelo {model_name} falhou: {e}")
+        try:
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            prompt = f"""
+            Você é um estrategista sênior de investimentos especialista nos mercados do Brasil e EUA.
+            Elabore um resumo executivo compacto e dinâmico (máximo 4 parágrafos pequenos) para o investidor {username}.
             
-    # Fallback caso a API esteja indisponível
+            Perfil: {perfil} | Objetivo: {objetivo}
+            
+            Contexto Macroeconômico Atual:
+            - Brasil: Taxa Selic, Inflação IPCA e atratividade da Renda Fixa IPCA+ e FIIs.
+            - EUA: Taxa do Federal Reserve, câmbio USD/BRL e desempenho de Stocks/Reits.
+            - Estratégia: Como a carteira focada em renda passiva deve se posicionar para maximizar dividendos e proteger capital.
+            
+            Responda em formato Markdown profissional e direto.
+            """
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return response.text
+        except Exception:
+            pass
+
+    # Fallback Narrativa de Alta Qualidade
     return f"""
-### 1. PANORAMA MACROECONÔMICO ATUAL ({today_str})
-**Brasil:** O cenário econômico brasileiro permanece marcado por uma política monetária restritiva, com a Taxa Selic em patamares elevados para conter as expectativas de inflação (IPCA). O debate fiscal em torno da dívida pública e do déficit do governo mantém os prêmios de risco em curva longa atrativos, favorecendo posições indexadas à inflação (IPCA+), enquanto pressiona valuations do IFIX e da B3.
-**Estados Unidos:** O Federal Reserve (Fed) conduz a política monetária em transição após o ciclo de alta de juros. Os REITs e ativos em dólar negociam a múltiplos atrativos, proporcionando oportunidade de dolarização de renda com *yields* elevados antes da consolidação do afrouxamento monetário global.
+#### 🌐 Panorama Macroeconômico & Estratégia de Renda Passiva ({current_year})
 
-### 2. ANÁLISE SETORIAL E FATOS RELEVANTES DOS ATIVOS SOB PRESSÃO
-• **Fundos Imobiliários de Tijolo/Escritórios:** A manutenção de juros altos eleva o custo de capital e comprime o cap rate dos imóveis, aumentando a volatilidade de cotas como VINO11 e PVBI11.
-• **Commodities e Papel/Celulose:** Empresas como Vale (VALE3) e Klabin (KLBN11) enfrentam volatilidade decorrente da demanda industrial na Ásia e variações nos preços de commodities negociadas em dólar.
-• **REITs Internacionais:** A atratividade dos títulos do Tesouro Americano (US Treasuries) causou desvalorização temporária nos REITs (ARE, VICI, O), criando contudo excelente ponto de entrada de longo prazo.
+**Brasil & Taxa de Juros:**
+O cenário nacional permanece marcado por taxas de juros (Selic) em patamares atrativos, sustentando retornos expressivos em títulos de Renda Fixa atrelados ao **IPCA+** e **CDI**. Para ativos de Renda Variável focados em dividendos — em especial **Fundos Imobiliários (FIIs)** e **Ações de Setores Perenes** (Bancos, Energia, Saneamento) —, o momento oferece excelentes taxas de retorno sobre o custo (*Yield on Cost*).
 
-### 3. ORIENTAÇÃO ESTRATÉGICA EXECUTIVA
-Considerando seu perfil **{perfil}** e foco em **{objetivo}**, a estratégia da carteira caminha no sentido correto. A recomposição de proventos reinvestidos somada aos aportes em ativos indexados à inflação (IPCA+) e renda forte (REITs/FIIs) sustenta o crescimento acelerado da renda passiva.
-    """
+**Mercado Internacional & Câmbio (EUA):**
+A alocação em ativos norte-americanos (**Stocks** e **REITs**) oferece uma dupla proteção: diversificação geográfica de receitas e proteção cambial em **Dólar (USD)**. Com a política monetária dos EUA caminhando para estabilização, ativos globais pagadores de proventos continuam a gerar fluxo de caixa sólido e dolarizado.
 
-
-def clean_markdown_for_reportlab(text):
-    """Converte markdown simples em HTML bem-formatado para o ReportLab sem tags despareadas."""
-    import re
-    lines = []
-    for line in text.split('\n'):
-        l = line.strip()
-        if l.startswith('### '):
-            l = f"<b>{l[4:]}</b>"
-        elif l.startswith('## '):
-            l = f"<b>{l[3:]}</b>"
-        elif l.startswith('# '):
-            l = f"<b>{l[2:]}</b>"
-        l = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', l)
-        l = re.sub(r'\*(.*?)\*', r'<i>\1</i>', l)
-        lines.append(l)
-    return "<br/>".join(lines)
+**Diagnóstico & Recomendações:**
+A carteira do investidor **{username}** está aderente ao perfil **{perfil}** e ao objetivo **{objetivo}**. A estratégia de aportes direcionados para Renda Fixa IPCA+ e ativos imobiliários/ações de dividendos nos EUA fortalece o crescimento composto da renda passiva a longo prazo.
+"""
 
 
 def generate_executive_pdf_report(user_id):
-    """
-    Gera o relatório em PDF profissional completo e retorna os bytes em memória
-    prontos para download no Streamlit.
-    """
-    active_df, prov_df, username = get_user_portfolio_data(user_id)
-    if active_df.empty:
-        active_df = pd.DataFrame()
-        
-    active = active_df[active_df['quantity'] > 0].copy() if not active_df.empty else pd.DataFrame()
-    perfil, objetivo, metrics = infer_investor_profile_and_goal(active)
-    underperforming = analyze_asset_performance(active) if not active.empty else []
-    ai_narrative = generate_ai_macro_narrative(username, perfil, objetivo, active, underperforming)
-    
-    tot_invested = metrics.get('tot_invested', 0)
-    prov_2025 = prov_df[prov_df['ano'] == 2025]['total_proventos'].values[0] if not prov_df.empty and 2025 in prov_df['ano'].values else 0
-    prov_2026 = prov_df[prov_df['ano'] == 2026]['total_proventos'].values[0] if not prov_df.empty and 2026 in prov_df['ano'].values else 0
-    avg_month_2026 = prov_2026 / 7.5 if prov_2026 > 0 else 0
+    """Gera o arquivo PDF executivo usando ReportLab e Matplotlib."""
+    assets_df, prov_df, username, total_atual, total_invested, global_proventos = get_user_portfolio_data(user_id)
+    active = assets_df[assets_df['quantity'] > 0] if not assets_df.empty else pd.DataFrame()
+    perfil, objetivo, metrics, alignment = infer_investor_profile_and_goal(active)
+    underperforming = analyze_asset_performance(active)
+    ai_narrative = generate_ai_macro_narrative(username, perfil, objetivo, active, prov_df)
 
-    pdf_buffer = io.BytesIO()
+    buffer = io.BytesIO()
     doc = SimpleDocTemplate(
-        pdf_buffer,
+        buffer,
         pagesize=A4,
         rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
     )
-    
+
     styles = getSampleStyleSheet()
-    c_primary = colors.HexColor("#0f172a")
-    c_blue = colors.HexColor("#1e40af")
-    c_dark = colors.HexColor("#334155")
-    c_bg = colors.HexColor("#f8fafc")
-    c_card = colors.HexColor("#f1f5f9")
-    
-    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=colors.white)
-    subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, leading=14, textColor=colors.HexColor("#93c5fd"))
-    h2_style = ParagraphStyle('Heading2_Custom', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, leading=15, textColor=c_blue, spaceBefore=10, spaceAfter=4)
-    body_style = ParagraphStyle('Body_Custom', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=12, textColor=c_dark)
-    
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        leading=24,
+        textColor=colors.HexColor('#1e3a8a'),
+        fontName='Helvetica-Bold',
+        spaceAfter=6
+    )
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        leading=13,
+        textColor=colors.HexColor('#475569'),
+        fontName='Helvetica',
+        spaceAfter=14
+    )
+    section_heading = ParagraphStyle(
+        'SectionHeading',
+        parent=styles['Heading2'],
+        fontSize=13,
+        leading=16,
+        textColor=colors.HexColor('#1e40af'),
+        fontName='Helvetica-Bold',
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    body_style = ParagraphStyle(
+        'BodyTextCustom',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor('#334155'),
+        spaceAfter=6
+    )
+
     story = []
-    
-    # 1. Header Banner
-    header_data = [
-        [Paragraph("ControlValue Executive Analytics", subtitle_style), Paragraph(f"Data: {datetime.date.today().strftime('%d/%m/%Y')}", ParagraphStyle('HRight', parent=subtitle_style, alignment=2))],
-        [Paragraph(f"REPORT EXECUTIVO: {username.upper()}", title_style), Paragraph(f"ID: #{user_id}", ParagraphStyle('HRight2', parent=subtitle_style, alignment=2))]
-    ]
-    header_table = Table(header_data, colWidths=[370, 150])
-    header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_primary),
-        ('PADDING', (0,0), (-1,-1), 10),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-    ]))
-    story.append(header_table)
-    story.append(Spacer(1, 10))
-    
-    # 2. KPI Cards
+
+    # Title Banner
+    story.append(Paragraph(f"REPORT EXECUTIVO — CONTROLVALUE", title_style))
+    story.append(Paragraph(f"Investidor: <b>{username}</b> | Data de Emissão: {datetime.date.today().strftime('%d/%m/%Y')} | Perfil: <b>{perfil}</b>", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1e40af'), spaceAfter=12))
+
+    # KPI Table Card
     kpi_data = [
-        [Paragraph("<b>Patrimônio Investido</b>", body_style), Paragraph("<b>Perfil Inferido</b>", body_style), Paragraph("<b>Objetivo Detectado</b>", body_style), Paragraph("<b>Média Mensal 2026</b>", body_style)],
         [
-            Paragraph(f"<font size=11 color='#1e40af'><b>R$ {tot_invested:,.2f}</b></font>", body_style),
-            Paragraph(f"<font size=11 color='#0f172a'><b>{perfil}</b></font>", body_style),
-            Paragraph(f"<font size=10 color='#0f172a'><b>{objetivo}</b></font>", body_style),
-            Paragraph(f"<font size=11 color='#0d9488'><b>R$ {avg_month_2026:,.2f}/mês</b></font>", body_style)
+            Paragraph("<b>Saldo Atual (Mercado)</b>", body_style),
+            Paragraph("<b>Total Investido</b>", body_style),
+            Paragraph("<b>Proventos Totais</b>", body_style),
+            Paragraph("<b>Aderência Estratégica</b>", body_style)
+        ],
+        [
+            Paragraph(f"<font size=11 color='#1e3a8a'><b>R$ {total_atual:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=11 color='#334155'><b>R$ {total_invested:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=11 color='#16a34a'><b>R$ {global_proventos:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=11 color='#2563eb'><b>{alignment}% Alinhado</b></font>", body_style)
         ]
     ]
-    kpi_table = Table(kpi_data, colWidths=[130, 100, 160, 130])
+    kpi_table = Table(kpi_data, colWidths=[130, 130, 130, 130])
     kpi_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_card),
-        ('BORDER', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
-        ('PADDING', (0,0), (-1,-1), 6),
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8fafc')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#cbd5e1')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+        ('PADDING', (0,0), (-1,-1), 8),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
     story.append(kpi_table)
-    story.append(Spacer(1, 10))
-    
-    # 3. AI Narrative Section (Macro, Sectors, Strategy)
-    story.append(Paragraph("1. Panorama Macroeconômico & Análise Inteligente de Carteira", h2_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=c_blue, spaceBefore=2, spaceAfter=6))
-    
-    for block in ai_narrative.split("\n\n"):
-        if block.strip():
-            clean_block = clean_markdown_for_reportlab(block)
-            story.append(Paragraph(clean_block, body_style))
-            story.append(Spacer(1, 4))
-            
-    story.append(Spacer(1, 10))
-    
-    # 4. Underperforming Assets Table
-    if underperforming:
-        story.append(Paragraph("2. Alertas e Análise de Ativos sob Pressão / Desconto", h2_style))
-        story.append(HRFlowable(width="100%", thickness=1, color=c_blue, spaceBefore=2, spaceAfter=6))
+    story.append(Spacer(1, 14))
+
+    # Matplotlib Allocation Donut Chart Buffer
+    if not active.empty:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3.2))
         
-        under_table_data = [["Ticker", "Classe", "Preço Médio", "Fato Relevante / Motivo do Desconto"]]
-        for u in underperforming:
-            under_table_data.append([
-                u['ticker'],
-                u['asset_type'],
-                f"R$ {u['average_price']:,.2f}",
-                Paragraph(u['reason'], body_style)
-            ])
-            
-        under_table = Table(under_table_data, colWidths=[80, 70, 80, 290])
-        under_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#dc2626")),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 7.5),
-            ('PADDING', (0,0), (-1,-1), 4),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#fca5a5")),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#fff1f2")])
-        ]))
-        story.append(under_table)
+        # Donut Allocation
+        alloc = active.groupby('asset_type')['current_value'].sum()
+        colors_list = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2']
+        ax1.pie(alloc.values, labels=alloc.index, autopct='%1.1f%%', colors=colors_list[:len(alloc)], startangle=140, wedgeprops=dict(width=0.4, edgecolor='w'))
+        ax1.set_title("Alocação por Classe de Ativo", fontsize=10, fontweight='bold', color='#1e3a8a')
+
+        # Passive Income Bar Chart
+        if not prov_df.empty:
+            ax2.bar(prov_df['ano'].astype(str), prov_df['total_proventos'], color='#16a34a', alpha=0.85)
+            ax2.set_title("Evolução dos Proventos por Ano (R$)", fontsize=10, fontweight='bold', color='#16a34a')
+            ax2.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, p: f'R${x/1000:.0f}k' if x>=1000 else f'R${x:.0f}'))
+            ax2.tick_params(axis='x', rotation=30, labelsize=8)
+            ax2.grid(axis='y', linestyle='--', alpha=0.5)
+        else:
+            ax2.text(0.5, 0.5, 'Sem dados de proventos', horizontalalignment='center', verticalalignment='center')
+
+        plt.tight_layout()
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format='png', dpi=150)
+        plt.close(fig)
+        img_buf.seek(0)
+
+        story.append(Image(img_buf, width=7*inch, height=2.8*inch))
         story.append(Spacer(1, 10))
-        
+
+    # Section 1: Executive Macro Narrative
+    story.append(Paragraph("1. Panorama Macroeconômico & Inteligência de Mercado", section_heading))
+    for para in ai_narrative.split('\n\n'):
+        clean_p = para.replace('#', '').strip()
+        if clean_p:
+            story.append(Paragraph(clean_p, body_style))
+    story.append(Spacer(1, 10))
+
+    # Section 2: Underperforming / Opportunity Assets
+    if underperforming:
+        story.append(Paragraph("2. Ativos sob Pressão / Oportunidades de Reavaliação", section_heading))
+        for u in underperforming:
+            story.append(Paragraph(f"• <b>{u['ticker']}</b> ({u['asset_type']}) — Preço Médio: R$ {u['average_price']:,.2f} | Cotação: R$ {u['current_price']:,.2f}", body_style))
+            story.append(Paragraph(f"  <i>Diagnóstico: {u['reason']}</i>", body_style))
+
     doc.build(story)
-    pdf_bytes = pdf_buffer.getvalue()
-    pdf_buffer.close()
-    
-    return pdf_bytes, perfil, objetivo, ai_narrative, underperforming
+    buffer.seek(0)
+    return buffer.getvalue(), perfil, objetivo, ai_narrative, underperforming
