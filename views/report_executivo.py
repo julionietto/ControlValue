@@ -120,10 +120,29 @@ def dialog_report_executivo():
     with tab_prov:
         st.markdown("#### 📈 Evolução Histórica dos Proventos e Média Mensal Real")
         if not prov_df.empty:
-            # Gráfico 1: Evolução Anual
+            # Cálculo YTD Mês a Mês do Ano Atual (Itens 2 & 3)
+            prov_raw_user = db.get_proventos(user_id)
+            if not prov_raw_user.empty:
+                df_curr_year = prov_raw_user[(prov_raw_user['ano'] == current_year) & (prov_raw_user['mes'] <= current_month)]
+                tot_ytd = df_curr_year['valor'].sum() if not df_curr_year.empty else 0.0
+            else:
+                tot_ytd = 0.0
+
+            media_ytd = tot_ytd / current_month if current_month > 0 else 0.0
+
+            # Gráfico 1: Evolução Anual (Sincronizado com Média Mensal YTD do Ano Corrente)
             prov_df_calc = prov_df.copy()
-            prov_df_calc['media_mensal'] = prov_df_calc.apply(
-                lambda r: r['total_proventos'] / (r['max_mes'] if r['max_mes'] and r['max_mes'] > 0 else 12), axis=1
+            def calc_media_mensal_row(r):
+                ano_row = int(r['ano'])
+                if ano_row == current_year:
+                    return media_ytd
+                else:
+                    meses_div = r['max_mes'] if (r['max_mes'] and r['max_mes'] > 0) else 12
+                    return r['total_proventos'] / meses_div
+
+            prov_df_calc['media_mensal'] = prov_df_calc.apply(calc_media_mensal_row, axis=1)
+            prov_df_calc['total_proventos'] = prov_df_calc.apply(
+                lambda r: tot_ytd if int(r['ano']) == current_year else r['total_proventos'], axis=1
             )
 
             fig_prov = go.Figure()
@@ -151,16 +170,6 @@ def dialog_report_executivo():
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig_prov, use_container_width=True)
-
-            # Cálculo YTD Mês a Mês do Ano Atual (Item 2 & 3)
-            prov_raw_user = db.get_proventos(user_id)
-            if not prov_raw_user.empty:
-                df_curr_year = prov_raw_user[(prov_raw_user['ano'] == current_year) & (prov_raw_user['mes'] <= current_month)]
-                tot_ytd = df_curr_year['valor'].sum() if not df_curr_year.empty else 0.0
-            else:
-                tot_ytd = 0.0
-
-            media_ytd = tot_ytd / current_month if current_month > 0 else 0.0
 
             def fmt_brl_str(val):
                 return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
