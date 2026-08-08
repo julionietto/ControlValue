@@ -1,20 +1,29 @@
 # pyrefly: ignore[missing-import]
 import streamlit as st  # type: ignore
 import datetime
+import pandas as pd  # type: ignore
 import plotly.express as px  # type: ignore
 import plotly.graph_objects as go  # type: ignore
 from components.ui import create_card
 import executive_report_service as exec_svc
+import db
 
 @st.dialog("📄 Report Executivo Inteligente & Panorama Macroeconômico", width="large")
 def dialog_report_executivo():
     user_id = st.session_state.get('user_id', 1)
     username = st.session_state.get('username', 'Investidor')
+    now_dt = datetime.datetime.now()
+    current_year = now_dt.year
+    current_month = now_dt.month
+
+    meses_nomes_dict = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
+    meses_abrev_dict = {1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr', 5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'}
+    nome_mes_atual = meses_nomes_dict.get(current_month, f"Mês {current_month}")
 
     with st.spinner("Analisando ativos em carteira, precificação em tempo real e inteligência macroeconômica..."):
         try:
             pdf_bytes, perfil, objetivo, ai_narrative, underperforming = exec_svc.generate_executive_pdf_report(user_id)
-            assets_df, prov_df, _, total_atual, total_invested, global_proventos = exec_svc.get_user_portfolio_data(user_id)
+            assets_df, prov_df, _, total_atual, total_invested, global_proventos, total_compras_ano = exec_svc.get_user_portfolio_data(user_id)
             active = assets_df[assets_df['quantity'] > 0] if not assets_df.empty else assets_df
             _, _, metrics, alignment = exec_svc.infer_investor_profile_and_goal(active)
         except Exception as e:
@@ -42,15 +51,17 @@ def dialog_report_executivo():
         </div>
     """, unsafe_allow_html=True)
 
-    # 4 Cards de Métricas Principais (Valores Exatos Sincronizados com a Tela Principal)
-    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+    # 5 Cards de Métricas Principais (Item 1: Incluído Aportes no Ano Corrente)
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns(5)
     with col_kpi1:
         create_card("Saldo Atual (Mercado)", f"R$ {total_atual:,.2f}")
     with col_kpi2:
         create_card("Total Investido", f"R$ {total_invested:,.2f}")
     with col_kpi3:
-        create_card("Proventos Totais Acumulados", f"R$ {global_proventos:,.2f}")
+        create_card(f"Aportes ({current_year})", f"R$ {total_compras_ano:,.2f}")
     with col_kpi4:
+        create_card("Proventos Totais Acumulados", f"R$ {global_proventos:,.2f}")
+    with col_kpi5:
         lucro_val = total_atual - total_invested
         lucro_pct = (lucro_val / total_invested * 100) if total_invested > 0 else 0
         profit_str = f"+R$ {lucro_val:,.2f}" if lucro_val >= 0 else f"-R$ {abs(lucro_val):,.2f}"
@@ -109,13 +120,12 @@ def dialog_report_executivo():
     with tab_prov:
         st.markdown("#### 📈 Evolução Histórica dos Proventos e Média Mensal Real")
         if not prov_df.empty:
-            # Calcula Média Mensal Real por ano
+            # Gráfico 1: Evolução Anual
             prov_df_calc = prov_df.copy()
             prov_df_calc['media_mensal'] = prov_df_calc.apply(
                 lambda r: r['total_proventos'] / (r['max_mes'] if r['max_mes'] and r['max_mes'] > 0 else 12), axis=1
             )
 
-            # Gráfico Combinado: Barras (Total Ano) + Linha (Média Mensal)
             fig_prov = go.Figure()
             fig_prov.add_trace(go.Bar(
                 x=prov_df_calc['ano'].astype(str),
@@ -136,24 +146,107 @@ def dialog_report_executivo():
             fig_prov.update_layout(
                 yaxis=dict(title="Total Anual (R$)"),
                 yaxis2=dict(title="Média Mensal (R$)", overlaying="y", side="right"),
-                height=320,
+                height=300,
                 margin=dict(t=20, b=20, l=20, r=20),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig_prov, use_container_width=True)
 
-            # Destaca a Média do Ano Atual YTD
-            latest_row = prov_df_calc.iloc[-1]
-            last_ano = int(latest_row['ano'])
-            last_media = latest_row['media_mensal']
-            last_meses = int(latest_row['max_mes']) if latest_row['max_mes'] else 12
+            # Cálculo YTD Mês a Mês do Ano Atual (Item 2 & 3)
+            prov_raw_user = db.get_proventos(user_id)
+            if not prov_raw_user.empty:
+                df_curr_year = prov_raw_user[(prov_raw_user['ano'] == current_year) & (prov_raw_user['mes'] <= current_month)]
+                tot_ytd = df_curr_year['valor'].sum() if not df_curr_year.empty else 0.0
+            else:
+                tot_ytd = 0.0
 
-            st.info(f"💡 **Foto Atual ({last_ano}):** Nos **{last_meses} meses decorridos** de {last_ano}, você recebeu um total de **R$ {latest_row['total_proventos']:,.2f}**, representando uma **média mensal real de R$ {last_media:,.2f}/mês**.")
+            media_ytd = tot_ytd / current_month if current_month > 0 else 0.0
+
+            def fmt_brl_str(val):
+                return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            st.info(f"💡 **Foto Atual {current_year}:** Até o mês de **{nome_mes_atual}** o valor total de proventos recebidos é de **R\\$ {fmt_brl_str(tot_ytd)}** e o valor médio recebido por mês é de **R\\$ {fmt_brl_str(media_ytd)}**.")
+
+            st.markdown("---")
+            # Item 4: Segundo gráfico Mês a Mês no ano atual (Recebidos vs Provisionados)
+            st.markdown(f"#### 📅 Proventos Mês a Mês no Ano Atual ({current_year}) — Recebidos & Provisionados")
+
+            prov_futuros_df = db.get_proventos_provisionados_calculados(user_id)
+            if not prov_futuros_df.empty and 'data_pagamento' in prov_futuros_df.columns:
+                prov_futuros_df['dt_pag'] = pd.to_datetime(prov_futuros_df['data_pagamento'], errors='coerce')
+                prov_futuros_df['total_futuro'] = prov_futuros_df['valor'] * prov_futuros_df['quantidade_elegivel']
+                df_fut_year = prov_futuros_df[prov_futuros_df['dt_pag'].dt.year == current_year]
+            else:
+                df_fut_year = pd.DataFrame()
+
+            months_x = [meses_abrev_dict[m] for m in range(1, 13)]
+            val_recebidos = []
+            val_provisionados = []
+            medias_acumuladas = []
+
+            soma_acumulada = 0.0
+            for m in range(1, 13):
+                if not prov_raw_user.empty:
+                    rec_val = prov_raw_user[(prov_raw_user['ano'] == current_year) & (prov_raw_user['mes'] == m)]['valor'].sum()
+                else:
+                    rec_val = 0.0
+
+                if not df_fut_year.empty:
+                    fut_val = df_fut_year[df_fut_year['dt_pag'].dt.month == m]['total_futuro'].sum()
+                else:
+                    fut_val = 0.0
+
+                if m <= current_month:
+                    r_item = float(rec_val)
+                    p_item = 0.0
+                else:
+                    r_item = 0.0
+                    p_item = max(float(rec_val), float(fut_val))
+
+                val_recebidos.append(r_item)
+                val_provisionados.append(p_item)
+
+                soma_acumulada += (r_item + p_item)
+                medias_acumuladas.append(soma_acumulada / m)
+
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(
+                x=months_x,
+                y=val_recebidos,
+                name="Recebido (R$)",
+                marker_color='#16a34a'
+            ))
+            fig_m.add_trace(go.Bar(
+                x=months_x,
+                y=val_provisionados,
+                name="Provisionado (R$)",
+                marker_color='#3b82f6'
+            ))
+            fig_m.add_trace(go.Scatter(
+                x=months_x,
+                y=medias_acumuladas,
+                name="Média Acumulada (R$)",
+                yaxis="y2",
+                mode="lines+markers+text",
+                text=[f"R$ {v:,.0f}" for v in medias_acumuladas],
+                textposition="top center",
+                line=dict(color='#f59e0b', width=3)
+            ))
+            fig_m.update_layout(
+                barmode='stack',
+                yaxis=dict(title="Proventos Mensais (R$)"),
+                yaxis2=dict(title="Média Acumulada (R$)", overlaying="y", side="right"),
+                height=320,
+                margin=dict(t=20, b=20, l=20, r=20),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_m, use_container_width=True)
+
         else:
             st.info("Nenhum histórico de proventos cadastrado.")
 
     # -----------------------------
-    # TAB 3: MACRO & ALERTAS
+    # TAB 3: MACRO & ALERTAS (Item 5: Moedas e Preço Teto)
     # -----------------------------
     with tab_macro:
         st.markdown(ai_narrative)
@@ -162,7 +255,10 @@ def dialog_report_executivo():
         if underperforming:
             st.warning("Os ativos abaixo apresentam cotações com desconto ou preço médio superior ao preço teto estipulado:")
             for u in underperforming:
-                with st.expander(f"📌 **{u['ticker']}** ({u['asset_type']}) — Preço Médio: R$ {u['average_price']:,.2f} | Cotação: R$ {u['current_price']:,.2f}"):
+                curr_sym = u.get('currency_symbol', 'R\\$')
+                avg_p_str = f"{curr_sym} {u['average_price']:,.2f}"
+                curr_p_str = f"{curr_sym} {u['current_price']:,.2f}"
+                with st.expander(f"📌 **{u['ticker']}** ({u['asset_type']}) — Preço Médio: {avg_p_str} | Cotação: {curr_p_str}"):
                     st.write(f"**Diagnóstico:** {u['reason']}")
         else:
             st.success("🎉 Nenhum ativo da carteira apresenta desvio crítico em relação aos preços teto estipulados!")
@@ -190,3 +286,4 @@ def dialog_report_executivo():
 def render_report_executivo_view():
     """Função legada de fallback se acessado diretamente."""
     dialog_report_executivo()
+

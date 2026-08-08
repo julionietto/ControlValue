@@ -43,7 +43,7 @@ def get_user_portfolio_data(user_id):
     """
     assets_df = db.get_all_assets(user_id)
     if assets_df.empty:
-        return pd.DataFrame(), pd.DataFrame(), f"Investidor #{user_id}", 0.0, 0.0, 0.0
+        return pd.DataFrame(), pd.DataFrame(), f"Investidor #{user_id}", 0.0, 0.0, 0.0, 0.0
 
     all_histories_df = db.get_all_asset_histories(user_id)
     MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
@@ -135,6 +135,23 @@ def get_user_portfolio_data(user_id):
     tot_brl = assets_df['current_value'].sum()
     assets_df['weight_%'] = (assets_df['current_value'] / tot_brl * 100) if tot_brl > 0 else 0
 
+    # Aportes do Ano Corrente (Compras realizadas no ano atual)
+    now_year = datetime.date.today().year
+    total_compras_ano = 0.0
+    if not all_histories_df.empty:
+        hist_calc = all_histories_df.copy()
+        if 'date' in hist_calc.columns:
+            hist_calc['dt'] = pd.to_datetime(hist_calc['date'], errors='coerce')
+            hist_calc = hist_calc[(hist_calc['dt'].dt.year == now_year) & (hist_calc['quantity'] > 0)]
+            if not hist_calc.empty and not assets_df.empty:
+                hist_merged = hist_calc.merge(assets_df[['id', 'currency']], left_on='asset_id', right_on='id', how='left')
+                def calc_buy_brl(r):
+                    val = r['quantity'] * r['unit_price']
+                    if r.get('currency') == 'USD':
+                        return val * usd_to_brl_rate
+                    return val
+                total_compras_ano = hist_merged.apply(calc_buy_brl, axis=1).sum()
+
     # Proventos
     prov_raw = db.get_proventos(user_id)
     if not prov_raw.empty:
@@ -152,7 +169,7 @@ def get_user_portfolio_data(user_id):
     current_total_value = assets_df[assets_df['quantity'] > 0]['current_value'].sum()
     total_invested = assets_df[assets_df['quantity'] > 0]['invested_brl_est'].sum()
 
-    return assets_df, prov_df, username, current_total_value, total_invested, global_proventos
+    return assets_df, prov_df, username, current_total_value, total_invested, global_proventos, total_compras_ano
 
 
 def infer_investor_profile_and_goal(active_df):
@@ -216,19 +233,29 @@ def analyze_asset_performance(active_df):
     for _, row in active_df.iterrows():
         ticker = row['ticker']
         a_type = row['asset_type']
+        currency = row.get('currency', 'BRL')
+        is_usd = (currency == 'USD') or (a_type in ['Reits', 'Stocks'])
+        curr_sym = "U\\$" if is_usd else "R\\$"
+        pdf_sym = "U$" if is_usd else "R$"
+
         avg_price = row['average_price']
-        curr_price = row.get('current_price', avg_price)
-        teto = row.get('ceiling_price', 0)
+        curr_price = row.get('original_current_price', row.get('current_price', avg_price))
+        teto = row.get('price_ceiling', row.get('ceiling_price', 0))
+        if teto is None or pd.isna(teto):
+            teto = 0.0
         
         profit_loss = row.get('profit_loss', 0)
         
         if profit_loss < -500 or (teto and teto > 0 and curr_price < teto * 0.9):
-            reason = f"Ativo sob pressão no mercado. Cotação atual de R$ {curr_price:,.2f} versus Preço Médio R$ {avg_price:,.2f} (Preço Teto Estipulado: R$ {teto:,.2f}). Oportunidade de aporte ou reavaliação setorial."
+            reason = f"Ativo sob pressão no mercado. Cotação atual de {curr_sym} {curr_price:,.2f} versus Preço Médio {curr_sym} {avg_price:,.2f} (Preço Teto Estipulado: {curr_sym} {teto:,.2f}). Oportunidade de aporte ou reavaliação setorial."
             underperforming.append({
                 "ticker": ticker,
                 "asset_type": a_type,
+                "currency_symbol": curr_sym,
+                "pdf_symbol": pdf_sym,
                 "average_price": avg_price,
                 "current_price": curr_price,
+                "price_ceiling": teto,
                 "reason": reason
             })
     return underperforming
@@ -277,7 +304,7 @@ A carteira do investidor **{username}** está aderente ao perfil **{perfil}** e 
 
 def generate_executive_pdf_report(user_id):
     """Gera o arquivo PDF executivo usando ReportLab e Matplotlib."""
-    assets_df, prov_df, username, total_atual, total_invested, global_proventos = get_user_portfolio_data(user_id)
+    assets_df, prov_df, username, total_atual, total_invested, global_proventos, total_compras_ano = get_user_portfolio_data(user_id)
     active = assets_df[assets_df['quantity'] > 0] if not assets_df.empty else pd.DataFrame()
     perfil, objetivo, metrics, alignment = infer_investor_profile_and_goal(active)
     underperforming = analyze_asset_performance(active)
@@ -335,27 +362,29 @@ def generate_executive_pdf_report(user_id):
     story.append(Paragraph(f"Investidor: <b>{username}</b> | Data de Emissão: {datetime.date.today().strftime('%d/%m/%Y')} | Perfil: <b>{perfil}</b>", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1e40af'), spaceAfter=12))
 
-    # KPI Table Card
+    # KPI Table Card (5 colunas)
     kpi_data = [
         [
             Paragraph("<b>Saldo Atual (Mercado)</b>", body_style),
             Paragraph("<b>Total Investido</b>", body_style),
+            Paragraph("<b>Aportes (Ano)</b>", body_style),
             Paragraph("<b>Proventos Totais</b>", body_style),
-            Paragraph("<b>Aderência Estratégica</b>", body_style)
+            Paragraph("<b>Aderência</b>", body_style)
         ],
         [
-            Paragraph(f"<font size=11 color='#1e3a8a'><b>R$ {total_atual:,.2f}</b></font>", body_style),
-            Paragraph(f"<font size=11 color='#334155'><b>R$ {total_invested:,.2f}</b></font>", body_style),
-            Paragraph(f"<font size=11 color='#16a34a'><b>R$ {global_proventos:,.2f}</b></font>", body_style),
-            Paragraph(f"<font size=11 color='#2563eb'><b>{alignment}% Alinhado</b></font>", body_style)
+            Paragraph(f"<font size=10 color='#1e3a8a'><b>R$ {total_atual:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=10 color='#334155'><b>R$ {total_invested:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=10 color='#2563eb'><b>R$ {total_compras_ano:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=10 color='#16a34a'><b>R$ {global_proventos:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=10 color='#2563eb'><b>{alignment}% Alinhado</b></font>", body_style)
         ]
     ]
-    kpi_table = Table(kpi_data, colWidths=[130, 130, 130, 130])
+    kpi_table = Table(kpi_data, colWidths=[104, 104, 104, 104, 104])
     kpi_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8fafc')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#cbd5e1')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
-        ('PADDING', (0,0), (-1,-1), 8),
+        ('PADDING', (0,0), (-1,-1), 6),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
     ]))
     story.append(kpi_table)
@@ -402,7 +431,8 @@ def generate_executive_pdf_report(user_id):
     if underperforming:
         story.append(Paragraph("2. Ativos sob Pressão / Oportunidades de Reavaliação", section_heading))
         for u in underperforming:
-            story.append(Paragraph(f"• <b>{u['ticker']}</b> ({u['asset_type']}) — Preço Médio: R$ {u['average_price']:,.2f} | Cotação: R$ {u['current_price']:,.2f}", body_style))
+            sym = u.get('pdf_symbol', u.get('currency_symbol', 'R$')).replace('\\', '')
+            story.append(Paragraph(f"• <b>{u['ticker']}</b> ({u['asset_type']}) — Preço Médio: {sym} {u['average_price']:,.2f} | Cotação: {sym} {u['current_price']:,.2f}", body_style))
             story.append(Paragraph(f"  <i>Diagnóstico: {u['reason']}</i>", body_style))
 
     doc.build(story)
