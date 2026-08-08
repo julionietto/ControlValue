@@ -23,7 +23,7 @@ def dialog_report_executivo():
     with st.spinner("Analisando ativos em carteira, precificação em tempo real e inteligência macroeconômica..."):
         try:
             pdf_bytes, perfil, objetivo, ai_narrative, underperforming = exec_svc.generate_executive_pdf_report(user_id)
-            assets_df, prov_df, _, total_atual, total_invested, global_proventos, total_compras_ano = exec_svc.get_user_portfolio_data(user_id)
+            assets_df, prov_df, _, total_atual, total_invested, global_proventos, total_aportes_ano = exec_svc.get_user_portfolio_data(user_id)
             active = assets_df[assets_df['quantity'] > 0] if not assets_df.empty else assets_df
             _, _, metrics, alignment = exec_svc.infer_investor_profile_and_goal(active)
         except Exception as e:
@@ -51,14 +51,14 @@ def dialog_report_executivo():
         </div>
     """, unsafe_allow_html=True)
 
-    # 5 Cards de Métricas Principais (Item 1: Incluído Aportes no Ano Corrente)
+    # 5 Cards de Métricas Principais (Item 1: Incluído Aportes Líquidos no Ano Corrente)
     col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns(5)
     with col_kpi1:
         create_card("Saldo Atual (Mercado)", f"R$ {total_atual:,.2f}")
     with col_kpi2:
         create_card("Total Investido", f"R$ {total_invested:,.2f}")
     with col_kpi3:
-        create_card(f"Aportes ({current_year})", f"R$ {total_compras_ano:,.2f}")
+        create_card(f"Aportes Líquidos ({current_year})", f"R$ {total_aportes_ano:,.2f}")
     with col_kpi4:
         create_card("Proventos Totais Acumulados", f"R$ {global_proventos:,.2f}")
     with col_kpi5:

@@ -150,7 +150,7 @@ Ao emitir um novo relatório, o sistema ControlValue realiza uma análise comple
 *   **Métricas Financeiras Essenciais:** Na parte superior do relatório, tanto na tela quanto no PDF gerado, você encontrará um resumo dos seus indicadores mais importantes, exibidos de forma clara e organizada:
     *   **Saldo Atual (Mercado):** O valor total da sua carteira no momento.
     *   **Total Investido:** O valor total que você já aportou ao longo do tempo.
-    *   **Aportes no Ano Atual:** O total de dinheiro novo que você investiu (compras de ativos) apenas neste ano.
+    *   **Aportes Líquidos no Ano Atual:** Este valor agora mostra o total líquido de dinheiro que você investiu ou desinvestiu (compras menos vendas de ativos) apenas neste ano. Um valor positivo indica aportes líquidos, enquanto um valor negativo indicaria um resgate líquido.
     *   **Proventos Totais Acumulados:** A soma de todos os dividendos e rendimentos que você recebeu desde o início.
     *   **Aderência Estratégica (no PDF) / Ganho/Perda Realizado (na tela):** O sistema oferece uma porcentagem de alinhamento com seus objetivos no documento PDF e mostra seu lucro ou prejuízo real na visualização da tela.
 

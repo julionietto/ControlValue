@@ -135,22 +135,22 @@ def get_user_portfolio_data(user_id):
     tot_brl = assets_df['current_value'].sum()
     assets_df['weight_%'] = (assets_df['current_value'] / tot_brl * 100) if tot_brl > 0 else 0
 
-    # Aportes do Ano Corrente (Compras realizadas no ano atual)
+    # Aportes Líquidos do Ano Corrente (Compras - Vendas no ano atual)
     now_year = datetime.date.today().year
-    total_compras_ano = 0.0
+    total_aportes_ano = 0.0
     if not all_histories_df.empty:
         hist_calc = all_histories_df.copy()
         if 'date' in hist_calc.columns:
             hist_calc['dt'] = pd.to_datetime(hist_calc['date'], errors='coerce')
-            hist_calc = hist_calc[(hist_calc['dt'].dt.year == now_year) & (hist_calc['quantity'] > 0)]
+            hist_calc = hist_calc[(hist_calc['dt'].dt.year == now_year) & (hist_calc['quantity'] != 0)]
             if not hist_calc.empty and not assets_df.empty:
                 hist_merged = hist_calc.merge(assets_df[['id', 'currency']], left_on='asset_id', right_on='id', how='left')
-                def calc_buy_brl(r):
+                def calc_op_brl(r):
                     val = r['quantity'] * r['unit_price']
                     if r.get('currency') == 'USD':
                         return val * usd_to_brl_rate
                     return val
-                total_compras_ano = hist_merged.apply(calc_buy_brl, axis=1).sum()
+                total_aportes_ano = hist_merged.apply(calc_op_brl, axis=1).sum()
 
     # Proventos
     prov_raw = db.get_proventos(user_id)
@@ -169,7 +169,7 @@ def get_user_portfolio_data(user_id):
     current_total_value = assets_df[assets_df['quantity'] > 0]['current_value'].sum()
     total_invested = assets_df[assets_df['quantity'] > 0]['invested_brl_est'].sum()
 
-    return assets_df, prov_df, username, current_total_value, total_invested, global_proventos, total_compras_ano
+    return assets_df, prov_df, username, current_total_value, total_invested, global_proventos, total_aportes_ano
 
 
 def infer_investor_profile_and_goal(active_df):
@@ -304,7 +304,7 @@ A carteira do investidor **{username}** está aderente ao perfil **{perfil}** e 
 
 def generate_executive_pdf_report(user_id):
     """Gera o arquivo PDF executivo usando ReportLab e Matplotlib."""
-    assets_df, prov_df, username, total_atual, total_invested, global_proventos, total_compras_ano = get_user_portfolio_data(user_id)
+    assets_df, prov_df, username, total_atual, total_invested, global_proventos, total_aportes_ano = get_user_portfolio_data(user_id)
     active = assets_df[assets_df['quantity'] > 0] if not assets_df.empty else pd.DataFrame()
     perfil, objetivo, metrics, alignment = infer_investor_profile_and_goal(active)
     underperforming = analyze_asset_performance(active)
@@ -374,7 +374,7 @@ def generate_executive_pdf_report(user_id):
         [
             Paragraph(f"<font size=10 color='#1e3a8a'><b>R$ {total_atual:,.2f}</b></font>", body_style),
             Paragraph(f"<font size=10 color='#334155'><b>R$ {total_invested:,.2f}</b></font>", body_style),
-            Paragraph(f"<font size=10 color='#2563eb'><b>R$ {total_compras_ano:,.2f}</b></font>", body_style),
+            Paragraph(f"<font size=10 color='#2563eb'><b>R$ {total_aportes_ano:,.2f}</b></font>", body_style),
             Paragraph(f"<font size=10 color='#16a34a'><b>R$ {global_proventos:,.2f}</b></font>", body_style),
             Paragraph(f"<font size=10 color='#2563eb'><b>{alignment}% Alinhado</b></font>", body_style)
         ]
