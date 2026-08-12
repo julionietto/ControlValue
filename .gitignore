@@ -10,8 +10,12 @@ ENV/
 env.bak/
 venv.bak/
 
-# Project Specific
+# Database / SQLite
+*.db
+db/*.db
 portfolio.db
+
+# Project Specific
 b64_icon.txt
 cripto_lines.txt
 

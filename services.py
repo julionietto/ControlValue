@@ -556,7 +556,8 @@ def send_exception_report_email(exception_details):
       </body>
     </html>
     """
-    success, msg = _send_smtp_email("julionietto@gmail.com", "Exception capturada no App ControlValue", html)
+    target_email = os.getenv("ADMIN_EMAIL", os.getenv("SMTP_EMAIL", "controlvalueoficial@gmail.com"))
+    success, msg = _send_smtp_email(target_email, "Exception capturada no App ControlValue", html)
     return success
 
 def fetch_investidor10_proventos(tickers_with_types):

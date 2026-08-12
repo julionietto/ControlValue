@@ -56,10 +56,11 @@ Siga os passos abaixo para configurar o ambiente e começar a usar o agente:
     pip install -r requirements.txt
     ```
 
-4.  **Configure sua chave de API do Gemini:**
-    Crie um arquivo chamado `.env` na raiz do projeto e adicione sua chave de API do Google AI Studio (Gemini API) nele:
+4.  **Configure sua chave de API do Gemini e outras variáveis de ambiente:**
+    Crie um arquivo chamado `.env` na raiz do projeto e adicione sua chave de API do Google AI Studio (Gemini API) nele. Opcionalmente, você pode configurar um e-mail para relatórios de exceção:
     ```
     GEMINI_API_KEY=SUA_CHAVE_DE_API_DO_GEMINI_AQUI
+    ADMIN_EMAIL=SEU_EMAIL_PARA_NOTIFICACOES_AQUI # Opcional, para relatórios de exceção
     ```
 
 5.  **Inicialização do Banco de Dados (PostgreSQL):**
@@ -107,7 +108,6 @@ Você verá o progresso e as decisões da IA sendo impressas no console.
         A função `get_db_connection` atua como um gerenciador de contexto (`context manager`), garantindo que a conexão seja criada ao entrar no bloco e, crucialmente, **fechada ao sair**, encapsulando de forma segura a aquisição e liberação de recursos. As funções `init_connection_pool` e `close_pool` são mantidas como legadas para compatibilidade, mas não são mais utilizadas para gerenciamento ativo de pools de conexão persistentes. A função `init_db` continua sendo responsável por criar as tabelas do sistema e executar migrações de esquema (como a conversão de colunas de data para o tipo `DATE` na tabela `opcoes`), utilizando o `get_db_connection` para suas operações, garantindo a consistência e o correto manuseio de datas.
     *   `db/auth.py`: Módulo responsável pelas operações de autenticação e gerenciamento de usuários. A lógica de verificação de usuário (`verify_user`) foi significativamente aprimorada para permitir login tanto por e-mail quanto por nome de usuário, com tratamento case-insensitive e com remoção de espaços em branco. Funções como `create_user` e `admin_update_user` também foram ajustadas para limpar e padronizar as entradas de usuário e e-mail. Adicionalmente, a função `get_all_users` garante que os dados dos usuários sejam sempre retornados ordenados por `id` de forma ascendente, otimizando a consistência dos resultados.
     *   `db/options.py`: O módulo `db/options.py` agora inclui a função utilitária `_parse_date_to_iso`, que padroniza a conversão de diversas entradas de data (incluindo strings e objetos de data) para o formato ISO `YYYY-MM-DD`, fundamental para a correta persistência de dados no banco de dados. A função `get_opcoes_import` foi atualizada para utilizar essa nova lógica, garantindo a robustez na importação de dados de opções, com validação explícita para datas de operação e vencimento.
-    *   `db/controlvalue.db`: Um arquivo de banco de dados local (provavelmente SQLite) adicionado para persistência de dados adicionais ou configuração padrão.
 *   `services/`: Novo diretório para encapsular a lógica de serviços de negócio.
     *   `services/executive_report_service.py`: É responsável pela lógica de recuperação de dados do portfólio, inferência de perfil e objetivos do investidor, análise de desempenho dos ativos e, crucialmente, pela integração com a Gemini API para gerar uma análise macroeconômica e estratégica inteligente, além de orquestrar a geração do relatório em PDF usando `reportlab`. **Este serviço agora calcula e inclui o *total de aportes líquidos (compras - vendas) realizados no ano corrente* na análise do portfólio. A lógica de análise de desempenho de ativos foi refinada para lidar com *múltiplas moedas* (exibindo valores em USD para ativos estrangeiros) e utiliza o campo `price_ceiling` de forma mais robusta. O relatório PDF foi atualizado para apresentar *cinco KPIs principais* (incluindo "Aportes Líquidos (Ano)") e para exibir corretamente os símbolos monetários (R$ ou U$) nas seções de ativos sob pressão.**
 *   `views/`: Diretório que hospeda a lógica de apresentação e os controladores para diferentes interfaces.
