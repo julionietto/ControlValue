@@ -1,9 +1,11 @@
 import psycopg2.extras
-from db.connection import get_db_connection, _query_to_df
+from db.connection import get_db_connection, _query_to_df, clear_db_cache
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
+import streamlit as st
 
+@st.cache_data(ttl=300)
 def get_proventos(user_id):
     """Retorna o histórico de proventos recebidos."""
     with get_db_connection() as conn:
@@ -26,6 +28,7 @@ def save_provento(ano, mes, ticker, valor, user_id):
         else:
             cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, %s, %s, %s, %s)", (ano, mes, ticker, valor, user_id))
         conn.commit()
+        clear_db_cache()
 
 def delete_proventos_ativo_ano(ano, ticker, user_id):
     """Remove todos os proventos de um ativo em um ano específico."""
@@ -33,7 +36,9 @@ def delete_proventos_ativo_ano(ano, ticker, user_id):
         cursor = conn.cursor()
         cursor.execute("DELETE FROM proventos WHERE ano = %s AND ticker = %s AND user_id = %s", (ano, ticker, user_id))
         conn.commit()
+        clear_db_cache()
 
+@st.cache_data(ttl=300)
 def get_proventos_provisionados_calculados(user_id):
     """
     Retorna os proventos provisionados cruzados com a quantidade de ativos do usuário na data com,
@@ -59,6 +64,7 @@ def clear_proventos_provisionados(user_id):
         cursor = conn.cursor()
         cursor.execute("DELETE FROM proventos_provisionados WHERE user_id = %s", (user_id,))
         conn.commit()
+        clear_db_cache()
 
 def clear_all_proventos_provisionados():
     """Limpa a tabela de proventos futuros de TODOS os usuários."""
@@ -66,6 +72,7 @@ def clear_all_proventos_provisionados():
         cursor = conn.cursor()
         cursor.execute("DELETE FROM proventos_provisionados")
         conn.commit()
+        clear_db_cache()
 
 def add_provento_provisionado(user_id, ticker, tipo, data_com, data_pagamento, valor):
     """Adiciona um novo provento futuro mapeado."""
@@ -76,6 +83,7 @@ def add_provento_provisionado(user_id, ticker, tipo, data_com, data_pagamento, v
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (ticker, tipo, data_com, data_pagamento, valor, user_id))
         conn.commit()
+        clear_db_cache()
 
 def import_proventos_csv(file_content, user_id):
     """Importa proventos de um arquivo CSV (layout padrão do sistema)."""
@@ -150,10 +158,12 @@ def import_proventos_csv(file_content, user_id):
                                 (ano, mes_pt, ticker, valor, user_id)
                             )
             conn.commit()
+            clear_db_cache()
             return True, "Importação de Proventos concluída com sucesso."
     except Exception as e:
         return False, f"Erro ao importar: {str(e)}"
 
+@st.cache_data(ttl=300)
 def get_total_proventos_by_ticker(ticker, user_id):
     ticker = ticker.strip().upper()
     with get_db_connection() as conn:
@@ -162,6 +172,7 @@ def get_total_proventos_by_ticker(ticker, user_id):
         res = cursor.fetchone()
         return res[0] if res[0] is not None else 0.0
 
+@st.cache_data(ttl=300)
 def get_total_proventos_all_tickers(user_id):
     """Retorna um dicionário com o total de proventos acumulado por ticker."""
     with get_db_connection() as conn:
@@ -190,9 +201,11 @@ def check_and_create_next_year_dashboard(user_id):
                 for row in tickers:
                     cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, 1, %s, 0.0, %s)", (next_year, row[0], user_id))
                 conn.commit()
+                clear_db_cache()
                 return True
     return False
 
+@st.cache_data(ttl=300)
 def get_all_total_proventos(user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()

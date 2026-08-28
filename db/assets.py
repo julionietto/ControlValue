@@ -1,6 +1,7 @@
 import psycopg2.extras
-from db.connection import get_db_connection
+from db.connection import get_db_connection, clear_db_cache
 import pandas as pd
+import streamlit as st
 
 def recalculate_asset_balance(asset_id, conn):
     """Recalcula a quantidade e o preço médio de um ativo com base no histórico."""
@@ -29,6 +30,7 @@ def recalculate_asset_balance(asset_id, conn):
         (final_qty, avg_price, asset_id)
     )
 
+@st.cache_data(ttl=300)
 def get_all_assets(user_id):
     """Retorna todos os ativos do usuário."""
     with get_db_connection() as conn:
@@ -50,9 +52,11 @@ def add_empty_asset(ticker, asset_type, user_id, currency='BRL'):
                 (ticker, asset_type, user_id, currency)
             )
             conn.commit()
+            clear_db_cache()
             return True
         return False
 
+@st.cache_data(ttl=300)
 def get_asset_by_id(asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -71,6 +75,7 @@ def add_asset_operation(asset_id, user_id, date, quantity, unit_price):
             )
             recalculate_asset_balance(asset_id, conn)
             conn.commit()
+            clear_db_cache()
 
 def update_asset_operation(operation_id, asset_id, user_id, date, quantity, unit_price):
     with get_db_connection() as conn:
@@ -83,6 +88,7 @@ def update_asset_operation(operation_id, asset_id, user_id, date, quantity, unit
             )
             recalculate_asset_balance(asset_id, conn)
             conn.commit()
+            clear_db_cache()
 
 def delete_asset_operation(operation_id, asset_id, user_id):
     with get_db_connection() as conn:
@@ -92,6 +98,7 @@ def delete_asset_operation(operation_id, asset_id, user_id):
             cursor.execute("DELETE FROM asset_history WHERE id = %s AND asset_id = %s", (operation_id, asset_id))
             recalculate_asset_balance(asset_id, conn)
             conn.commit()
+            clear_db_cache()
 
 def delete_asset(asset_id, user_id):
     with get_db_connection() as conn:
@@ -99,7 +106,9 @@ def delete_asset(asset_id, user_id):
         cursor.execute("DELETE FROM asset_history WHERE asset_id = %s", (asset_id,))
         cursor.execute("DELETE FROM assets WHERE id = %s AND user_id = %s", (asset_id, user_id))
         conn.commit()
+        clear_db_cache()
 
+@st.cache_data(ttl=300)
 def get_asset_history(asset_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -107,6 +116,7 @@ def get_asset_history(asset_id, user_id):
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
+@st.cache_data(ttl=300)
 def get_all_asset_histories(user_id):
     """Busca o histórico de operações de TODOS os ativos do usuário em um único Round-Trip."""
     with get_db_connection() as conn:
@@ -140,6 +150,7 @@ def add_or_update_fixed_income_asset(ticker, saldo, user_id, asset_type='Renda F
                 (ticker, asset_type, saldo, user_id)
             )
         conn.commit()
+        clear_db_cache()
 
 def update_asset_valuation(asset_id, user_id, price_ceiling, fair_value):
     with get_db_connection() as conn:
@@ -149,7 +160,9 @@ def update_asset_valuation(asset_id, user_id, price_ceiling, fair_value):
             (price_ceiling, fair_value, asset_id, user_id)
         )
         conn.commit()
+        clear_db_cache()
 
+@st.cache_data(ttl=300)
 def get_user_allocations(user_id):
     """Retorna as metas de alocação de classes de ativos do usuário."""
     with get_db_connection() as conn:
@@ -184,6 +197,7 @@ def save_user_allocations(user_id, allocations_dict):
                 DO UPDATE SET allocation_percent = EXCLUDED.allocation_percent
             """, (user_id, asset_class, percent))
         conn.commit()
+        clear_db_cache()
 
 CRYPTO_ETFS = {
     # B3 Crypto ETFs
@@ -243,6 +257,7 @@ def update_asset(asset_id, user_id, ticker, asset_type, quantity, average_price,
                 (ticker, asset_type, price_ceiling, fair_value, currency, asset_id, user_id)
             )
         conn.commit()
+        clear_db_cache()
 
 def import_assets_csv(file_content, user_id):
     import csv
@@ -267,6 +282,7 @@ def import_assets_csv(file_content, user_id):
                 else:
                     cursor.execute("INSERT INTO assets (ticker, asset_type, quantity, average_price, user_id) VALUES (%s, %s, %s, %s, %s)", (ticker, asset_type, quantity, avg_price, user_id))
             conn.commit()
+            clear_db_cache()
         return True, "Importação concluída."
     except Exception as e:
         return False, f"Erro: {e}"

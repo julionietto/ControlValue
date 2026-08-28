@@ -52,6 +52,13 @@ def init_connection_pool():
     """Função legada de inicialização de pool (mantida para compatibilidade)."""
     return None
 
+def clear_db_cache():
+    """Limpa o cache de dados do Streamlit com segurança se disponível."""
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+
 @contextmanager
 def get_db_connection():
     """

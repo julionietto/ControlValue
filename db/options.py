@@ -1,6 +1,7 @@
-from db.connection import get_db_connection, _query_to_df
+from db.connection import get_db_connection, _query_to_df, clear_db_cache
 import pandas as pd
 from datetime import datetime, date
+import streamlit as st
 
 def _parse_date_to_iso(date_val):
     if pd.isna(date_val) or date_val is None:
@@ -20,6 +21,7 @@ def _parse_date_to_iso(date_val):
     except:
         return None
 
+@st.cache_data(ttl=300)
 def get_opcoes(user_id):
     with get_db_connection() as conn:
         df = _query_to_df("SELECT * FROM opcoes WHERE user_id = %s ORDER BY dt_vencimento ASC, ativo ASC", conn, params=(user_id,))
@@ -37,6 +39,7 @@ def insert_opcao(ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo
         ''', (ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status, user_id,
               tipo_operacao, qtd_inicial, vl_opcao_inicial, vl_premio_inicial, qtd_final, vl_opcao_final, vl_premio_final, resultado))
         conn.commit()
+        clear_db_cache()
 
 def update_opcao(opcao_id, user_id, ativo, strike, tp_opcao, dt_operacao, dt_vencimento, derivativo, quantidade, vl_opcao, vl_premio, status,
                  tipo_operacao=None, qtd_inicial=None, vl_opcao_inicial=None, vl_premio_inicial=None, 
@@ -53,12 +56,14 @@ def update_opcao(opcao_id, user_id, ativo, strike, tp_opcao, dt_operacao, dt_ven
               tipo_operacao, qtd_inicial, vl_opcao_inicial, vl_premio_inicial, qtd_final, vl_opcao_final, vl_premio_final, resultado,
               opcao_id, user_id))
         conn.commit()
+        clear_db_cache()
 
 def delete_opcao(opcao_id, user_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM opcoes WHERE id=%s AND user_id=%s", (opcao_id, user_id))
         conn.commit()
+        clear_db_cache()
 
 def get_opcoes_import(arquivo, user_id):
     try:
@@ -93,6 +98,7 @@ def get_opcoes_import(arquivo, user_id):
                 except (ValueError, IndexError):
                     continue
             conn.commit()
+            clear_db_cache()
         return True, "Importação de Opções concluída com sucesso."
     except Exception as e:
         return False, f"Erro ao importar Opções: {str(e)}"
@@ -109,3 +115,4 @@ def update_opcao_strike(opcao_id, new_strike):
         cursor = conn.cursor()
         cursor.execute("UPDATE opcoes SET strike = %s WHERE id = %s", (new_strike, opcao_id))
         conn.commit()
+        clear_db_cache()

@@ -7,37 +7,9 @@ from zoneinfo import ZoneInfo
 from db.connection import get_db_connection
 import psycopg2.extras
 
-# Variável global para controle da thread de desbloqueio
-_unblock_thread_active = False
-
-def _unblock_worker():
-    """Worker que roda em segundo plano para limpar bloqueios expirados."""
-    global _unblock_thread_active
-    while True:
-        try:
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                sp_tz = ZoneInfo("America/Sao_Paulo")
-                cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE locked_until IS NOT NULL AND locked_until <= %s", (datetime.now(sp_tz).replace(tzinfo=None),))
-                conn.commit()
-                cursor.execute("SELECT COUNT(*) FROM users WHERE locked_until IS NOT NULL")
-                count = cursor.fetchone()[0]
-                
-            if count == 0:
-                _unblock_thread_active = False
-                break
-        except Exception as e:
-            print(f"Erro na thread de desbloqueio: {e}")
-            
-        time.sleep(60)
-
 def trigger_unblock_thread():
-    """Inicia a thread de desbloqueio se ela não estiver ativa."""
-    global _unblock_thread_active
-    if not _unblock_thread_active:
-        _unblock_thread_active = True
-        thread = threading.Thread(target=_unblock_worker, daemon=True)
-        thread.start()
+    """Função mantida para compatibilidade (desbloqueios são validados por timestamp durante o login)."""
+    pass
 
 def hash_password(password):
     """Gera um hash bcrypt para a senha."""

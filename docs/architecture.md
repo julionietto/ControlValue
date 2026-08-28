@@ -141,6 +141,7 @@ O orquestrador (`agent_push.py`) executa as seguintes etapas para cada deploy:
 *   **`pandas`:** Biblioteca amplamente utilizada para manipulação e análise de dados, essencial em módulos como `db/options.py`, `utils/formatters.py` e **agora no `services/executive_report_service.py` para tratamento eficiente de tabelas, dados financeiros e preparação para gráficos/relatórios.**
 *   **`plotly.express`:** Biblioteca de visualização de dados em Python, integrada para gerar gráficos interativos (como gráficos de pizza) na interface de usuário, especialmente para a distribuição de proventos por classe de ativos.
 *   **`streamlit`:** Framework utilizado para construir a interface de usuário interativa do sistema, facilitando a criação de dashboards e aplicações web complexas com Python.
+*   **`streamlit.st.cache_data`:** Decorador do Streamlit utilizado extensivamente nos módulos de acesso a dados (`db/assets.py`, `db/dividends.py`, `db/options.py`) para otimizar o desempenho de funções de leitura, armazenando seus resultados em cache com um Time-To-Live (TTL) configurável (geralmente 300 segundos), reduzindo a carga no banco de dados e acelerando a renderização da interface.
 *   **`ReportLab`:** Uma biblioteca Python para criar documentos PDF de forma programática. Utilizada no `services/executive_report_service.py` para gerar relatórios executivos profissionais, permitindo controle granular sobre layout, estilos, tabelas e parágrafos.
 
 ## 5. Princípios de Design
@@ -150,7 +151,7 @@ O orquestrador (`agent_push.py`) executa as seguintes etapas para cada deploy:
 *   **Documentação Contínua:** Automação da atualização e geração de diversos documentos (`README.md`, `docs/architecture.md`, `docs/manual_do_usuario.md`, etc.) através do `doc_agent.py`, garantindo que ela esteja sempre alinhada com o código e sem a necessidade de intervenção manual, agora com a capacidade de direcionar a IA com contextos específicos para cada tipo de documento.
 *   **Versionamento Semântico Automatizado:** Aplicação automática das regras de SemVer (`major`, `minor`, `patch`) com base na análise do impacto das mudanças de código pela IA, com a lógica de incremento completa implementada no orquestrador.
 *   **Modularidade e Extensibilidade:** A arquitetura baseada em orquestrador e agentes externos permite adicionar novos passos ou modificar existentes com relativa facilidade, sem impactar o fluxo principal. **A criação de um novo serviço (`services/executive_report_service.py`) e uma nova view (`views/report_executivo.py`) para o Relatório Executivo demonstra a capacidade de estender a aplicação com novas funcionalidades complexas de forma modular, sem alterar o core do sistema.**
-*   **Robustez:** Melhorias no tratamento de codificação de caracteres (UTF-8 com `errors='replace'`) e no gerenciamento de arquivos, garantindo a execução e logs claros em diferentes ambientes, incluindo sistemas Windows. Para otimizar o desempenho e evitar re-inicializações desnecessárias, a função `db.init_db()` agora é invocada condicionalmente apenas uma vez por sessão da aplicação Streamlit (`app.py`), utilizando `st.session_state` para controlar o estado da inicialização do banco de dados. Adicionalmente, a configuração do email do administrador para relatórios de exceção via variáveis de ambiente (`ADMIN_EMAIL` ou `SMTP_EMAIL`) aumenta a capacidade de manutenção e a robustez do sistema em cenários de monitoramento de erros.
+*   **Robustez:** Melhorias no tratamento de codificação de caracteres (UTF-8 com `errors='replace'`) e no gerenciamento de arquivos, garantindo a execução e logs claros em diferentes ambientes, incluindo sistemas Windows. Para otimizar o desempenho e evitar re-inicializações desnecessárias, a função `db.init_db()` agora é invocada condicionalmente apenas uma vez por sessão da aplicação Streamlit (`app.py`), utilizando `st.session_state` para controlar o estado da inicialização do banco de dados. Adicionalmente, a configuração do email do administrador para relatórios de exceção via variáveis de ambiente (`ADMIN_EMAIL` ou `SMTP_EMAIL`) aumenta a capacidade de manutenção e a robustez do sistema em cenários de monitoramento de erros. **A introdução de uma estratégia de cache de dados com `st.cache_data` e a função `clear_db_cache()` garante que as operações de leitura sejam otimizadas e que as visualizações sejam consistentemente atualizadas após operações de escrita, contribuindo significativamente para a responsividade e a integridade da aplicação.**
 
 ## 6. Considerações Futuras
 
@@ -172,6 +173,7 @@ A gestão de dados de usuários e sua apresentação em interfaces administrativ
     *   A função `verify_user` foi significativamente aprimorada. Agora, ela permite a autenticação de usuários tanto pelo **email** quanto pelo **nome de usuário**, tornando o processo de login mais flexível. A busca é realizada de forma **case-insensitive** para ambos (email e nome de usuário) e **remove espaços em branco** das extremidades do identificador de login fornecido, aumentando a robustez contra erros de digitação e variações de capitalização.
     *   Outras funções de gerenciamento de usuários, como `create_user`, `get_user_by_email` e `admin_update_user`, também foram ajustadas para lidar com emails e nomes de usuário de forma **case-insensitive** e com **limpeza de espaços** (`strip()`), assegurando consistência e robustez em todo o ciclo de vida do usuário no sistema.
     *   A robustez desta camada é agora reforçada por testes unitários dedicados em `tests/test_auth.py`, que verificam cenários de login bem-sucedido, falhas por usuário não encontrado ou senha inválida, o fluxo de logout, e agora também cenários de login por nome de usuário e a tolerância a case-insensitivity e espaços em branco nos identificadores.
+    *   **Note que a funcionalidade de desbloqueio automático de contas, anteriormente gerenciada por uma thread em segundo plano, foi simplificada; o desbloqueio agora é avaliado e aplicado de forma síncrona durante as tentativas de login, baseando-se no timestamp de bloqueio, eliminando a necessidade de uma rotina assíncrona.**
 
 *   **Camada de Apresentação (`views/admin.py`):**
     *   Na função `render_admin_view` do módulo `views/admin.py`, que é responsável por preparar os dados para a interface administrativa, foi adicionado um passo de validação e ordenação explícita. Após a recuperação dos dados de usuários via `db.get_all_users()` e sua conversão para um `pandas.DataFrame`, o código agora verifica se o DataFrame não está vazio (`if not users_df.empty:`). Em caso afirmativo, ele aplica uma ordenação adicional `users_df.sort_values(by='id', ascending=True).reset_index(drop=True)`. Embora a camada de acesso a dados já forneça uma ordenação, esta etapa na camada de apresentação age como um reforço, garantindo que a visualização administrativa sempre exiba os usuários em ordem consistente por ID, independentemente de potenciais variações ou transformações intermediárias. Essa redundância controlada contribui para a robustez do fluxo de dados até o usuário final.
@@ -234,11 +236,13 @@ A gestão de operações financeiras com opções requer uma manipulação preci
     *   **Refatoração do Inicializador de Banco de Dados (`init_db`):**
         *   A função `init_db()` continua a utilizar o *context manager* `with get_db_connection() as conn:`. Esta abordagem, agora com o novo modelo de conexão direta e efêmera, melhora a robustez na aquisição e liberação de conexões para tarefas de inicialização e migração, garantindo que o banco de dados seja configurado de forma segura e que as conexões sejam apropriadamente encerradas.
         *   **Controle de Inicialização da Aplicação (`app.py`):** A chamada a `db.init_db()` na função principal da aplicação (`app.py`) foi otimizada para ser executada apenas uma vez por sessão do Streamlit. Isso é feito verificando o estado `st.session_state.db_initialized`, garantindo que o banco de dados seja inicializado de forma eficiente e evitando re-inicializações redundantes que podem impactar o desempenho e a estabilidade da aplicação em ambientes interativos como o Streamlit.
+    *   **Função de Limpeza de Cache (`clear_db_cache`):** Uma nova função `clear_db_cache()` foi introduzida em `db/connection.py`. Esta função é projetada para invalidar o cache de dados do Streamlit (`st.cache_data`) de forma segura, garantindo que as operações de escrita no banco de dados reflitam imediatamente na interface do usuário, promovendo consistência sem a necessidade de re-consultar o banco de dados desnecessariamente.
 
 *   **Camada de Acesso a Dados de Opções (`db/options.py`):**
     *   Foi adicionada uma nova função utilitária interna, `_parse_date_to_iso`, para padronizar a conversão de strings e objetos de data em vários formatos (`YYYY-MM-DD`, `DD/MM/YYYY`, `DD/MM/YY`) para o formato `YYYY-MM-DD` exigido pelas colunas `DATE` do banco de dados. Esta função é robusta e lida com valores nulos ou vazios, retornando `None` quando a conversão não é possível.
     *   A função `get_opcoes_import`, responsável pela importação de dados de opções de arquivos, foi atualizada para utilizar `_parse_date_to_iso` nas colunas `dt_operacao` e `dt_vencimento`. Isso garante que as datas importadas sejam consistentemente formatadas e validadas antes da inserção no banco de dados, prevenindo erros de tipo de dado e assegurando a integridade dos registros. Um `ValueError` explícito é levantado se as datas parseadas forem inválidas.
     *   A forma de acesso aos dados de linhas de DataFrame foi ajustada de `row[index]` para `row.iloc[index]` para maior clareza e robustez.
+    *   **Otimização de Desempenho com Cache:** A função `get_opcoes` foi otimizada com `@st.cache_data(ttl=300)` para cachear os resultados das consultas. Todas as funções de escrita (inserção, atualização e exclusão de opções, bem como a importação) agora incluem a chamada a `clear_db_cache()` para garantir que qualquer alteração nos dados reflita imediatamente na interface do usuário.
 
 *   **Utilitários de Formatação (`utils/formatters.py`):**
     *   A função `parse_currency`, crucial para a conversão robusta de valores monetários em diversos formatos de string (com ou sem símbolos de moeda, separadores de milhar/decimal variados) para o tipo `float`, foi centralizada neste módulo. Isso promove a reutilização de código e garante uma abordagem unificada para o tratamento de valores financeiros em toda a aplicação. A função lida com valores nulos, vazios e diferentes convenções de formatação (e.g., `,` como separador decimal).
@@ -246,7 +250,17 @@ A gestão de operações financeiras com opções requer uma manipulação preci
 
 Essas alterações em `db/connection.py`, `db/options.py` e `utils/formatters.py` reforçam a arquitetura da aplicação com uma manipulação de dados financeiros mais segura, padronizada e à prova de erros, essencial para a confiabilidade de um sistema de gestão de investimentos.
 
-### 7.4. Processamento de Proventos e Validação de Custódia (`sync_job.py`)
+### 7.4. Gerenciamento de Ativos e Histórico de Operações (`db/assets.py`)
+
+*   O módulo `db/assets.py` agora integra de forma extensiva o mecanismo de cache do Streamlit (`st.cache_data(ttl=300)`) para otimizar o desempenho das operações de leitura, como `get_all_assets`, `get_asset_by_id`, `get_asset_history`, `get_all_asset_histories` e `get_user_allocations`.
+*   Para garantir a consistência dos dados após qualquer modificação, todas as funções de escrita—incluindo `add_empty_asset`, `add_asset_operation`, `update_asset_operation`, `delete_asset_operation`, `delete_asset`, `add_or_update_fixed_income_asset`, `update_asset_valuation`, `save_user_allocations`, `update_asset`, e `import_assets_csv`—invocam a função `clear_db_cache()` (definida em `db/connection.py`) para invalidar o cache e assegurar que a interface do usuário sempre reflita o estado mais atualizado do banco de dados.
+
+### 7.5. Gerenciamento de Proventos e Sincronização (`db/dividends.py`)
+
+*   Similarmente ao módulo de ativos, `db/dividends.py` também implementa a estratégia de caching (`st.cache_data(ttl=300)`) para suas funções de leitura, como `get_proventos`, `get_proventos_provisionados_calculados`, `get_total_proventos_by_ticker`, `get_total_proventos_all_tickers` e `get_all_total_proventos`, visando aprimorar a performance na recuperação de dados financeiros.
+*   Todas as operações que modificam os dados de proventos (como `save_provento`, `delete_proventos_ativo_ano`, `clear_proventos_provisionados`, `clear_all_proventos_provisionados`, `add_provento_provisionado`, `import_proventos_csv`, e `check_and_create_next_year_dashboard`) são complementadas com chamadas a `clear_db_cache()` para garantir que as visualizações na aplicação permaneçam sincronizadas com o banco de dados.
+
+### 7.6. Processamento de Proventos e Validação de Custódia (`sync_job.py`)
 
 O módulo `sync_job.py`, responsável pela sincronização e provisionamento de proventos, recebeu uma importante melhoria para garantir a precisão e a integridade na atribuição de rendimentos aos usuários.
 
@@ -257,7 +271,7 @@ O módulo `sync_job.py`, responsável pela sincronização e provisionamento de 
     *   Se a quantidade em custódia na `data_com` for `0` ou negativa (`qty_on_date <= 0`), o provento não é provisionado para aquele usuário (`continue`), prevenindo a atribuição indevida de rendimentos a quem não era elegível.
     *   Esta validação crítica garante que os registros de proventos sejam baseados na posse efetiva do ativo, aumentando a confiabilidade dos dados financeiros da aplicação.
 
-### 7.5. Otimização da Visualização e Interação de Dados para a Visão Geral
+### 7.7. Otimização da Visualização e Interação de Dados para a Visão Geral
 
 No módulo `views/geral.py`, responsável pela renderização da "Visão Geral", foram implementadas otimizações na preparação de dados para gráficos que exibem proventos e retornos totais de Fundos de Investimento Imobiliário (FIIs), juntamente com melhorias na interação para exploração detalhada dos ativos.
 
@@ -272,13 +286,13 @@ No módulo `views/geral.py`, responsável pela renderização da "Visão Geral",
     *   A função `format_usd_custom` foi introduzida para padronizar a formatação de valores monetários em dólar (`$ X.XXX,XX`), garantindo consistência na apresentação.
     *   A tabela "Ativos nos Estados Unidos", localizada na seção "Radar de Balanceamento" da Visão Geral, agora exibe uma nova coluna "Valor em Dólar". Além disso, o nome da coluna para o valor em BRL é dinamicamente ajustado: "Valor em Real" quando a visualização em dólar está ativa (`show_usd`), ou "Valor do Ativo" em outros contextos. Esta coluna calcula o valor atual dos ativos dos EUA em USD, utilizando o `original_current_price` (preço original do ativo em dólar, se disponível) ou, como fallback, convertendo o `current_value` em BRL usando a taxa de câmbio USD/BRL. Essa funcionalidade oferece uma visão mais direta e contextualizada do patrimônio em moeda estrangeira, aprimorando a clareza e a utilidade da Visão Geral para portfólios globais.
 
-### 7.6. Mapeamento de Ativos Financeiros
+### 7.8. Mapeamento de Ativos Financeiros
 
 O módulo `services.py` atua como um repositório central para lógicas de negócio e mapeamentos de dados que são utilizados em diversas partes da aplicação.
 
 *   **Atualização do Mapeamento de Setores de FIIs:** O dicionário `FII_TICKER_OVERRIDE` em `services.py`, que define o setor de um Fundo de Investimento Imobiliário (FII) a partir de seu ticker, foi atualizado. Especificamente, o ticker `'KNUQ11.SA'` foi adicionado e associado ao setor `'Recebíveis'`. Essa atualização garante que novos ativos sejam corretamente classificados e exibidos conforme sua categoria, mantendo a integridade e precisão das informações financeiras apresentadas na aplicação.
 
-### 7.7. Gerenciamento e Classificação de Ativos Financeiros
+### 7.9. Gerenciamento e Classificação de Ativos Financeiros
 
 A robustez na classificação de ativos é crucial para a precisão dos cálculos de portfólio, balanceamento e relatórios. Recentemente, a arquitetura de gerenciamento de ativos foi estendida para incluir uma categorização mais granular, especificamente para **ETFs de Criptomoedas**, e para garantir que essa nova categoria seja tratada corretamente em toda a aplicação.
 
@@ -297,7 +311,7 @@ A robustez na classificação de ativos é crucial para a precisão dos cálculo
 
 Essas modificações garantem que a aplicação principal categorize, visualize e forneça recomendações de balanceamento de portfólio para ETFs de Criptomoedas de forma inteligente e consistente, refletindo sua natureza híbrida entre ETFs e criptoativos e aprimoramento a precisão da gestão de portfólio.
 
-### 7.8. Detalhe do Ativo e Visualização Histórica de Operações
+### 7.10. Detalhe do Ativo e Visualização Histórica de Operações
 
 O módulo `views/asset_detail.py` é responsável por apresentar a visão detalhada de um ativo específico, incluindo seu histórico de operações. Melhorias foram implementadas para aprimorar a inteligência visual e a legibilidade da tabela de histórico de operações, permitindo que o usuário identifique rapidamente o desempenho de cada transação.
 
@@ -308,7 +322,7 @@ O módulo `views/asset_detail.py` é responsável por apresentar a visão detalh
     *   Esta função `color_cols` é então aplicada ao DataFrame `display_hist` usando `styled_hist = display_hist.style.apply(color_cols, axis=1)`.
     *   Finalmente, a coluna `raw_diff` é ocultada do `st.dataframe` final através da configuração `column_config={"op_idx": None, "raw_diff": None}`, garantindo que ela sirva apenas como um auxiliar interno para a estilização, sem poluir a interface do usuário. Essa abordagem melhora significativamente a usabilidade e a interpretação dos dados históricos do ativo, destacando visualmente as operações lucrativas e deficitárias de forma mais performática.
 
-### 7.9. Geração de Relatório Executivo e Análise Preditiva
+### 7.11. Geração de Relatório Executivo e Análise Preditiva
 
 Uma nova funcionalidade foi integrada à aplicação para fornecer aos usuários um relatório executivo detalhado e preditivo de seus investimentos. Esta funcionalidade é impulsionada por inteligência artificial para oferecer insights estratégicos e personalizados.
 
