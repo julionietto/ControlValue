@@ -16,50 +16,49 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
         return prices
         
     tickers_list = list(set(tickers_tuple))
+    tickers_str = " ".join(tickers_list)
     
-    # 1. Busca Primária via fast_info em paralelo (altamente precisa para cotações mais recentes como ARE $52.72)
-    import concurrent.futures
-    def fetch_fast(t):
-        try:
-            val = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
-            return t, val if (not pd.isna(val) and val > 0.0) else 0.0
-        except Exception:
-            return t, 0.0
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        results = executor.map(fetch_fast, tickers_list)
-        for t, val in results:
-            if val > 0.0:
-                prices[t] = val
-
-    # 2. Busca Secundária via yf.download (fallback caso fast_info falhe para algum ticker)
-    missing_tickers = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0]
-    if missing_tickers:
-        tickers_str = " ".join(missing_tickers)
-        try:
-            data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
-            if not data.empty:
-                close_df = data['Close'] if 'Close' in data else data
-                for ticker in missing_tickers:
+    # 1. Download em lote via requisição única agrupada no yfinance (não causa rate limiting)
+    try:
+        data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
+        if not data.empty:
+            close_df = data['Close'] if 'Close' in data else data
+            for ticker in tickers_list:
+                val = 0.0
+                try:
+                    if len(tickers_list) == 1:
+                        s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
+                        if not s.empty:
+                            val = float(s.iloc[-1])
+                    else:
+                        if ticker in close_df:
+                            s = close_df[ticker].dropna()
+                            if not s.empty:
+                                val = float(s.iloc[-1])
+                except Exception:
                     val = 0.0
-                    try:
-                        if len(missing_tickers) == 1:
-                            valid_series = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
-                            if not valid_series.empty:
-                                val = float(valid_series.iloc[-1])
-                        else:
-                            if ticker in close_df:
-                                series_t = close_df[ticker].dropna()
-                                if not series_t.empty:
-                                    val = float(series_t.iloc[-1])
-                    except Exception as e:
-                        import logging
-                        logging.warning(f"Erro no fallback do ticker {ticker}: {e}")
-                    if val > 0.0:
-                        prices[ticker] = val
-        except Exception as e:
-            print(f"Falha YF Download Fallback: {e}")
-            
+                if val > 0.0:
+                    prices[ticker] = val
+    except Exception as e:
+        print(f"Falha YF Download: {e}")
+        
+    # 2. Resgate pontual via fast_info apenas para ativos internacionais/US ou que falharam no lote
+    missing_or_us = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0 or (not t.endswith('.SA') and '-' not in t)]
+    if missing_or_us:
+        import concurrent.futures
+        def fetch_fast_info(t):
+            try:
+                v = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
+                return t, v if (not pd.isna(v) and v > 0.0) else 0.0
+            except Exception:
+                return t, 0.0
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(fetch_fast_info, missing_or_us)
+            for t, val in results:
+                if val > 0.0:
+                    prices[t] = val
+                
     # Assegura que sempre retornamos aquilo que foi pedido
     for t in tickers_tuple:
         if t not in prices:
@@ -86,25 +85,23 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
     """
     current_val = st.session_state.get('last_usd_rate', 0.0)
     
-    # Se o mercado está fechado e já temos um valor válido (diferente de 0), usamos o cache
     if not is_market_open('BR') and not is_first_load and current_val > 0:
         return current_val
 
     try:
-        # Usamos period="5d" para garantir que pegamos o último fechamento válido em noites/finais de semana
         data = yf.Ticker("BRL=X").history(period="5d")
         val = 0.0
         if not data.empty:
-            val = float(data['Close'].iloc[-1])
-        else:
-            try:
-                val = float(yf.Ticker("BRL=X").fast_info['lastPrice'])
-            except:
-                val = 0.0
+            s = data['Close'].dropna()
+            if not s.empty:
+                val = float(s.iloc[-1])
+        if val <= 0.0:
+            val = float(yf.Ticker("BRL=X").fast_info.get('lastPrice', 0.0))
         
         if val > 0:
             st.session_state.last_usd_rate = val
-        return val if val > 0 else (current_val if current_val > 0 else 5.0)
+            return val
+        return current_val if current_val > 0 else 5.0
     except Exception as e:
         print(f"Erro ao buscar cotação USD/BRL: {e}")
         return current_val if current_val > 0 else 5.0
@@ -113,26 +110,25 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
 def get_btc_usd_rate(refresh_id=0):
     """
     Busca a cotação atual do Bitcoin em Dólar usando o ticker BTC-USD.
-    Persiste em session_state e possui valor de fallback em caso de falha.
     """
     current_val = st.session_state.get('last_btc_rate', 0.0)
     try:
         data = yf.Ticker("BTC-USD").history(period="5d")
         val = 0.0
         if not data.empty:
-            val = float(data['Close'].iloc[-1])
-        else:
-            try:
-                val = float(yf.Ticker("BTC-USD").fast_info['lastPrice'])
-            except:
-                val = 0.0
+            s = data['Close'].dropna()
+            if not s.empty:
+                val = float(s.iloc[-1])
+        if val <= 0.0:
+            val = float(yf.Ticker("BTC-USD").fast_info.get('lastPrice', 0.0))
         
         if val > 0:
             st.session_state.last_btc_rate = val
-        return val if val > 0 else (current_val if current_val > 0 else 60000.0)
+            return val
+        return current_val
     except Exception as e:
         print(f"Erro ao buscar cotação BTC/USD: {e}")
-        return current_val if current_val > 0 else 60000.0
+        return current_val
 
 @st.cache_data(ttl=300)
 def get_ibov(refresh_id=0, is_first_load=False):
@@ -142,28 +138,26 @@ def get_ibov(refresh_id=0, is_first_load=False):
     """
     current_val = st.session_state.get('last_ibov_points', 0.0)
     
-    # Se o mercado está fechado e já temos um valor válido (diferente de 0), usamos o cache
     if not is_market_open('BR') and not is_first_load and current_val > 0:
         return current_val
 
     try:
-        # Usamos period="5d" para garantir que pegamos o último fechamento válido em noites/finais de semana
         data = yf.Ticker("^BVSP").history(period="5d")
         val = 0.0
         if not data.empty:
-            val = float(data['Close'].iloc[-1])
-        else:
-            try:
-                val = float(yf.Ticker("^BVSP").fast_info['lastPrice'])
-            except:
-                val = 0.0
+            s = data['Close'].dropna()
+            if not s.empty:
+                val = float(s.iloc[-1])
+        if val <= 0.0:
+            val = float(yf.Ticker("^BVSP").fast_info.get('lastPrice', 0.0))
         
         if val > 0:
             st.session_state.last_ibov_points = val
-        return val if val > 0 else (current_val if current_val > 0 else 130000.0)
+            return val
+        return current_val
     except Exception as e:
         print(f"Erro ao buscar pontuação do IBOV: {e}")
-        return current_val if current_val > 0 else 130000.0
+        return current_val
 
 SECTOR_TRANSLATION = {
     "Basic Materials": "Materiais Básicos",
