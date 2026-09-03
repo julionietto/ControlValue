@@ -505,7 +505,7 @@ def render_visao_geral_view():
         
         if missing_market_quotes:
             st.warning(
-                f"⚠️ **Cotação temporariamente indisponível:** Não foi possível obter a cotação no Yahoo Finance para: **{', '.join(missing_market_quotes)}**. "
+                f"**Cotação temporariamente indisponível:** Não foi possível obter a cotação no Yahoo Finance para: **{', '.join(missing_market_quotes)}**. "
                 "O saldo e a rentabilidade da carteira podem estar desatualizados temporariamente.",
                 icon="⚠️"
             )
