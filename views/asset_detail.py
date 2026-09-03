@@ -154,22 +154,27 @@ def render_asset_detail_view(asset_data):
     ticker = asset_data['ticker']
     display_ticker = format_ticker_for_display(ticker)
     
-    # Lógica de Refresh Imediato para Cripto (Independente de horário de bolsa)
+    # Lógica de Refresh Imediato para ativos de mercado ao abrir os detalhes
     current_type = asset_data.get('asset_type', '')
-    if current_type == 'Cripto' and st.session_state.get('detail_refreshed_ticker') != ticker:
+    MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
+    if current_type not in MANUAL_TYPES and st.session_state.get('detail_refreshed_ticker') != ticker:
         ticker_to_fetch = ticker
-        if '-' not in ticker and ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
-            ticker_to_fetch = f"{ticker}-USD"
+        if current_type == 'Cripto':
+            if '-' not in ticker and ticker in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+                ticker_to_fetch = f"{ticker}-USD"
+        elif current_type in ['Ações', 'Fiis', 'ETF']:
+            if not ticker.endswith('.SA') and '.' not in ticker:
+                ticker_to_fetch = f"{ticker}.SA"
             
         try:
-            # Força busca com refresh_id único (timestamp) para ignorar cache de 5min
+            # Força busca com refresh_id único (timestamp) para ignorar cache antigo
             fresh_prices = svc.fetch_current_prices([ticker_to_fetch], refresh_id=int(time.time()))
             new_native_price = fresh_prices.get(ticker_to_fetch, 0.0)
             
             if new_native_price > 0:
-                # Atualiza também a taxa do dólar (forçando busca)
                 rate = svc.get_usd_brl_rate(refresh_id=int(time.time()), is_first_load=True)
-                new_brl_price = new_native_price * rate if rate > 0 else 0.0
+                is_usd = asset_data.get('currency') == 'USD' or current_type in ['Cripto', 'Stocks', 'Reits']
+                new_brl_price = new_native_price * rate if (is_usd and rate > 0) else new_native_price
                 
                 # Atualiza o estado global e o snapshot local
                 st.session_state.viewing_history['original_current_price'] = new_native_price
@@ -180,7 +185,7 @@ def render_asset_detail_view(asset_data):
                 st.session_state.detail_refreshed_ticker = ticker
         except Exception as e:
             import logging
-            logging.warning(f"Erro no refresh de cripto: {e}")
+            logging.warning(f"Erro no refresh de detalhe do ativo: {e}")
     
     # HEADER INTERNALIZED - This forces a native scroll reset on navigation
     render_top_header(f"Detalhe do Ativo: {display_ticker}", "Análise detalhada e gerenciamento de operações.")
