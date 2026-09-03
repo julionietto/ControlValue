@@ -6,8 +6,8 @@ from utils.refresh_manager import is_market_open
 import socket
 from zoneinfo import ZoneInfo
 
-# Força timeout agressivo a nível de socket para evitar travamentos de 60 segundos em firewalls / IP blocking do Yahoo
-socket.setdefaulttimeout(5.0)
+# Timeout seguro a nível de socket para acomodar buscas em lote sem estourar em conexões iniciais
+socket.setdefaulttimeout(15.0)
 
 @st.cache_data(ttl=300)
 def _fetch_prices_batch(tickers_tuple, refresh_id=0):
@@ -18,7 +18,7 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
     tickers_list = list(set(tickers_tuple))
     tickers_str = " ".join(tickers_list)
     
-    # 1. Download em lote via requisição única agrupada no yfinance (não causa rate limiting)
+    # 1. Tier 1: Download em lote via requisição única agrupada no yfinance
     try:
         data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
         if not data.empty:
@@ -42,7 +42,7 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
     except Exception as e:
         print(f"Falha YF Download: {e}")
         
-    # 2. Resgate pontual via fast_info apenas para ativos internacionais/US ou que falharam no lote
+    # 2. Tier 2: Resgate pontual via fast_info para ativos US ou que falharam no lote
     missing_or_us = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0 or (not t.endswith('.SA') and '-' not in t)]
     if missing_or_us:
         import concurrent.futures
@@ -58,6 +58,19 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
             for t, val in results:
                 if val > 0.0:
                     prices[t] = val
+
+    # 3. Tier 3: Fallback de segurança definitivo via Ticker.history para qualquer ativo remanescente zerado
+    still_missing = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0]
+    if still_missing:
+        for t in still_missing:
+            try:
+                h_df = yf.Ticker(t).history(period="5d")
+                if not h_df.empty:
+                    s = h_df['Close'].dropna()
+                    if not s.empty:
+                        prices[t] = float(s.iloc[-1])
+            except Exception as e:
+                print(f"Falha Tier 3 history para {t}: {e}")
                 
     # Assegura que sempre retornamos aquilo que foi pedido
     for t in tickers_tuple:
