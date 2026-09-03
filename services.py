@@ -9,6 +9,10 @@ from zoneinfo import ZoneInfo
 # Timeout seguro a nível de socket para acomodar buscas em lote sem estourar em conexões iniciais
 socket.setdefaulttimeout(15.0)
 
+def _chunk_list(lst, chunk_size=20):
+    """Divide uma lista em sublistas de no máximo chunk_size elementos."""
+    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+
 @st.cache_data(ttl=300)
 def _fetch_prices_batch(tickers_tuple, refresh_id=0):
     prices = {}
@@ -16,62 +20,117 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
         return prices
         
     tickers_list = list(set(tickers_tuple))
-    tickers_str = " ".join(tickers_list)
     
-    # 1. Tier 1: Download em lote via requisição única agrupada no yfinance
-    try:
-        data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
-        if not data.empty:
-            close_df = data['Close'] if 'Close' in data else data
-            for ticker in tickers_list:
-                val = 0.0
-                try:
-                    if len(tickers_list) == 1:
-                        s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
-                        if not s.empty:
-                            val = float(s.iloc[-1])
-                    else:
-                        if ticker in close_df:
-                            s = close_df[ticker].dropna()
+    # -----------------------------------------------------------------
+    # FASE 1: Busca em lotes de no máximo 20 ativos por vez
+    # -----------------------------------------------------------------
+    chunks = _chunk_list(tickers_list, 20)
+    failed_tickers = []
+    
+    for chunk in chunks:
+        chunk_str = " ".join(chunk)
+        try:
+            data = yf.download(chunk_str, period="5d", threads=True, progress=False, ignore_tz=True)
+            if not data.empty:
+                close_df = data['Close'] if 'Close' in data else data
+                for ticker in chunk:
+                    val = 0.0
+                    try:
+                        if len(chunk) == 1:
+                            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
                             if not s.empty:
                                 val = float(s.iloc[-1])
+                        else:
+                            if ticker in close_df:
+                                s = close_df[ticker].dropna()
+                                if not s.empty:
+                                    val = float(s.iloc[-1])
+                    except Exception:
+                        val = 0.0
+                    
+                    if val > 0.0:
+                        prices[ticker] = val
+                    else:
+                        failed_tickers.append(ticker)
+            else:
+                failed_tickers.extend(chunk)
+        except Exception as e:
+            print(f"Falha no lote YF: {e}")
+            failed_tickers.extend(chunk)
+
+    # Garante cotação de fechamento atualizada para ativos US/internacionais via fast_info
+    for t in tickers_list:
+        if not t.endswith('.SA') and '-' not in t:
+            try:
+                fp = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
+                if not pd.isna(fp) and fp > 0.0:
+                    prices[t] = fp
+            except Exception:
+                pass
+
+    # -----------------------------------------------------------------
+    # FASE 2: Segunda rodada de pesquisa em lote para os ativos que falharam
+    # -----------------------------------------------------------------
+    if failed_tickers:
+        failed_chunks = _chunk_list(failed_tickers, 20)
+        still_failed = []
+        
+        for chunk in failed_chunks:
+            chunk_str = " ".join(chunk)
+            try:
+                data = yf.download(chunk_str, period="5d", threads=True, progress=False, ignore_tz=True)
+                if not data.empty:
+                    close_df = data['Close'] if 'Close' in data else data
+                    for ticker in chunk:
+                        val = 0.0
+                        try:
+                            if len(chunk) == 1:
+                                s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
+                                if not s.empty:
+                                    val = float(s.iloc[-1])
+                            else:
+                                if ticker in close_df:
+                                    s = close_df[ticker].dropna()
+                                    if not s.empty:
+                                        val = float(s.iloc[-1])
+                        except Exception:
+                            val = 0.0
+                        
+                        if val > 0.0:
+                            prices[ticker] = val
+                        else:
+                            still_failed.append(ticker)
+                else:
+                    still_failed.extend(chunk)
+            except Exception:
+                still_failed.extend(chunk)
+        failed_tickers = still_failed
+
+    # -----------------------------------------------------------------
+    # FASE 3: Buscas individuais dedicadas para ativos remanescentes
+    # -----------------------------------------------------------------
+    still_failed = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0]
+    if still_failed:
+        for t in still_failed:
+            val = 0.0
+            try:
+                val = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
+            except Exception:
+                val = 0.0
+                
+            if pd.isna(val) or val <= 0.0:
+                try:
+                    h_df = yf.Ticker(t).history(period="5d")
+                    if not h_df.empty:
+                        s = h_df['Close'].dropna()
+                        if not s.empty:
+                            val = float(s.iloc[-1])
                 except Exception:
                     val = 0.0
-                if val > 0.0:
-                    prices[ticker] = val
-    except Exception as e:
-        print(f"Falha YF Download: {e}")
-        
-    # 2. Tier 2: Resgate pontual via fast_info para ativos US ou que falharam no lote
-    missing_or_us = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0 or (not t.endswith('.SA') and '-' not in t)]
-    if missing_or_us:
-        import concurrent.futures
-        def fetch_fast_info(t):
-            try:
-                v = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
-                return t, v if (not pd.isna(v) and v > 0.0) else 0.0
-            except Exception:
-                return t, 0.0
+            
+            if not pd.isna(val) and val > 0.0:
+                prices[t] = val
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(fetch_fast_info, missing_or_us)
-            for t, val in results:
-                if val > 0.0:
-                    prices[t] = val
-
-    # 3. Tier 3: Fallback de segurança definitivo via Ticker.history para qualquer ativo remanescente zerado
-    still_missing = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0]
-    if still_missing:
-        for t in still_missing:
-            try:
-                h_df = yf.Ticker(t).history(period="5d")
-                if not h_df.empty:
-                    s = h_df['Close'].dropna()
-                    if not s.empty:
-                        prices[t] = float(s.iloc[-1])
-            except Exception as e:
-                print(f"Falha Tier 3 history para {t}: {e}")
-                
     # Assegura que sempre retornamos aquilo que foi pedido
     for t in tickers_tuple:
         if t not in prices:
