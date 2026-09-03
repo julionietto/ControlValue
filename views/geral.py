@@ -456,7 +456,7 @@ def render_visao_geral_view():
             sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_first_load)
             
             usd_to_brl_rate = svc.get_usd_brl_rate(refresh_id, is_first_load)
-            btc_to_usd_rate = svc.get_btc_usd_rate(refresh_id)
+            btc_to_usd_rate = svc.get_btc_usd_rate(refresh_id, is_first_load)
             ibov_points = svc.get_ibov(refresh_id, is_first_load)
             
             # Após a carga inicial de todos os dados e indicadores, desmarca a flag

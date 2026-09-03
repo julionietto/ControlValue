@@ -238,6 +238,41 @@ def fetch_current_prices(tickers, refresh_id=0):
     return _fetch_prices_batch(tuple(tickers), refresh_id)
 
 @st.cache_data(ttl=300)
+def _fetch_indicators_batch(refresh_id=0):
+    """
+    Busca em lote as cotações de Dólar (BRL=X), Bitcoin (BTC-USD) e IBOVESPA (^BVSP).
+    """
+    res = {'USD': 0.0, 'BTC': 0.0, 'IBOV': 0.0}
+    try:
+        df = yf.download(['BRL=X', 'BTC-USD', '^BVSP'], period='5d', progress=False, ignore_tz=True)
+        if not df.empty:
+            close = df['Close'] if 'Close' in df else df
+            for symbol, key in [('BRL=X', 'USD'), ('BTC-USD', 'BTC'), ('^BVSP', 'IBOV')]:
+                try:
+                    if isinstance(close, pd.DataFrame) and symbol in close.columns:
+                        s = close[symbol].dropna()
+                        if not s.empty:
+                            v = float(s.iloc[-1])
+                            if v > 0: res[key] = v
+                    elif isinstance(close, pd.Series):
+                        v = float(close.dropna().iloc[-1])
+                        if v > 0: res[key] = v
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Erro no download em lote de indicadores: {e}")
+        
+    for symbol, key in [('BRL=X', 'USD'), ('BTC-USD', 'BTC'), ('^BVSP', 'IBOV')]:
+        if res[key] <= 0.0:
+            try:
+                v = float(yf.Ticker(symbol).fast_info.get('lastPrice', 0.0) or 0.0)
+                if v > 0: res[key] = v
+            except Exception:
+                pass
+                
+    return res
+
+@st.cache_data(ttl=300)
 def get_usd_brl_rate(refresh_id=0, is_first_load=False):
     """
     Busca a cotação atual do Dólar em Reais usando o ticker BRL=X.
@@ -248,24 +283,17 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
     if not is_market_open('BR') and not is_first_load and current_val > 0:
         return current_val
 
-    try:
-        data = yf.download("BRL=X", period="5d", progress=False, ignore_tz=True)
-        val = 0.0
-        if not data.empty:
-            close_df = data['Close'] if 'Close' in data else data
-            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
-            if not s.empty:
-                val = float(s.iloc[-1])
-        if val <= 0.0:
-            val = float(yf.Ticker("BRL=X").fast_info.get('lastPrice', 0.0) or 0.0)
+    indicators = _fetch_indicators_batch(refresh_id)
+    val = indicators.get('USD', 0.0)
+    
+    if val > 0:
+        st.session_state.last_usd_rate = val
+        return val
         
-        if val > 0:
-            st.session_state.last_usd_rate = val
-            return val
-        return current_val if current_val > 0 else 5.0
-    except Exception as e:
-        print(f"Erro ao buscar cotação USD/BRL: {e}")
-        return current_val if current_val > 0 else 5.0
+    if current_val > 0:
+        return current_val
+        
+    return 5.15
 
 @st.cache_data(ttl=300)
 def get_btc_usd_rate(refresh_id=0, is_first_load=False):
@@ -273,24 +301,18 @@ def get_btc_usd_rate(refresh_id=0, is_first_load=False):
     Busca a cotação atual do Bitcoin em Dólar usando o ticker BTC-USD.
     """
     current_val = st.session_state.get('last_btc_rate', 0.0)
-    try:
-        data = yf.download("BTC-USD", period="5d", progress=False, ignore_tz=True)
-        val = 0.0
-        if not data.empty:
-            close_df = data['Close'] if 'Close' in data else data
-            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
-            if not s.empty:
-                val = float(s.iloc[-1])
-        if val <= 0.0:
-            val = float(yf.Ticker("BTC-USD").fast_info.get('lastPrice', 0.0) or 0.0)
+    
+    indicators = _fetch_indicators_batch(refresh_id)
+    val = indicators.get('BTC', 0.0)
+    
+    if val > 0:
+        st.session_state.last_btc_rate = val
+        return val
         
-        if val > 0:
-            st.session_state.last_btc_rate = val
-            return val
+    if current_val > 0:
         return current_val
-    except Exception as e:
-        print(f"Erro ao buscar cotação BTC/USD: {e}")
-        return current_val
+        
+    return 79000.0
 
 @st.cache_data(ttl=300)
 def get_ibov(refresh_id=0, is_first_load=False):
@@ -303,24 +325,18 @@ def get_ibov(refresh_id=0, is_first_load=False):
     if not is_market_open('BR') and not is_first_load and current_val > 0:
         return current_val
 
-    try:
-        data = yf.download("^BVSP", period="5d", progress=False, ignore_tz=True)
-        val = 0.0
-        if not data.empty:
-            close_df = data['Close'] if 'Close' in data else data
-            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
-            if not s.empty:
-                val = float(s.iloc[-1])
-        if val <= 0.0:
-            val = float(yf.Ticker("^BVSP").fast_info.get('lastPrice', 0.0) or 0.0)
+    indicators = _fetch_indicators_batch(refresh_id)
+    val = indicators.get('IBOV', 0.0)
+    
+    if val > 0:
+        st.session_state.last_ibov_points = val
+        return val
         
-        if val > 0:
-            st.session_state.last_ibov_points = val
-            return val
+    if current_val > 0:
         return current_val
-    except Exception as e:
-        print(f"Erro ao buscar pontuação do IBOV: {e}")
-        return current_val
+        
+    return 187000.0
+
 
 
 SECTOR_TRANSLATION = {
