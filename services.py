@@ -19,8 +19,8 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
     tickers_str = " ".join(tickers_list)
     
     try:
-        # yf.download agrupa todas as requisições, evitando bloqueios na AWS/Streamlit Cloud
-        data = yf.download(tickers_str, period="1d", threads=True, progress=False, ignore_tz=True)
+        # yf.download agrupa todas as requisições, usando period="5d" para capturar a última cotação de fechamento válida
+        data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
         
         if not data.empty:
             if 'Close' in data:
@@ -33,14 +33,17 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
                 try:
                     if len(tickers_list) == 1:
                         import numbers
-                        val_raw = close_df.iloc[-1]
-                        if isinstance(val_raw, numbers.Number):
-                            val = float(val_raw)
+                        if isinstance(close_df, pd.Series):
+                            valid_series = close_df.dropna()
                         else:
-                            val = float(val_raw.iloc[0] if hasattr(val_raw, 'iloc') else 0.0)
+                            valid_series = close_df.iloc[:, 0].dropna()
+                        if not valid_series.empty:
+                            val = float(valid_series.iloc[-1])
                     else:
                         if ticker in close_df:
-                            val = float(close_df[ticker].iloc[-1])
+                            series_t = close_df[ticker].dropna()
+                            if not series_t.empty:
+                                val = float(series_t.iloc[-1])
                 except Exception as e:
                     import logging
                     logging.warning(f"Erro ao extrair valor do ticker {ticker}: {e}")

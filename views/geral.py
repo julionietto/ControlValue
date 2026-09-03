@@ -523,12 +523,24 @@ def render_visao_geral_view():
             # Usa o mapeamento para pegar o preço correto do dicionário
             ticker = row['ticker']
             yf_ticker = ticker_fetch_map.get(ticker, ticker)
-            price = current_prices.get(yf_ticker, 0.0)
-            # Fallback: se a cotação em tempo real retornar <= 0 (ex: mercado fechado sem cache / falha de API), usa o preço médio
-            if price <= 0.0:
-                price = row.get('average_price', 0.0)
-            return price
+            return current_prices.get(yf_ticker, 0.0)
     
+        # Adiciona os preços diretos da fonte (em suas moedas originais da busca)
+        assets_df['original_current_price'] = assets_df.apply(get_current_price, axis=1)
+        
+        # Alerta se houver ativos com cotação indisponível no Yahoo Finance
+        missing_market_quotes = []
+        for _, row in assets_df.iterrows():
+            if row['asset_type'] not in MANUAL_TYPES and abs(row['quantity']) > 1e-5 and row['original_current_price'] <= 0.0:
+                missing_market_quotes.append(format_ticker_for_display(row['ticker']))
+        
+        if missing_market_quotes:
+            st.warning(
+                f"⚠️ **Cotação temporariamente indisponível:** Não foi possível obter a cotação no Yahoo Finance para: **{', '.join(missing_market_quotes)}**. "
+                "O saldo e a rentabilidade da carteira podem estar desatualizados temporariamente.",
+                icon="⚠️"
+            )
+
         # Função para converter valores em USD para BRL
         foreign_input_types = ['Stocks', 'Reits'] # Cripto é BRL por padrão no input (preço médio)
         foreign_market_types = ['Cripto', 'Stocks', 'Reits'] # Cripto vem do YF em USD (BTC-USD)
@@ -543,9 +555,6 @@ def render_visao_geral_view():
                 # Se o registro é em USD, converte o valor final para BRL para o Dashboard
                 return val * usd_to_brl_rate
             return val
-    
-        # Adiciona os preços diretos da fonte (em suas moedas originais da busca)
-        assets_df['original_current_price'] = assets_df.apply(get_current_price, axis=1)
         
         # Aplica a conversão para BRL onde for necessário (transformando as métricas base para Reais)
         assets_df['average_price_brl'] = assets_df.apply(lambda row: apply_exchange_rate(row, 'average_price', is_market_price=False), axis=1)
