@@ -16,61 +16,50 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
         return prices
         
     tickers_list = list(set(tickers_tuple))
-    tickers_str = " ".join(tickers_list)
     
-    try:
-        # yf.download agrupa todas as requisições, usando period="5d" para capturar a última cotação de fechamento válida
-        data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
-        
-        if not data.empty:
-            if 'Close' in data:
-                close_df = data['Close']
-            else:
-                close_df = data
-                
-            for ticker in tickers_list:
-                val = 0.0
-                try:
-                    if len(tickers_list) == 1:
-                        import numbers
-                        if isinstance(close_df, pd.Series):
-                            valid_series = close_df.dropna()
-                        else:
-                            valid_series = close_df.iloc[:, 0].dropna()
-                        if not valid_series.empty:
-                            val = float(valid_series.iloc[-1])
-                    else:
-                        if ticker in close_df:
-                            series_t = close_df[ticker].dropna()
-                            if not series_t.empty:
-                                val = float(series_t.iloc[-1])
-                except Exception as e:
-                    import logging
-                    logging.warning(f"Erro ao extrair valor do ticker {ticker}: {e}")
-                
-                prices[ticker] = val
-                
-    except Exception as e:
-        print(f"Falha YF Download: {e}")
-        
-    # Identificar quais falharam no download em batch ou retornaram <= 0
-    missing_tickers = [t for t in tickers_list if pd.isna(prices.get(t, 0.0)) or prices.get(t, 0.0) <= 0.0]
-    
-    # Resgate paralelo incrivelmente mais rápido para ativos que o yf.download não capturou
-    if missing_tickers:
-        import concurrent.futures
-        
-        def fetch_fast_info(t):
-            try:
-                return t, float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
-            except Exception:
-                return t, 0.0
+    # 1. Busca Primária via fast_info em paralelo (altamente precisa para cotações mais recentes como ARE $52.72)
+    import concurrent.futures
+    def fetch_fast(t):
+        try:
+            val = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
+            return t, val if (not pd.isna(val) and val > 0.0) else 0.0
+        except Exception:
+            return t, 0.0
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            results = executor.map(fetch_fast_info, missing_tickers)
-            for t, val in results:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = executor.map(fetch_fast, tickers_list)
+        for t, val in results:
+            if val > 0.0:
                 prices[t] = val
-                
+
+    # 2. Busca Secundária via yf.download (fallback caso fast_info falhe para algum ticker)
+    missing_tickers = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0]
+    if missing_tickers:
+        tickers_str = " ".join(missing_tickers)
+        try:
+            data = yf.download(tickers_str, period="5d", threads=True, progress=False, ignore_tz=True)
+            if not data.empty:
+                close_df = data['Close'] if 'Close' in data else data
+                for ticker in missing_tickers:
+                    val = 0.0
+                    try:
+                        if len(missing_tickers) == 1:
+                            valid_series = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
+                            if not valid_series.empty:
+                                val = float(valid_series.iloc[-1])
+                        else:
+                            if ticker in close_df:
+                                series_t = close_df[ticker].dropna()
+                                if not series_t.empty:
+                                    val = float(series_t.iloc[-1])
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"Erro no fallback do ticker {ticker}: {e}")
+                    if val > 0.0:
+                        prices[ticker] = val
+        except Exception as e:
+            print(f"Falha YF Download Fallback: {e}")
+            
     # Assegura que sempre retornamos aquilo que foi pedido
     for t in tickers_tuple:
         if t not in prices:

@@ -445,9 +445,11 @@ def render_visao_geral_view():
         m_status = get_market_status()
         is_first_load = st.session_state.get('is_first_load', True)
         
-        # Inicializa cache de preços no session_state se não existir
+        # Inicializa cache de preços no session_state se não existir e purga entradas inválidas
         if 'price_cache' not in st.session_state:
             st.session_state.price_cache = {}
+        else:
+            st.session_state.price_cache = {k: v for k, v in st.session_state.price_cache.items() if v > 0.0}
 
         # Prepara dados e verifica se é Auto-Refresh
         current_datarefresh = st.session_state.get('datarefresh', 0)
@@ -461,15 +463,15 @@ def render_visao_geral_view():
 
         final_tickers_to_fetch = []
         for t in tickers_br:
-            if (m_status['BR'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache:
+            if (m_status['BR'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache or st.session_state.price_cache.get(t, 0.0) <= 0.0:
                 final_tickers_to_fetch.append(t)
         
         for t in tickers_us:
-            if (m_status['US'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache:
+            if (m_status['US'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache or st.session_state.price_cache.get(t, 0.0) <= 0.0:
                 final_tickers_to_fetch.append(t)
                 
         for t in tickers_crypto:
-            if (m_status['CRYPTO'] and is_auto_refresh) or t not in st.session_state.price_cache: # Bitcoin sempre entra
+            if (m_status['CRYPTO'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache or st.session_state.price_cache.get(t, 0.0) <= 0.0:
                 final_tickers_to_fetch.append(t)
 
         with st.spinner("Buscando preços atualizados..."):
@@ -478,7 +480,9 @@ def render_visao_geral_view():
             # Só chama a API para o que o mercado permitir (ou se for a primeira carga ou ativo novo)
             if final_tickers_to_fetch:
                 new_prices = svc.fetch_current_prices(final_tickers_to_fetch, refresh_id)
-                st.session_state.price_cache.update(new_prices)
+                for k, v in new_prices.items():
+                    if v > 0.0:
+                        st.session_state.price_cache[k] = v
             
             # O current_prices final é a união do que acabamos de buscar com o que já tínhamos no cache
             current_prices = st.session_state.price_cache
