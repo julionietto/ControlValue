@@ -441,54 +441,19 @@ def render_visao_geral_view():
                 ticker_fetch_map[t] = yf_t
                 tickers_br.append(yf_t)
     
-        # Determina quais tickers realmente buscar com base nas regras de mercado
+        # Determina a lista completa de tickers de mercado a serem consultados
+        all_tickers = list(set(tickers_br + tickers_us + tickers_crypto))
         m_status = get_market_status()
         is_first_load = st.session_state.get('is_first_load', True)
-        
-        # Inicializa cache de preços no session_state se não existir e purga entradas inválidas
-        if 'price_cache' not in st.session_state:
-            st.session_state.price_cache = {}
-        else:
-            st.session_state.price_cache = {k: v for k, v in st.session_state.price_cache.items() if v > 0.0}
-
-        # Prepara dados e verifica se é Auto-Refresh
-        current_datarefresh = st.session_state.get('datarefresh', 0)
-        is_auto_refresh = False
-        if 'last_datarefresh' not in st.session_state:
-            st.session_state.last_datarefresh = current_datarefresh
-            is_auto_refresh = True
-        elif current_datarefresh != st.session_state.last_datarefresh:
-            st.session_state.last_datarefresh = current_datarefresh
-            is_auto_refresh = True
-
-        final_tickers_to_fetch = []
-        for t in tickers_br:
-            if (m_status['BR'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache or st.session_state.price_cache.get(t, 0.0) <= 0.0:
-                final_tickers_to_fetch.append(t)
-        
-        for t in tickers_us:
-            if (m_status['US'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache or st.session_state.price_cache.get(t, 0.0) <= 0.0:
-                final_tickers_to_fetch.append(t)
-                
-        for t in tickers_crypto:
-            if (m_status['CRYPTO'] and is_auto_refresh) or is_first_load or t not in st.session_state.price_cache or st.session_state.price_cache.get(t, 0.0) <= 0.0:
-                final_tickers_to_fetch.append(t)
 
         with st.spinner("Buscando preços atualizados..."):
             refresh_id = st.session_state.refresh_id
             
-            # Só chama a API para o que o mercado permitir (ou se for a primeira carga ou ativo novo)
-            if final_tickers_to_fetch:
-                new_prices = svc.fetch_current_prices(final_tickers_to_fetch, refresh_id)
-                for k, v in new_prices.items():
-                    if v > 0.0:
-                        st.session_state.price_cache[k] = v
-            
-            # O current_prices final é a união do que acabamos de buscar com o que já tínhamos no cache
-            current_prices = st.session_state.price_cache
+            # Utiliza a camada de cache nativa st.cache_data(ttl=300) do serviço
+            current_prices = svc.fetch_current_prices(all_tickers, refresh_id)
                 
             assets_tuple = (tuple(assets_df['ticker'].tolist()), tuple(assets_df['asset_type'].tolist()))
-            sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_auto_refresh)
+            sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_first_load)
             
             usd_to_brl_rate = svc.get_usd_brl_rate(refresh_id, is_first_load)
             btc_to_usd_rate = svc.get_btc_usd_rate(refresh_id)
