@@ -88,3 +88,24 @@ def test_get_annual_proventos_summary():
     assert row_current["Valor Anual"] == expected_anual
     assert row_current["Valor Mensal"] == 120.0  # (120 * current_month) / current_month
 
+
+def test_empty_unified_df_columns():
+    import pandas as pd
+    from utils.formatters import format_ticker_for_display
+    
+    all_rows = []
+    cols = [
+        'id', 'ticker', 'Tipo', 'Quantidade', 'Preço', 'Valor da operação',
+        'Cotação Atual', 'Valor atualizado', 'Orientação', 'Lucro / Prejuízo',
+        'Peso %', 'currency'
+    ]
+    unified_df = pd.DataFrame(all_rows, columns=cols)
+    assert not unified_df.columns.empty
+    assert 'ticker' in unified_df.columns
+
+    display_unified = unified_df.copy()
+    display_unified['ticker'] = display_unified['ticker'].apply(format_ticker_for_display)
+    assert 'ticker' in display_unified.columns
+    assert len(display_unified) == 0
+
+

@@ -759,7 +759,12 @@ def render_visao_geral_view():
                 'currency': asset['currency']
             })
         
-        unified_df = pd.DataFrame(all_rows)
+        cols = [
+            'id', 'ticker', 'Tipo', 'Quantidade', 'Preço', 'Valor da operação',
+            'Cotação Atual', 'Valor atualizado', 'Orientação', 'Lucro / Prejuízo',
+            'Peso %', 'currency'
+        ]
+        unified_df = pd.DataFrame(all_rows, columns=cols)
         if not unified_df.empty:
             unified_df = unified_df.sort_values(by='ticker', ascending=True).reset_index(drop=True)
         
