@@ -13,27 +13,76 @@ def _chunk_list(lst, chunk_size=20):
     """Divide uma lista em sublistas de no máximo chunk_size elementos."""
     return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
+def _normalize_ticker_for_yf(ticker):
+    """Retorna o ticker formatado para consulta no Yahoo Finance e suas chaves equivalentes (aliases)."""
+    t = str(ticker).strip().upper()
+    if not t:
+        return "", []
+    
+    if t.endswith('.SA'):
+        base = t[:-3]
+        return t, [t, base]
+    elif '-' in t:
+        base = t.split('-')[0]
+        return t, [t, base]
+    elif '.' in t:
+        return t, [t]
+    elif t in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
+        yf_t = f"{t}-USD"
+        return yf_t, [yf_t, t]
+    else:
+        # Padrão B3 (Ações, FIIs, ETFs ex: MGLU3, PETR4, MXRF11, HASH11)
+        yf_t = f"{t}.SA"
+        return yf_t, [yf_t, t]
+
 @st.cache_data(ttl=300)
 def _fetch_prices_batch(tickers_tuple, refresh_id=0):
     prices = {}
     if not tickers_tuple:
         return prices
-        
-    tickers_list = list(set(tickers_tuple))
+
+    # Mapeamento bidirecional: ticker YFinance -> conjunto de aliases (solicitado, sem .SA, com .SA)
+    yf_to_aliases = {}
+    input_to_yf = {}
     
+    for t in tickers_tuple:
+        yf_t, aliases = _normalize_ticker_for_yf(t)
+        if not yf_t:
+            continue
+        input_to_yf[t] = yf_t
+        if yf_t not in yf_to_aliases:
+            yf_to_aliases[yf_t] = set()
+        yf_to_aliases[yf_t].add(t)
+        for a in aliases:
+            yf_to_aliases[yf_t].add(a)
+
+    def set_price_for_yf_ticker(yf_t, price_val):
+        if price_val is not None and not pd.isna(price_val):
+            try:
+                p_float = float(price_val)
+                if p_float > 0.0:
+                    for alias in yf_to_aliases.get(yf_t, [yf_t]):
+                        prices[alias] = p_float
+                    return True
+            except (ValueError, TypeError):
+                pass
+        return False
+
+    unique_yf_tickers = list(yf_to_aliases.keys())
+
     # -----------------------------------------------------------------
-    # FASE 1: Busca em lotes de no máximo 20 ativos por vez
+    # FASE 1: Busca em lotes de no máximo 20 ativos por vez no YFinance
     # -----------------------------------------------------------------
-    chunks = _chunk_list(tickers_list, 20)
-    failed_tickers = []
-    
+    chunks = _chunk_list(unique_yf_tickers, 20)
+    failed_yf_tickers = []
+
     for chunk in chunks:
         chunk_str = " ".join(chunk)
         try:
             data = yf.download(chunk_str, period="5d", threads=True, progress=False, ignore_tz=True)
             if not data.empty:
                 close_df = data['Close'] if 'Close' in data else data
-                for ticker in chunk:
+                for yf_t in chunk:
                     val = 0.0
                     try:
                         if len(chunk) == 1:
@@ -41,47 +90,35 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
                             if not s.empty:
                                 val = float(s.iloc[-1])
                         else:
-                            if ticker in close_df:
-                                s = close_df[ticker].dropna()
+                            if isinstance(close_df, pd.DataFrame) and yf_t in close_df.columns:
+                                s = close_df[yf_t].dropna()
                                 if not s.empty:
                                     val = float(s.iloc[-1])
                     except Exception:
                         val = 0.0
-                    
-                    if val > 0.0:
-                        prices[ticker] = val
-                    else:
-                        failed_tickers.append(ticker)
+
+                    if not set_price_for_yf_ticker(yf_t, val):
+                        failed_yf_tickers.append(yf_t)
             else:
-                failed_tickers.extend(chunk)
+                failed_yf_tickers.extend(chunk)
         except Exception as e:
             print(f"Falha no lote YF: {e}")
-            failed_tickers.extend(chunk)
-
-    # Garante cotação de fechamento atualizada para ativos US/internacionais via fast_info
-    for t in tickers_list:
-        if not t.endswith('.SA') and '-' not in t:
-            try:
-                fp = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
-                if not pd.isna(fp) and fp > 0.0:
-                    prices[t] = fp
-            except Exception:
-                pass
+            failed_yf_tickers.extend(chunk)
 
     # -----------------------------------------------------------------
     # FASE 2: Segunda rodada de pesquisa em lote para os ativos que falharam
     # -----------------------------------------------------------------
-    if failed_tickers:
-        failed_chunks = _chunk_list(failed_tickers, 20)
+    if failed_yf_tickers:
+        failed_chunks = _chunk_list(failed_yf_tickers, 20)
         still_failed = []
-        
+
         for chunk in failed_chunks:
             chunk_str = " ".join(chunk)
             try:
                 data = yf.download(chunk_str, period="5d", threads=True, progress=False, ignore_tz=True)
                 if not data.empty:
                     close_df = data['Close'] if 'Close' in data else data
-                    for ticker in chunk:
+                    for yf_t in chunk:
                         val = 0.0
                         try:
                             if len(chunk) == 1:
@@ -89,53 +126,103 @@ def _fetch_prices_batch(tickers_tuple, refresh_id=0):
                                 if not s.empty:
                                     val = float(s.iloc[-1])
                             else:
-                                if ticker in close_df:
-                                    s = close_df[ticker].dropna()
+                                if isinstance(close_df, pd.DataFrame) and yf_t in close_df.columns:
+                                    s = close_df[yf_t].dropna()
                                     if not s.empty:
                                         val = float(s.iloc[-1])
                         except Exception:
                             val = 0.0
-                        
-                        if val > 0.0:
-                            prices[ticker] = val
-                        else:
-                            still_failed.append(ticker)
+
+                        if not set_price_for_yf_ticker(yf_t, val):
+                            still_failed.append(yf_t)
                 else:
                     still_failed.extend(chunk)
             except Exception:
                 still_failed.extend(chunk)
-        failed_tickers = still_failed
+        failed_yf_tickers = still_failed
 
     # -----------------------------------------------------------------
-    # FASE 3: Buscas individuais dedicadas para ativos remanescentes
+    # FASE 3: Buscas individuais dedicadas com múltiplos fallbacks no YFinance
     # -----------------------------------------------------------------
-    still_failed = [t for t in tickers_list if prices.get(t, 0.0) <= 0.0]
-    if still_failed:
-        for t in still_failed:
+    for yf_t in unique_yf_tickers:
+        if prices.get(yf_t, 0.0) <= 0.0:
             val = 0.0
+            ticker_obj = yf.Ticker(yf_t)
+
+            # Tentar fast_info (lastPrice, previousClose, regularMarketPreviousClose)
             try:
-                val = float(yf.Ticker(t).fast_info.get('lastPrice', 0.0))
+                fi = ticker_obj.fast_info
+                val = float(fi.get('lastPrice', 0.0) or fi.get('previousClose', 0.0) or fi.get('regularMarketPreviousClose', 0.0) or 0.0)
             except Exception:
                 val = 0.0
-                
+
+            # Tentar history
             if pd.isna(val) or val <= 0.0:
                 try:
-                    h_df = yf.Ticker(t).history(period="5d")
+                    h_df = ticker_obj.history(period="5d")
                     if not h_df.empty:
                         s = h_df['Close'].dropna()
                         if not s.empty:
                             val = float(s.iloc[-1])
                 except Exception:
                     val = 0.0
-            
-            if not pd.isna(val) and val > 0.0:
-                prices[t] = val
 
-    # Assegura que sempre retornamos aquilo que foi pedido
+            # Tentar info (currentPrice, regularMarketPrice, previousClose)
+            if pd.isna(val) or val <= 0.0:
+                try:
+                    inf = ticker_obj.info
+                    val = float(inf.get('currentPrice') or inf.get('regularMarketPrice') or inf.get('previousClose') or 0.0)
+                except Exception:
+                    val = 0.0
+
+            # Fallback alternando formato (.SA) caso original tenha falhado
+            if pd.isna(val) or val <= 0.0:
+                alt_yf_t = yf_t[:-3] if yf_t.endswith('.SA') else f"{yf_t}.SA"
+                try:
+                    alt_obj = yf.Ticker(alt_yf_t)
+                    val = float(alt_obj.fast_info.get('lastPrice', 0.0) or 0.0)
+                    if pd.isna(val) or val <= 0.0:
+                        h_df2 = alt_obj.history(period="5d")
+                        if not h_df2.empty:
+                            s2 = h_df2['Close'].dropna()
+                            if not s2.empty:
+                                val = float(s2.iloc[-1])
+                except Exception:
+                    val = 0.0
+
+            if not pd.isna(val) and val > 0.0:
+                set_price_for_yf_ticker(yf_t, val)
+
+    # -----------------------------------------------------------------
+    # FASE 4: Fallback no Banco de Dados (preço médio de assets)
+    # -----------------------------------------------------------------
+    for t in tickers_tuple:
+        if prices.get(t, 0.0) <= 0.0:
+            yf_t = input_to_yf.get(t, t)
+            base_t = t[:-3] if t.endswith('.SA') else t
+            try:
+                from db.connection import get_db_connection
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT average_price FROM assets 
+                        WHERE (ticker = %s OR ticker = %s OR ticker = %s) AND average_price > 0 
+                        ORDER BY id DESC LIMIT 1
+                    """, (t, yf_t, base_t))
+                    row = cursor.fetchone()
+                    if row and row[0] > 0:
+                        val = float(row[0])
+                        set_price_for_yf_ticker(yf_t, val)
+                        prices[t] = val
+                        prices[base_t] = val
+            except Exception:
+                pass
+
+    # Garante que todo ticker na tupla solicitada tenha entrada no dicionário retornado
     for t in tickers_tuple:
         if t not in prices:
             prices[t] = 0.0
-            
+
     return prices
 
 def fetch_current_prices(tickers, refresh_id=0):

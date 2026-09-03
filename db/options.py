@@ -78,6 +78,8 @@ def get_opcoes_import(arquivo, user_id):
             for _, row in df.iterrows():
                 try:
                     ativo = str(row.iloc[0]).strip().upper()
+                    if ativo and not ativo.endswith(".SA") and "." not in ativo and "-" not in ativo:
+                        ativo += ".SA"
                     strike = parse_currency(row.iloc[1])
                     tp_opcao = row.iloc[2].strip()
                     dt_operacao = _parse_date_to_iso(row.iloc[3])

@@ -202,6 +202,15 @@ def render_derivativos_view():
         
         tickers = display_df['ativo'].unique().tolist()
         prices_dict = svc.fetch_current_prices(tickers, st.session_state.refresh_id)
+        
+        # Garantia contra cotação zerada: tentar repescagem para ativos com cotação zerada
+        zero_tickers = [t for t in tickers if prices_dict.get(t, 0.0) <= 0.0]
+        if zero_tickers:
+            fresh_prices = svc.fetch_current_prices(zero_tickers, st.session_state.refresh_id + 999)
+            for zt, zp in fresh_prices.items():
+                if zp > 0.0:
+                    prices_dict[zt] = zp
+
         display_df['Cotação Atual'] = display_df['ativo'].map(prices_dict).fillna(0.0)
         
         display_df['Diferença'] = display_df['Cotação Atual'] - display_df['strike']
