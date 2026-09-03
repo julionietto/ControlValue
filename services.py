@@ -7,7 +7,7 @@ import socket
 from zoneinfo import ZoneInfo
 
 # Força timeout agressivo a nível de socket para evitar travamentos de 60 segundos em firewalls / IP blocking do Yahoo
-socket.setdefaulttimeout(3.0)
+socket.setdefaulttimeout(5.0)
 
 @st.cache_data(ttl=300)
 def _fetch_prices_batch(tickers_tuple, refresh_id=0):
@@ -121,16 +121,26 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
 def get_btc_usd_rate(refresh_id=0):
     """
     Busca a cotação atual do Bitcoin em Dólar usando o ticker BTC-USD.
+    Persiste em session_state e possui valor de fallback em caso de falha.
     """
+    current_val = st.session_state.get('last_btc_rate', 0.0)
     try:
-        data = yf.Ticker("BTC-USD").history(period="1d")
+        data = yf.Ticker("BTC-USD").history(period="5d")
+        val = 0.0
         if not data.empty:
-            return float(data['Close'].iloc[-1])
+            val = float(data['Close'].iloc[-1])
         else:
-            return float(yf.Ticker("BTC-USD").fast_info['lastPrice'])
+            try:
+                val = float(yf.Ticker("BTC-USD").fast_info['lastPrice'])
+            except:
+                val = 0.0
+        
+        if val > 0:
+            st.session_state.last_btc_rate = val
+        return val if val > 0 else (current_val if current_val > 0 else 60000.0)
     except Exception as e:
         print(f"Erro ao buscar cotação BTC/USD: {e}")
-        return 0.0
+        return current_val if current_val > 0 else 60000.0
 
 @st.cache_data(ttl=300)
 def get_ibov(refresh_id=0, is_first_load=False):
@@ -158,10 +168,10 @@ def get_ibov(refresh_id=0, is_first_load=False):
         
         if val > 0:
             st.session_state.last_ibov_points = val
-        return val if val > 0 else current_val
+        return val if val > 0 else (current_val if current_val > 0 else 130000.0)
     except Exception as e:
         print(f"Erro ao buscar pontuação do IBOV: {e}")
-        return current_val
+        return current_val if current_val > 0 else 130000.0
 
 SECTOR_TRANSLATION = {
     "Basic Materials": "Materiais Básicos",
