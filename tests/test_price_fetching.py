@@ -19,8 +19,17 @@ def test_normalize_ticker_for_yf():
     assert "BTC-USD" in aliases_crypto
 
     yf_t_us, aliases_us = _normalize_ticker_for_yf("AAPL")
-    assert yf_t_us == "AAPL.SA"  # Default B3 unless has dot/dash, but let me check:
+    assert yf_t_us == "AAPL"
     assert "AAPL" in aliases_us
+
+    yf_t_reit, aliases_reit = _normalize_ticker_for_yf("NHI")
+    assert yf_t_reit == "NHI"
+    assert "NHI" in aliases_reit
+
+    yf_t_ind, aliases_ind = _normalize_ticker_for_yf("^BVSP")
+    assert yf_t_ind == "^BVSP"
+    assert "^BVSP" in aliases_ind
+
 
 def test_fetch_current_prices_alias_mapping(monkeypatch):
     """Testa se fetch_current_prices mapeia os preços para ambas as versões do ticker (com e sem .SA)."""

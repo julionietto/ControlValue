@@ -22,18 +22,19 @@ def _normalize_ticker_for_yf(ticker):
     if t.endswith('.SA'):
         base = t[:-3]
         return t, [t, base]
-    elif '-' in t:
-        base = t.split('-')[0]
-        return t, [t, base]
-    elif '.' in t:
-        return t, [t]
+    elif '=' in t or '^' in t or '-' in t or '.' in t:
+        base = t.split('-')[0].split('.')[0]
+        return t, [t, base] if base != t else [t]
     elif t in ['BTC', 'ETH', 'SOL', 'USDT', 'USDC']:
         yf_t = f"{t}-USD"
         return yf_t, [yf_t, t]
-    else:
-        # Padrão B3 (Ações, FIIs, ETFs ex: MGLU3, PETR4, MXRF11, HASH11)
+    elif any(char.isdigit() for char in t):
+        # Padrão B3 (Ações, FIIs, ETFs contêm dígitos ex: MGLU3, PETR4, MXRF11, HASH11)
         yf_t = f"{t}.SA"
         return yf_t, [yf_t, t]
+    else:
+        # Stocks / Reits americanos sem sufixo ou caracteres especiais (ex: NHI, AAPL, MSFT, O)
+        return t, [t]
 
 @st.cache_data(ttl=300)
 def _fetch_prices_batch(tickers_tuple, refresh_id=0):
@@ -248,14 +249,15 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
         return current_val
 
     try:
-        data = yf.Ticker("BRL=X").history(period="5d")
+        data = yf.download("BRL=X", period="5d", progress=False, ignore_tz=True)
         val = 0.0
         if not data.empty:
-            s = data['Close'].dropna()
+            close_df = data['Close'] if 'Close' in data else data
+            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
             if not s.empty:
                 val = float(s.iloc[-1])
         if val <= 0.0:
-            val = float(yf.Ticker("BRL=X").fast_info.get('lastPrice', 0.0))
+            val = float(yf.Ticker("BRL=X").fast_info.get('lastPrice', 0.0) or 0.0)
         
         if val > 0:
             st.session_state.last_usd_rate = val
@@ -266,20 +268,21 @@ def get_usd_brl_rate(refresh_id=0, is_first_load=False):
         return current_val if current_val > 0 else 5.0
 
 @st.cache_data(ttl=300)
-def get_btc_usd_rate(refresh_id=0):
+def get_btc_usd_rate(refresh_id=0, is_first_load=False):
     """
     Busca a cotação atual do Bitcoin em Dólar usando o ticker BTC-USD.
     """
     current_val = st.session_state.get('last_btc_rate', 0.0)
     try:
-        data = yf.Ticker("BTC-USD").history(period="5d")
+        data = yf.download("BTC-USD", period="5d", progress=False, ignore_tz=True)
         val = 0.0
         if not data.empty:
-            s = data['Close'].dropna()
+            close_df = data['Close'] if 'Close' in data else data
+            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
             if not s.empty:
                 val = float(s.iloc[-1])
         if val <= 0.0:
-            val = float(yf.Ticker("BTC-USD").fast_info.get('lastPrice', 0.0))
+            val = float(yf.Ticker("BTC-USD").fast_info.get('lastPrice', 0.0) or 0.0)
         
         if val > 0:
             st.session_state.last_btc_rate = val
@@ -301,14 +304,15 @@ def get_ibov(refresh_id=0, is_first_load=False):
         return current_val
 
     try:
-        data = yf.Ticker("^BVSP").history(period="5d")
+        data = yf.download("^BVSP", period="5d", progress=False, ignore_tz=True)
         val = 0.0
         if not data.empty:
-            s = data['Close'].dropna()
+            close_df = data['Close'] if 'Close' in data else data
+            s = close_df.dropna() if isinstance(close_df, pd.Series) else close_df.iloc[:, 0].dropna()
             if not s.empty:
                 val = float(s.iloc[-1])
         if val <= 0.0:
-            val = float(yf.Ticker("^BVSP").fast_info.get('lastPrice', 0.0))
+            val = float(yf.Ticker("^BVSP").fast_info.get('lastPrice', 0.0) or 0.0)
         
         if val > 0:
             st.session_state.last_ibov_points = val
@@ -317,6 +321,7 @@ def get_ibov(refresh_id=0, is_first_load=False):
     except Exception as e:
         print(f"Erro ao buscar pontuação do IBOV: {e}")
         return current_val
+
 
 SECTOR_TRANSLATION = {
     "Basic Materials": "Materiais Básicos",
