@@ -437,8 +437,9 @@ def render_visao_geral_view():
                 ticker_fetch_map[t] = t
                 tickers_us.append(t)
             else: # Ações e Fiis
-                ticker_fetch_map[t] = t
-                tickers_br.append(t)
+                yf_t = t if (t.endswith('.SA') or '.' in t) else f"{t}.SA"
+                ticker_fetch_map[t] = yf_t
+                tickers_br.append(yf_t)
     
         # Determina quais tickers realmente buscar com base nas regras de mercado
         m_status = get_market_status()
@@ -522,7 +523,11 @@ def render_visao_geral_view():
             # Usa o mapeamento para pegar o preço correto do dicionário
             ticker = row['ticker']
             yf_ticker = ticker_fetch_map.get(ticker, ticker)
-            return current_prices.get(yf_ticker, 0.0)
+            price = current_prices.get(yf_ticker, 0.0)
+            # Fallback: se a cotação em tempo real retornar <= 0 (ex: mercado fechado sem cache / falha de API), usa o preço médio
+            if price <= 0.0:
+                price = row.get('average_price', 0.0)
+            return price
     
         # Função para converter valores em USD para BRL
         foreign_input_types = ['Stocks', 'Reits'] # Cripto é BRL por padrão no input (preço médio)
