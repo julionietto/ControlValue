@@ -659,7 +659,7 @@ def render_visao_geral_view():
     
         # Exibindo os dados de forma tabular
         st.markdown('<h3 style="text-align: center; color: #ffffff; margin-bottom: 0.5rem;">Meus Ativos</h3>', unsafe_allow_html=True)
-        tab_meus_ativos, tab_performance_prov = st.tabs(["Meus Ativos", "Performance e Proventos"])
+        tab_meus_ativos, tab_performance_prov = st.tabs(["Meus Ativos", "Performance de Ativos"])
         
         display_df = assets_df[['id', 'ticker', 'asset_type', 'quantity', 'average_price_brl', 'current_price', 'current_value', 'weight_pct', 'orientation']].copy()
         display_df.columns = ['ID', 'Ticker', 'Tipo', 'Qtd', 'Preço Médio', 'Preço Atual', 'Valor Atual', 'Peso %', 'Orientação']
@@ -893,7 +893,6 @@ def render_visao_geral_view():
                         
                     disp_ret_val = fmt_curr(retorno_total_val)
                     disp_ret_pct = fmt_pct(retorno_total_pct)
-                    retorno_total_str = f"{disp_ret_val} ({disp_ret_pct})"
                     
                     perf_rows.append({
                         'id': asset_id,
@@ -901,7 +900,8 @@ def render_visao_geral_view():
                         'Valor Investido': fmt_curr(total_investido_val),
                         'Valor Atual': fmt_curr(total_ativo_val),
                         'Total Proventos': fmt_curr(total_proventos_val),
-                        'Retorno Total': retorno_total_str,
+                        'Retorno Total': disp_ret_val,
+                        'Perc. de Retorno': disp_ret_pct,
                         'Yeld On Cost': fmt_pct(yoc_val),
                         'Dividend Yeld': fmt_pct(dy_val)
                     })
@@ -910,9 +910,9 @@ def render_visao_geral_view():
             if perf_df.empty:
                 st.info("Nenhum ativo do tipo Ações, FIIs, Reits, Stocks ou ETF encontrado na carteira.")
             else:
-                display_perf = perf_df[['Ativo', 'Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Yeld On Cost', 'Dividend Yeld']].copy()
+                display_perf = perf_df[['Ativo', 'Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Perc. de Retorno', 'Yeld On Cost', 'Dividend Yeld']].copy()
                 styled_perf_df = display_perf.style.set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
-                                                   .set_properties(**{'text-align': 'right'}, subset=['Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Yeld On Cost', 'Dividend Yeld']) \
+                                                   .set_properties(**{'text-align': 'right'}, subset=['Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Perc. de Retorno', 'Yeld On Cost', 'Dividend Yeld']) \
                                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
                                                    
                 st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️</div>', unsafe_allow_html=True)

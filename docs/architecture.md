@@ -291,12 +291,13 @@ No módulo `views/geral.py`, responsável pela renderização da "Visão Geral",
 *   **Apresentação de Dados de Ativos em Abas (`views/geral.py`):**
     *   A seção "Meus Ativos" foi significativamente refatorada para apresentar as informações em duas abas distintas:
         *   **"Meus Ativos":** Mantém a exibição da tabela principal de ativos (`styled_final_df`) com colunas como 'Ativo', 'Tipo', 'Quantidade', 'Cotação Atual', 'Valor atualizado', 'Orientação', 'Peso %'. Esta aba permite a seleção de uma linha para navegar até o "Detalhe do Ativo".
-        *   **"Performance e Proventos":** Esta é uma nova aba dedicada a métricas de desempenho. Ela calcula e exibe uma tabela para ativos do tipo 'Ações', 'Fiis', 'Reits', 'Stocks' e 'ETF', incluindo:
+        *   **"Performance de Ativos":** Renomeada de "Performance e Proventos", esta é uma nova aba dedicada a métricas de desempenho. Ela calcula e exibe uma tabela para ativos do tipo 'Ações', 'Fiis', 'Reits', 'Stocks' e 'ETF', incluindo:
             *   'Ativo': O ticker do ativo.
             *   'Valor Investido': O valor total investido no ativo.
             *   'Valor Atual': O valor de mercado atual do ativo.
             *   'Total Proventos': A soma total de proventos recebidos pelo ativo (ajustado pelo histórico de posse).
-            *   'Retorno Total': O retorno total (ganho de capital + proventos) em valor e percentual.
+            *   **'Retorno Total': O retorno total (ganho de capital + proventos) em valor monetário.**
+            *   **'Perc. de Retorno': O retorno total em percentual.**
             *   'Yeld On Cost': O *Dividend Yield* calculado sobre o custo médio do ativo.
             *   'Dividend Yeld': O *Dividend Yield* atual do ativo, obtido através da nova função `fetch_dividend_yields` de `services.py`.
         *   Esta nova aba fornece uma visão consolidada e aprofundada da performance de rendimentos de cada ativo, permitindo também a navegação para o "Detalhe do Ativo" ao selecionar uma linha. Um aviso informativo é exibido se nenhum ativo relevante for encontrado para a análise de performance.

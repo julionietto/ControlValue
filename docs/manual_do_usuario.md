@@ -29,17 +29,18 @@ Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteir
     *   A categorização dos Fundos Imobiliários (FIIs) por setor é continuamente atualizada para garantir que seus gráficos de alocação estejam sempre precisos, incluindo os ativos mais recentes.
 *   **Radar de Alocação (Novidade!):** Abaixo dos gráficos, você encontrará o "Radar de Alocação", uma tabela que compara seus ativos atuais com seus objetivos de alocação. Essa funcionalidade ajuda a identificar rapidamente quais investimentos estão acima ou abaixo do seu plano.
     *   **Visão Detalhada de Ativos Internacionais:** Para seus investimentos nos Estados Unidos (como **Stocks** e **Reits**), a tabela agora se ajusta para oferecer uma visão ainda mais clara. Seus ativos internacionais serão exibidos com uma coluna para o **"Valor em Dólar"**, mostrando o valor atual desses ativos diretamente na moeda original (USD). Além disso, a coluna de valor em Reais passará a se chamar **"Valor em Real"**, facilitando a identificação dos valores na moeda local e na moeda original lado a lado. Isso proporciona uma visão mais clara e direta do seu patrimônio internacional, permitindo um acompanhamento mais preciso sem a necessidade de conversões manuais.
-*   **Seus Ativos em Detalhe: Abas 'Meus Ativos' e 'Performance e Proventos' (Novidade!)**
+*   **Seus Ativos em Detalhe: Abas 'Meus Ativos' e 'Performance de Ativos' (Atualizado!)**
     Abaixo dos gráficos e do Radar de Alocação, você encontrará uma nova organização para visualizar seus investimentos de forma ainda mais completa. A antiga tabela de "Meus Ativos" foi aprimorada e agora está dividida em duas abas interativas para facilitar sua análise:
 
     *   **Aba "Meus Ativos":** Esta aba apresenta a lista consolidada de todos os seus investimentos, com informações essenciais como o Ticker (código do ativo), Tipo (Ações, FIIs, Cripto, etc.), Quantidade que você possui, a Cotação Atual, o Valor atualizado de mercado, uma Orientação (se o sistema sugere Compra, Venda ou Manter) e o Peso que cada ativo representa no total da sua carteira. Você pode clicar em qualquer linha desta tabela para ir diretamente à tela de "Detalhes do Ativo" e ver o histórico de suas operações.
 
-    *   **Aba "Performance e Proventos":** Esta é uma **nova e poderosa ferramenta** para analisar o desempenho financeiro dos seus investimentos que geram renda (como Ações, Fundos Imobiliários, REITs, Stocks e ETFs). Ela oferece uma visão clara e objetiva de como seus ativos estão performando, exibindo as seguintes informações:
+    *   **Aba "Performance de Ativos":** Esta é uma **nova e poderosa ferramenta** para analisar o desempenho financeiro dos seus investimentos que geram renda (como Ações, Fundos Imobiliários, REITs, Stocks e ETFs). Ela oferece uma visão clara e objetiva de como seus ativos estão performando, exibindo as seguintes informações:
         *   **Ativo:** O nome ou código do seu investimento.
         *   **Valor Investido:** O total de dinheiro que você colocou neste ativo desde a primeira compra.
         *   **Valor Atual:** O valor de mercado que este ativo tem hoje na sua carteira.
         *   **Total Proventos:** A soma de todos os dividendos, juros sobre capital próprio e outros rendimentos que você recebeu deste ativo ao longo do tempo.
-        *   **Retorno Total:** O ganho ou perda geral que você teve com este investimento, considerando tanto a valorização do preço quanto os proventos que você recebeu.
+        *   **Retorno Total:** O ganho ou perda geral que você teve com este investimento, considerando tanto a valorização do preço quanto os proventos que você recebeu. Este valor é exibido em Reais (ou Dólar para ativos internacionais).
+        *   **Perc. de Retorno:** Uma porcentagem que mostra o ganho ou perda do seu investimento em relação ao valor investido.
         *   **Yield On Cost (YoC):** Uma porcentagem que mostra o quanto de proventos anuais você recebe em relação ao preço médio que você pagou pelo ativo. É uma métrica importante para investidores focados em renda.
         *   **Dividend Yield (DY):** Uma porcentagem que indica a renda anual esperada que um ativo pode gerar, baseada no seu preço de mercado atual. Ajuda a comparar o potencial de renda entre diferentes investimentos.
 
@@ -141,7 +142,8 @@ A aba de Proventos está organizada em três seções principais para facilitar 
 *   **Valor Investido:** O total de dinheiro que você colocou em um ativo desde a primeira compra.
 *   **Valor Atual:** O valor de mercado que um ativo tem hoje na sua carteira.
 *   **Total Proventos:** A soma de todos os dividendos, juros e outros rendimentos que você recebeu de um ativo ao longo do tempo.
-*   **Retorno Total:** O ganho ou perda geral de um investimento, considerando tanto a valorização do preço quanto os proventos recebidos.
+*   **Retorno Total:** O ganho ou perda geral de um investimento, considerando tanto a valorização do preço quanto os proventos recebidos, exibido em valor monetário.
+*   **Perc. de Retorno:** A porcentagem de ganho ou perda total do seu investimento.
 *   **Yield On Cost (YoC):** A porcentagem de proventos anuais recebidos em relação ao preço médio pago pelo ativo.
 *   **Dividend Yield (DY):** A porcentagem da renda anual esperada que um ativo pode gerar, baseada no seu preço de mercado atual.
 *   **Crescimento:** Indica a porcentagem de crescimento dos proventos em comparação com o mesmo mês do ano anterior.
