@@ -29,6 +29,21 @@ Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteir
     *   A categorização dos Fundos Imobiliários (FIIs) por setor é continuamente atualizada para garantir que seus gráficos de alocação estejam sempre precisos, incluindo os ativos mais recentes.
 *   **Radar de Alocação (Novidade!):** Abaixo dos gráficos, você encontrará o "Radar de Alocação", uma tabela que compara seus ativos atuais com seus objetivos de alocação. Essa funcionalidade ajuda a identificar rapidamente quais investimentos estão acima ou abaixo do seu plano.
     *   **Visão Detalhada de Ativos Internacionais:** Para seus investimentos nos Estados Unidos (como **Stocks** e **Reits**), a tabela agora se ajusta para oferecer uma visão ainda mais clara. Seus ativos internacionais serão exibidos com uma coluna para o **"Valor em Dólar"**, mostrando o valor atual desses ativos diretamente na moeda original (USD). Além disso, a coluna de valor em Reais passará a se chamar **"Valor em Real"**, facilitando a identificação dos valores na moeda local e na moeda original lado a lado. Isso proporciona uma visão mais clara e direta do seu patrimônio internacional, permitindo um acompanhamento mais preciso sem a necessidade de conversões manuais.
+*   **Seus Ativos em Detalhe: Abas 'Meus Ativos' e 'Performance e Proventos' (Novidade!)**
+    Abaixo dos gráficos e do Radar de Alocação, você encontrará uma nova organização para visualizar seus investimentos de forma ainda mais completa. A antiga tabela de "Meus Ativos" foi aprimorada e agora está dividida em duas abas interativas para facilitar sua análise:
+
+    *   **Aba "Meus Ativos":** Esta aba apresenta a lista consolidada de todos os seus investimentos, com informações essenciais como o Ticker (código do ativo), Tipo (Ações, FIIs, Cripto, etc.), Quantidade que você possui, a Cotação Atual, o Valor atualizado de mercado, uma Orientação (se o sistema sugere Compra, Venda ou Manter) e o Peso que cada ativo representa no total da sua carteira. Você pode clicar em qualquer linha desta tabela para ir diretamente à tela de "Detalhes do Ativo" e ver o histórico de suas operações.
+
+    *   **Aba "Performance e Proventos":** Esta é uma **nova e poderosa ferramenta** para analisar o desempenho financeiro dos seus investimentos que geram renda (como Ações, Fundos Imobiliários, REITs, Stocks e ETFs). Ela oferece uma visão clara e objetiva de como seus ativos estão performando, exibindo as seguintes informações:
+        *   **Ativo:** O nome ou código do seu investimento.
+        *   **Valor Investido:** O total de dinheiro que você colocou neste ativo desde a primeira compra.
+        *   **Valor Atual:** O valor de mercado que este ativo tem hoje na sua carteira.
+        *   **Total Proventos:** A soma de todos os dividendos, juros sobre capital próprio e outros rendimentos que você recebeu deste ativo ao longo do tempo.
+        *   **Retorno Total:** O ganho ou perda geral que você teve com este investimento, considerando tanto a valorização do preço quanto os proventos que você recebeu.
+        *   **Yield On Cost (YoC):** Uma porcentagem que mostra o quanto de proventos anuais você recebe em relação ao preço médio que você pagou pelo ativo. É uma métrica importante para investidores focados em renda.
+        *   **Dividend Yield (DY):** Uma porcentagem que indica a renda anual esperada que um ativo pode gerar, baseada no seu preço de mercado atual. Ajuda a comparar o potencial de renda entre diferentes investimentos.
+
+        Assim como na aba "Meus Ativos", você pode clicar em qualquer linha da tabela para acessar os detalhes específicos daquele investimento. Se você não possuir ativos dos tipos mencionados (Ações, FIIs, etc.), a aba informará que não há dados a serem exibidos.
 *   **Dados Sempre Disponíveis (Melhoria):** Para que sua experiência seja a mais fluida e precisa possível, implementamos aprimoramentos internos na forma como buscamos as cotações de mercado. Agora, o sistema utiliza **múltiplas estratégias inteligentes e otimizadas** para obter a cotação mais recente e válida dos seus ativos. Isso significa que ele se esforça para encontrar o preço de mercado mais atualizado e, caso alguma cotação pareça inválida (por exemplo, um valor zero), ele tentará buscar novamente de forma mais eficiente. Com essas melhorias, o ControlValue está ainda mais inteligente na identificação e busca de cotações para uma **variedade maior de ativos globais**, incluindo ações e REITs internacionais que não utilizam sufixos específicos em seus códigos. Isso garante que, independentemente do tipo de investimento, você terá a cotação mais precisa e relevante para sua análise. Dessa forma, você sempre terá a informação mais consistente e confiável disponível para a sua carteira, mesmo que não seja do dia exato.
     *   **Alertas de Cotação:** Se, por alguma razão (como instabilidade temporária na internet ou no serviço de cotações), o ControlValue não conseguir buscar um preço de mercado válido para um ou mais dos seus investimentos (exceto para tipos de ativo que não possuem cotação de mercado, como a Renda Fixa), **você verá um aviso claro na tela**. Este alerta informará quais ativos estão com a cotação temporariamente indisponível, garantindo que você esteja ciente de que o saldo e a rentabilidade da sua carteira podem estar desatualizados até que a cotação seja restabelecida. Esta verificação aprimorada para preços inválidos ajuda a manter sua visão geral do patrimônio e as comparações de mercado sempre o mais transparentes e relevantes possível.
 *   **Menu de Navegação:** Localizado na barra superior ou lateral, ele permite alternar entre as diferentes visões do sistema.
@@ -100,7 +115,7 @@ A aba de Proventos está organizada em três seções principais para facilitar 
 2.  **Resumo de Recebimentos:** Esta seção foi aprimorada e agora conta com duas abas para diferentes perspectivas de análise:
     *   **Aba "📅 Evolução Anual":**
         *   Aqui você encontrará a tabela consolidada dos seus proventos, exibindo os valores mensais de cada ativo e um **Total Anual**.
-        *   Uma nova linha **"Crescimento"** mostra a porcentagem de crescimento dos proventos de cada mês em relação ao mesmo mês do ano anterior, ajudando a identificar tendências na sua renda passiva.
+        *   Uma nova linha **"Crescimento"** mostra a porcentagem de crescimento dos proventos de cada mês em relação ao mesmo mês do ano anterior, helping to identify trends na sua renda passiva.
         *   A linha **"Valor Médio"** (anteriormente conhecida como "Média Acumulada") agora oferece uma visão mais precisa do seu recebimento médio. Para anos fechados, ela mostra a média mensal considerando o total do ano. **Já para o ano atual, o cálculo é ajustado para mostrar a média dos proventos recebidos apenas até o mês corrente, refletindo com mais exatidão o seu ritmo de recebimentos ao longo do tempo.**
         *   **Proventos Dolarizados:** Se você possui investimentos internacionais (como Stocks e Reits) que pagam proventos em dólar, você encontrará um resumo separado desses valores, já convertidos para Reais (R$), nesta mesma aba.
 
@@ -123,6 +138,12 @@ A aba de Proventos está organizada em três seções principais para facilitar 
 ---
 
 **💡 Legenda:**
+*   **Valor Investido:** O total de dinheiro que você colocou em um ativo desde a primeira compra.
+*   **Valor Atual:** O valor de mercado que um ativo tem hoje na sua carteira.
+*   **Total Proventos:** A soma de todos os dividendos, juros e outros rendimentos que você recebeu de um ativo ao longo do tempo.
+*   **Retorno Total:** O ganho ou perda geral de um investimento, considerando tanto a valorização do preço quanto os proventos recebidos.
+*   **Yield On Cost (YoC):** A porcentagem de proventos anuais recebidos em relação ao preço médio pago pelo ativo.
+*   **Dividend Yield (DY):** A porcentagem da renda anual esperada que um ativo pode gerar, baseada no seu preço de mercado atual.
 *   **Crescimento:** Indica a porcentagem de crescimento dos proventos em comparação com o mesmo mês do ano anterior.
 *   **Valor Médio:** Representa o valor médio mensal dos proventos. Para anos anteriores, é a média do total anual. Para o ano atual, é a média dos proventos recebidos apenas até o mês corrente, oferecendo uma visão mais precisa da sua renda passiva mensal projetada.
 

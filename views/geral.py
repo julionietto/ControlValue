@@ -451,6 +451,7 @@ def render_visao_geral_view():
             
             # Utiliza a camada de cache nativa st.cache_data(ttl=300) do serviço
             current_prices = svc.fetch_current_prices(all_tickers, refresh_id)
+            dy_dict = svc.fetch_dividend_yields(all_tickers, refresh_id)
                 
             assets_tuple = (tuple(assets_df['ticker'].tolist()), tuple(assets_df['asset_type'].tolist()))
             sectors_dict = svc.fetch_asset_sectors(assets_tuple, is_first_load)
@@ -657,7 +658,8 @@ def render_visao_geral_view():
         assets_df['orientation'] = "Em construção"
     
         # Exibindo os dados de forma tabular
-        st.markdown('<h3 style="text-align: center; color: #ffffff; margin-bottom: -1.5rem;">Meus Ativos</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="text-align: center; color: #ffffff; margin-bottom: 0.5rem;">Meus Ativos</h3>', unsafe_allow_html=True)
+        tab_meus_ativos, tab_performance_prov = st.tabs(["Meus Ativos", "Performance e Proventos"])
         
         display_df = assets_df[['id', 'ticker', 'asset_type', 'quantity', 'average_price_brl', 'current_price', 'current_value', 'weight_pct', 'orientation']].copy()
         display_df.columns = ['ID', 'Ticker', 'Tipo', 'Qtd', 'Preço Médio', 'Preço Atual', 'Valor Atual', 'Peso %', 'Orientação']
@@ -682,10 +684,6 @@ def render_visao_geral_view():
         for col in cols_to_na:
             display_df.loc[is_rf, col] = 'N/A'
             
-        # Especificamente para BTC-USD, não mais oculta preços
-        # logic removed as per user request
-    
-    
         def format_brl_custom(val, is_currency=True):
             if pd.isna(val) or val == 0: 
                 return "R$ 0,00" if is_currency else "0,00"
@@ -700,22 +698,18 @@ def render_visao_geral_view():
     
         def format_qty_table(row):
             if row['asset_type'] == 'Cripto':
-                # Formata com até 8 casas, usando padrão BRL (ponto milhar, vírgula decimal)
                 formatted = f"{row['quantity']:,.8f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                # Remove zeros à direita e a vírgula se ficar isolada
                 if "," in formatted:
                     formatted = formatted.rstrip('0').rstrip(',')
                 return formatted
             return f"{row['quantity']:,.0f}".replace(",", ".")
     
         # --- TABELA DE ATIVOS: UNIFICADA COM OPERAÇÕES INDIVIDUAIS PARA CRIPTO ---
-        
         all_rows = []
         
         for _, asset in assets_df.iterrows():
             if abs(asset['quantity']) < 1e-5:
                 continue
-            # Para todos os ativos, usamos a linha consolidada original do assets_df
             val_op = asset['total_invested']
             val_at = asset['current_value']
             
@@ -755,7 +749,6 @@ def render_visao_geral_view():
         display_unified = unified_df.copy()
         display_unified['ticker'] = display_unified['ticker'].apply(format_ticker_for_display)
         
-        # Função de formatação de quantidade (8 casas para Cripto, 0 para outros)
         def format_qty_unified(row):
             if st.session_state.get('hide_values', False): return "••••••"
             if row['Tipo'] == 'Cripto':
@@ -797,7 +790,6 @@ def render_visao_geral_view():
         final_df = display_unified[final_cols]
         final_df.columns = ['Ativo', 'Tipo', 'Quantidade', 'Cotação Atual', 'Valor atualizado', 'Orientação', 'Peso %']
         
-        # Estilização da coluna Orientação
         def style_orientation_cells(val):
             if val == "COMPRA":
                 return 'background-color: #00CC96; color: white; font-weight: bold; text-align: center;'
@@ -807,32 +799,141 @@ def render_visao_geral_view():
     
         styled_final_df = final_df.style.map(style_orientation_cells, subset=['Orientação'])
         
-        # Alinhamentos via Style
         styled_final_df = styled_final_df.set_properties(**{'text-align': 'center'}, subset=['Ativo', 'Tipo', 'Quantidade', 'Orientação']) \
                                          .set_properties(**{'text-align': 'right'}, subset=['Cotação Atual', 'Valor atualizado', 'Peso %']) \
                                          .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
         
-        st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️</div>', unsafe_allow_html=True)
-        selected = st.dataframe(
-            styled_final_df,
-            hide_index=True,
-            use_container_width=True,
-            on_select="rerun",
-            selection_mode="single-row",
-            key=f"unified_df_{st.session_state.table_key}"
-        )
-        
-        if selected.selection.rows:
-            row_idx = selected.selection.rows[0]
-            ticker_to_edit = final_df.iloc[row_idx]['Ativo']
-            # Precisamos achar o ID original no unified_df
-            asset_id = unified_df.iloc[row_idx]['id']
-            asset_data = assets_df[assets_df['id'] == asset_id].iloc[0]
-            st.session_state.viewing_history = asset_data.to_dict()
-            st.session_state.navigation_tab = "Detalhe do Ativo"
-            st.session_state.scroll_to_top = True
-            st.rerun()
-    
+        # --- ABA 1: MEUS ATIVOS ---
+        with tab_meus_ativos:
+            st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️</div>', unsafe_allow_html=True)
+            selected = st.dataframe(
+                styled_final_df,
+                hide_index=True,
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key=f"unified_df_{st.session_state.table_key}"
+            )
+            
+            if selected.selection.rows:
+                row_idx = selected.selection.rows[0]
+                ticker_to_edit = final_df.iloc[row_idx]['Ativo']
+                asset_id = unified_df.iloc[row_idx]['id']
+                asset_data = assets_df[assets_df['id'] == asset_id].iloc[0]
+                st.session_state.viewing_history = asset_data.to_dict()
+                st.session_state.navigation_tab = "Detalhe do Ativo"
+                st.session_state.scroll_to_top = True
+                st.rerun()
+
+        # --- ABA 2: PERFORMANCE E PROVENTOS ---
+        with tab_performance_prov:
+            target_types = ['Ações', 'Fiis', 'Reits', 'Stocks', 'ETF']
+            perf_rows = []
+            
+            if not unified_df.empty:
+                all_proventos_df = db.get_proventos(st.session_state.user_id)
+                for _, u_row in unified_df.iterrows():
+                    if u_row['Tipo'] not in target_types:
+                        continue
+                        
+                    asset_id = u_row['id']
+                    asset = assets_df[assets_df['id'] == asset_id].iloc[0]
+                    ticker = asset['ticker']
+                    a_type = asset['asset_type']
+                    is_us = a_type in ['Stocks', 'Reits'] or asset['currency'] == 'USD'
+                    
+                    history_df = all_histories_df[all_histories_df['asset_id'] == asset_id] if not all_histories_df.empty else pd.DataFrame()
+                    
+                    if is_us:
+                        total_investido_val = (history_df['quantity'] * history_df['unit_price']).sum() if not history_df.empty else 0.0
+                        total_ativo_val = u_row['Quantidade'] * asset['original_current_price']
+                    else:
+                        total_investido_val = u_row['Valor da operação']
+                        total_ativo_val = u_row['Valor atualizado']
+                        
+                    total_proventos_brl = 0.0
+                    if not all_proventos_df.empty and ticker in all_proventos_df['ticker'].values:
+                        p_df = all_proventos_df[all_proventos_df['ticker'] == ticker].copy()
+                        p_df = p_df[p_df['valor'] > 0]
+                        if not history_df.empty:
+                            history_dates = pd.to_datetime(history_df['date'])
+                            min_date = history_dates.min()
+                            year_min, month_min = min_date.year, min_date.month
+                            p_df = p_df[
+                                (p_df['ano'] > year_min) | 
+                                ((p_df['ano'] == year_min) & (p_df['mes'] >= month_min))
+                            ]
+                            if abs(u_row['Quantidade']) < 1e-5 and not p_df.empty:
+                                max_date = history_dates.max()
+                                year_max, month_max = max_date.year, max_date.month
+                                p_df = p_df[
+                                    (p_df['ano'] < year_max) | 
+                                    ((p_df['ano'] == year_max) & (p_df['mes'] <= month_max))
+                                ]
+                        total_proventos_brl = float(p_df['valor'].sum())
+                        
+                    total_proventos_val = (total_proventos_brl / usd_to_brl_rate) if (is_us and usd_to_brl_rate > 0) else total_proventos_brl
+                    
+                    retorno_total_val = (total_ativo_val - total_investido_val) + total_proventos_val
+                    retorno_total_pct = (retorno_total_val / total_investido_val * 100) if total_investido_val > 0 else 0.0
+                    
+                    yoc_val = (total_proventos_val / total_investido_val * 100) if total_investido_val > 0 else 0.0
+                    dy_val = dy_dict.get(ticker, 0.0)
+                    
+                    sym = "$ " if is_us else "R$ "
+                    
+                    def fmt_curr(val):
+                        if is_hidden: return f"{sym}••••••"
+                        formatted = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        return f"{sym}{formatted}"
+                        
+                    def fmt_pct(val):
+                        if is_hidden: return "••••••"
+                        return f"{val:,.2f}%".replace(".", ",")
+                        
+                    disp_ret_val = fmt_curr(retorno_total_val)
+                    disp_ret_pct = fmt_pct(retorno_total_pct)
+                    retorno_total_str = f"{disp_ret_val} ({disp_ret_pct})"
+                    
+                    perf_rows.append({
+                        'id': asset_id,
+                        'Ativo': u_row['ticker'],
+                        'Valor Investido': fmt_curr(total_investido_val),
+                        'Valor Atual': fmt_curr(total_ativo_val),
+                        'Total Proventos': fmt_curr(total_proventos_val),
+                        'Retorno Total': retorno_total_str,
+                        'Yeld On Cost': fmt_pct(yoc_val),
+                        'Dividend Yeld': fmt_pct(dy_val)
+                    })
+                    
+            perf_df = pd.DataFrame(perf_rows)
+            if perf_df.empty:
+                st.info("Nenhum ativo do tipo Ações, FIIs, Reits, Stocks ou ETF encontrado na carteira.")
+            else:
+                display_perf = perf_df[['Ativo', 'Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Yeld On Cost', 'Dividend Yeld']].copy()
+                styled_perf_df = display_perf.style.set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
+                                                   .set_properties(**{'text-align': 'right'}, subset=['Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Yeld On Cost', 'Dividend Yeld']) \
+                                                   .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+                                                   
+                st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️</div>', unsafe_allow_html=True)
+                selected_perf = st.dataframe(
+                    styled_perf_df,
+                    hide_index=True,
+                    use_container_width=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key=f"perf_df_{st.session_state.table_key}"
+                )
+                
+                if selected_perf.selection.rows:
+                    r_idx = selected_perf.selection.rows[0]
+                    target_id = perf_df.iloc[r_idx]['id']
+                    target_asset = assets_df[assets_df['id'] == target_id].iloc[0]
+                    st.session_state.viewing_history = target_asset.to_dict()
+                    st.session_state.navigation_tab = "Detalhe do Ativo"
+                    st.session_state.scroll_to_top = True
+                    st.rerun()
+
         # Botão Adicionar novo ativo
         st.markdown("")
         if st.button("Adicionar novo ativo", type="primary", use_container_width=False):
@@ -842,6 +943,7 @@ def render_visao_geral_view():
             st.rerun()
     
         st.markdown("---")
+
     
         # --- SEÇÃO RADAR ---
         st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 0.5rem; margin-bottom: 1.5rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)

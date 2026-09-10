@@ -237,6 +237,67 @@ def fetch_current_prices(tickers, refresh_id=0):
     # Tupla é hashable permitindo que o Streamlit faça cache de chamadas semelhantes
     return _fetch_prices_batch(tuple(tickers), refresh_id)
 
+@st.cache_data(ttl=3600)
+def _fetch_dy_batch(tickers_tuple, refresh_id=0):
+    dy_dict = {}
+    if not tickers_tuple:
+        return dy_dict
+        
+    for t in tickers_tuple:
+        yf_t, aliases = _normalize_ticker_for_yf(t)
+        if not yf_t:
+            continue
+        val = 0.0
+        try:
+            ticker_obj = yf.Ticker(yf_t)
+            info = {}
+            try:
+                info = ticker_obj.info or {}
+            except Exception:
+                info = {}
+                
+            raw_dy = info.get('dividendYield')
+            if raw_dy is None or pd.isna(raw_dy) or raw_dy == 0:
+                raw_dy = info.get('trailingAnnualDividendYield')
+                
+            if raw_dy is not None and not pd.isna(raw_dy) and float(raw_dy) > 0:
+                val = float(raw_dy)
+                if val <= 1.0:
+                    val = val * 100.0
+            else:
+                try:
+                    h_divs = ticker_obj.dividends
+                    if h_divs is not None and not h_divs.empty:
+                        now = pd.Timestamp.now(tz=h_divs.index.tz) if h_divs.index.tz else pd.Timestamp.now()
+                        one_yr_ago = now - pd.DateOffset(years=1)
+                        recent_divs = h_divs[h_divs.index >= one_yr_ago]
+                        sum_divs = float(recent_divs.sum())
+                        curr_price = float(ticker_obj.fast_info.get('lastPrice', 0.0) or 0.0)
+                        if curr_price > 0 and sum_divs > 0:
+                            val = (sum_divs / curr_price) * 100.0
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        for alias in set([t, yf_t] + list(aliases)):
+            dy_dict[alias] = val
+
+    for t in tickers_tuple:
+        if t not in dy_dict:
+            dy_dict[t] = 0.0
+
+    return dy_dict
+
+def fetch_dividend_yields(tickers, refresh_id=0):
+    """
+    Busca o Dividend Yield (%) para uma lista de tickers usando yfinance.
+    Retorna um dicionário mapeando o ticker para seu Dividend Yield em percentual (ex: 6.54 para 6.54%).
+    """
+    if not tickers:
+        return {}
+    return _fetch_dy_batch(tuple(tickers), refresh_id)
+
 @st.cache_data(ttl=300)
 def _fetch_indicators_batch(refresh_id=0):
     """
