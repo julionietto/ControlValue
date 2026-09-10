@@ -911,9 +911,17 @@ def render_visao_geral_view():
                 st.info("Nenhum ativo do tipo Ações, FIIs, Reits, Stocks ou ETF encontrado na carteira.")
             else:
                 display_perf = perf_df[['Ativo', 'Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Perc. de Retorno', 'Yeld On Cost', 'Dividend Yeld']].copy()
-                styled_perf_df = display_perf.style.set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
+                
+                def style_negative_cells(val):
+                    if isinstance(val, str) and '-' in val and '••••••' not in val:
+                        return 'color: #EF553B; font-weight: bold;'
+                    return ''
+
+                styled_perf_df = display_perf.style.map(style_negative_cells, subset=['Retorno Total', 'Perc. de Retorno']) \
+                                                   .set_properties(**{'text-align': 'center'}, subset=['Ativo']) \
                                                    .set_properties(**{'text-align': 'right'}, subset=['Valor Investido', 'Valor Atual', 'Total Proventos', 'Retorno Total', 'Perc. de Retorno', 'Yeld On Cost', 'Dividend Yeld']) \
                                                    .set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
+
                                                    
                 st.markdown('<div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 5px; margin-left: 2px;">✏️</div>', unsafe_allow_html=True)
                 selected_perf = st.dataframe(
