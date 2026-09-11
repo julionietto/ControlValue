@@ -840,16 +840,10 @@ def render_visao_geral_view():
                     asset = assets_df[assets_df['id'] == asset_id].iloc[0]
                     ticker = asset['ticker']
                     a_type = asset['asset_type']
-                    is_us = a_type in ['Stocks', 'Reits'] or asset['currency'] == 'USD'
-                    
                     history_df = all_histories_df[all_histories_df['asset_id'] == asset_id] if not all_histories_df.empty else pd.DataFrame()
                     
-                    if is_us:
-                        total_investido_val = (history_df['quantity'] * history_df['unit_price']).sum() if not history_df.empty else 0.0
-                        total_ativo_val = u_row['Quantidade'] * asset['original_current_price']
-                    else:
-                        total_investido_val = u_row['Valor da operação']
-                        total_ativo_val = u_row['Valor atualizado']
+                    total_investido_val = u_row['Valor da operação']
+                    total_ativo_val = u_row['Valor atualizado']
                         
                     total_proventos_brl = 0.0
                     if not all_proventos_df.empty and ticker in all_proventos_df['ticker'].values:
@@ -872,7 +866,7 @@ def render_visao_geral_view():
                                 ]
                         total_proventos_brl = float(p_df['valor'].sum())
                         
-                    total_proventos_val = (total_proventos_brl / usd_to_brl_rate) if (is_us and usd_to_brl_rate > 0) else total_proventos_brl
+                    total_proventos_val = total_proventos_brl
                     
                     retorno_total_val = (total_ativo_val - total_investido_val) + total_proventos_val
                     retorno_total_pct = (retorno_total_val / total_investido_val * 100) if total_investido_val > 0 else 0.0
@@ -880,12 +874,10 @@ def render_visao_geral_view():
                     yoc_val = (total_proventos_val / total_investido_val * 100) if total_investido_val > 0 else 0.0
                     dy_val = dy_dict.get(ticker, 0.0)
                     
-                    sym = "$ " if is_us else "R$ "
-                    
                     def fmt_curr(val):
-                        if is_hidden: return f"{sym}••••••"
+                        if is_hidden: return "R$ ••••••"
                         formatted = f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                        return f"{sym}{formatted}"
+                        return f"R$ {formatted}"
                         
                     def fmt_pct(val):
                         if is_hidden: return "••••••"

@@ -1,4 +1,3 @@
-```
 # Arquitetura do Sistema de Deploy Multiagente
 
 ## 1. Introdução
@@ -24,7 +23,7 @@ O sistema é concebido como um orquestrador que coordena uma série de agentes e
 | Agente de Testes    |<-----+   Pytest          |
 |  (test_agent.py)    |      |   (Execução)      |
 |                     |<-----+   Google Gemini   |
-|                     |      |   (Diagnóstico)   |
+|                     |      |   (Diagnóstico))  |
 |                     |      |   (Geração de     |
 |                     |      |    Relatório HTML)|
 +----------+----------+      +-------------------+
@@ -300,6 +299,7 @@ No módulo `views/geral.py`, responsável pela renderização da "Visão Geral",
             *   **'Perc. de Retorno': O retorno total em percentual.**
             *   'Yeld On Cost': O *Dividend Yield* calculado sobre o custo médio do ativo.
             *   'Dividend Yeld': O *Dividend Yield* atual do ativo, obtido através da nova função `fetch_dividend_yields` de `services.py`.
+        *   **Para simplificar a apresentação e padronizar a experiência do usuário, todos os valores monetários nesta tabela são agora exibidos consistentemente em Reais (R$), removendo a lógica anterior de exibição dinâmica de símbolos de moeda ($ ou R$) e conversões explícitas de USD para BRL para proventos dentro desta seção. Esta abordagem garante uma visão unificada do desempenho, focada na moeda principal do usuário.**
         *   Esta nova aba fornece uma visão consolidada e aprofundada da performance de rendimentos de cada ativo, permitindo também a navegação para o "Detalhe do Ativo" ao selecionar uma linha. Um aviso informativo é exibido se nenhum ativo relevante for encontrado para a análise de performance.
 
 *   **Diálogos Interativos para Detalhamento de Ativos por Setor/Segmento:** Para aprimorar a capacidade de exploração dos dados na Visão Geral, foram introduzidos e refatorados diálogos (`st.dialog`) que permitem ao usuário visualizar os ativos pertencentes a um setor ou segmento específico, selecionado a partir dos gráficos de distribuição.

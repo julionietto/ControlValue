@@ -39,7 +39,7 @@ Ao fazer o login, você será direcionado para a **Visão Geral** da sua carteir
         *   **Valor Investido:** O total de dinheiro que você colocou neste ativo desde a primeira compra.
         *   **Valor Atual:** O valor de mercado que este ativo tem hoje na sua carteira.
         *   **Total Proventos:** A soma de todos os dividendos, juros sobre capital próprio e outros rendimentos que você recebeu deste ativo ao longo do tempo.
-        *   **Retorno Total:** O ganho ou perda geral que você teve com este investimento, considerando tanto a valorização do preço quanto os proventos que você recebeu. Este valor é exibido em Reais (ou Dólar para ativos internacionais).
+        *   **Retorno Total:** O ganho ou perda geral que você teve com este investimento, considerando tanto a valorização do preço quanto os proventos que você recebeu. **Para garantir uma visão unificada e simplificada do seu desempenho financeiro, todos os valores monetários apresentados nesta aba são exibidos em Reais (R$), consolidando o desempenho de todos os seus ativos na moeda local.**
         *   **Perc. de Retorno:** Uma porcentagem que mostra o ganho ou perda do seu investimento em relação ao valor investido.
         *   **Yield On Cost (YoC):** Uma porcentagem que mostra o quanto de proventos anuais você recebe em relação ao preço médio que você pagou pelo ativo. É uma métrica importante para investidores focados em renda.
         *   **Dividend Yield (DY):** Uma porcentagem que indica a renda anual esperada que um ativo pode gerar, baseada no seu preço de mercado atual. Ajuda a comparar o potencial de renda entre diferentes investimentos.
@@ -97,7 +97,7 @@ Para quem busca entender a evolução dos seus rendimentos ao longo do tempo, ad
 1.  Na aba **Proventos (Rendimentos)**, role a tela até a parte inferior, onde você encontrará os botões para "Adicionar Ativo" e "Editar Ativo". Clique no botão **"📊 Consulta Comparativa"** localizado nesta área.
 2.  Uma janela pop-up será exibida, onde você deverá selecionar o ano e o mês para os dois períodos que deseja comparar. **Para sua comodidade, o sistema agora preenche automaticamente as opções de comparação com sugestões inteligentes:**
     *   **Lado A (primeiro período):** Será preenchido com o **mês atual do ano anterior**, por exemplo, "Março de 2023" se o mês atual for Março de 2024.
-    *   **Lado B (segundo período):** Será preenchido com o **mes e ano atuais**, por exemplo, "Março de 2024".
+    *   **Lado B (segundo período)::** Será preenchido com o **mes e ano atuais**, por exemplo, "Março de 2024".
     Isso facilita a comparação imediata do seu desempenho de proventos do mês atual em relação ao mesmo mês do ano anterior. Você pode, claro, ajustar esses períodos conforme sua necessidade, escolhendo entre todos os anos em que você possui registro de proventos, incluindo o ano atual e o anterior.
 3.  Após selecionar os períodos, o sistema apresentará uma tabela detalhada com os resultados. **Esta tabela foi aprimorada para ser mais fácil de usar:**
     *   Se houver muitos ativos, você poderá **rolar a tela dentro da janela** para ver todos eles, sem perder o cabeçalho (que mostra os nomes das colunas) ou o total geral na parte inferior.
