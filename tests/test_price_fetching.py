@@ -47,20 +47,27 @@ def test_fetch_current_prices_alias_mapping(monkeypatch):
     assert prices["TESTM3.SA"] == 2.15
 
 def test_fetch_dividend_yields(monkeypatch):
-    """Testa se fetch_dividend_yields retorna o Dividend Yield mapeado corretamente."""
+    """Testa se fetch_dividend_yields prioriza trailingAnnualDividendYield e faz fallback para dividendYield."""
     from services import fetch_dividend_yields
 
     class MockTicker:
         def __init__(self, ticker):
             self.ticker = ticker
-            self.info = {'dividendYield': 0.0825} if 'PETR4' in ticker else {}
+            if 'PETR4' in ticker:
+                self.info = {'trailingAnnualDividendYield': 0.0757, 'dividendYield': 0.0896}
+            elif 'VALE3' in ticker:
+                self.info = {'dividendYield': 0.0792}
+            else:
+                self.info = {}
             self.fast_info = {'lastPrice': 100.0}
             self.dividends = pd.Series([2.0, 3.0], index=[pd.Timestamp.now(), pd.Timestamp.now()])
 
     monkeypatch.setattr("yfinance.Ticker", MockTicker)
 
-    dys = fetch_dividend_yields(["PETR4", "AAPL"], refresh_id=99999)
+    dys = fetch_dividend_yields(["PETR4", "VALE3", "AAPL"], refresh_id=99999)
     assert "PETR4" in dys
-    assert abs(dys["PETR4"] - 8.25) < 1e-4
+    assert abs(dys["PETR4"] - 7.57) < 1e-4
+    assert "VALE3" in dys
+    assert abs(dys["VALE3"] - 7.92) < 1e-4
     assert "AAPL" in dys
 

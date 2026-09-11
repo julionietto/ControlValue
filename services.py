@@ -256,9 +256,9 @@ def _fetch_dy_batch(tickers_tuple, refresh_id=0):
             except Exception:
                 info = {}
                 
-            raw_dy = info.get('dividendYield')
+            raw_dy = info.get('trailingAnnualDividendYield')
             if raw_dy is None or pd.isna(raw_dy) or raw_dy == 0:
-                raw_dy = info.get('trailingAnnualDividendYield')
+                raw_dy = info.get('dividendYield')
                 
             if raw_dy is not None and not pd.isna(raw_dy) and float(raw_dy) > 0:
                 val = float(raw_dy)
