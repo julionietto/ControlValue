@@ -43,7 +43,7 @@ try:
     import datetime
     import time
     from zoneinfo import ZoneInfo
-    TIMEOUT_MINUTES = 10
+    TIMEOUT_MINUTES = 9
 
     # Detectar se esta execução foi disparada pelo auto-refresh
     current_refresh_count = st.session_state.get('datarefresh', 0)
@@ -69,7 +69,7 @@ try:
                     if key not in ['table_key']: # Mantém chaves estruturais se necessário
                         del st.session_state[key]
                 st.session_state.authenticated = False
-                st.warning("Sessão expirada por inatividade (10 min).")
+                st.warning(f"Sessão expirada por inatividade ({TIMEOUT_MINUTES} min).")
                 # Força o redirecionamento mantendo a mensagem
                 st.stop()
         
@@ -117,10 +117,10 @@ try:
         st.session_state.refresh_id += 1
         # is_first_load será desmarcado dentro da view correspondente após a carga completa
 
-    # Atualização automática a cada 5 minutos (apenas se algum mercado BR/US estiver aberto)
+    # Atualização automática a cada 10 minutos (apenas se algum mercado BR/US estiver aberto)
     m_status = get_market_status()
     if any(m_status.values()):
-        st_autorefresh(interval=300000, key="datarefresh")
+        st_autorefresh(interval=600000, key="datarefresh")
 
     # ==============================
     # MENU DE PERFIL
