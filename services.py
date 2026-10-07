@@ -797,18 +797,20 @@ def send_exception_report_email(exception_details):
     success, msg = _send_smtp_email(target_email, "Exception capturada no App ControlValue", html)
     return success
 
-def fetch_investidor10_proventos(tickers_with_types):
+def fetch_investidor10_proventos(tickers_with_types, max_workers=5):
     """
-    Busca dados de proventos provisionados via scraping do Investidor10.
+    Busca dados de proventos provisionados via scraping do Investidor10 de forma concorrente (multithread).
     Recebe uma lista de dicionários [{'ticker': 'PETR4', 'type': 'Ações'}, ...]
     Retorna (DataFrame, error_message, raw_json_list).
     """
     import os
     import time
+    import random
     from datetime import datetime
     import pandas as pd
     # pyrefly: ignore [missing-import]
     from bs4 import BeautifulSoup
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     
     if not tickers_with_types:
         return pd.DataFrame(), "", []
@@ -829,71 +831,63 @@ def fetch_investidor10_proventos(tickers_with_types):
     try:
         # pyrefly: ignore [missing-import]
         from curl_cffi import requests as cffi_requests
-        
-        custom_headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://investidor10.com.br/",
-            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Upgrade-Insecure-Requests": "1"
-        }
-        
-        session = cffi_requests.Session(impersonate='chrome120')
-        session.headers.update(custom_headers)
-        
-        # Acessa a home primeiro para pegar cookies e passar pelo Cloudflare
-        try:
-            session.get("https://investidor10.com.br/", timeout=15)
-            import random
-            time.sleep(random.uniform(1.0, 2.0))
-        except:
-            pass
-            
     except Exception as e:
-        print(f"Erro ao iniciar curl_cffi session: {e}")
+        print(f"Erro ao importar curl_cffi: {e}")
         return pd.DataFrame(), "", []
 
-    for item in tickers_with_types:
+    custom_headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://investidor10.com.br/",
+        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Upgrade-Insecure-Requests": "1"
+    }
+
+    def fetch_single_ticker(item):
         t = item['ticker']
         a_type = item['type']
         
         clean_t = t.strip().upper().replace(".SA", "")
         if not clean_t:
-            continue
+            return [], {clean_t: "Ticker inválido"}
             
         ep = type_to_endpoint.get(a_type, 'acoes')
-        
-        # Caso especial: muitas BDRs cadastradas como Stocks caem na rota /bdrs/
-        # Vamos tentar a rota original primeiro
         urls_to_try = [f"https://investidor10.com.br/{ep}/{clean_t.lower()}/"]
         if a_type == 'Stocks':
             urls_to_try.append(f"https://investidor10.com.br/bdrs/{clean_t.lower()}/")
             
-        success = False
+        ticker_dividends = []
+        raw_info = None
         
+        try:
+            session = cffi_requests.Session(impersonate='chrome120')
+            session.headers.update(custom_headers)
+        except Exception as e:
+            return [], {clean_t: f"Erro ao criar sessão curl_cffi: {e}"}
+
+        success = False
         for url in urls_to_try:
             if success:
                 break
-                
             try:
-                response = session.get(url, timeout=15)
+                response = session.get(url, timeout=12)
                 if response.status_code == 200:
                     html = response.text
                     soup = BeautifulSoup(html, "html.parser")
                     
                     table = soup.find('table', id='table-dividends-history')
                     if not table:
-                        full_raw_response.append({clean_t: "Tabela de dividendos não encontrada na página."})
-                        success = True # Pagina carregou mas não tem dividendos
+                        raw_info = {clean_t: "Tabela de dividendos não encontrada na página."}
+                        success = True
                         break
                         
                     rows = table.find('tbody').find_all('tr')
-                    full_raw_response.append({clean_t: f"Tabela encontrada com {len(rows)} proventos históricos/futuros."})
+                    raw_info = {clean_t: f"Tabela encontrada com {len(rows)} proventos históricos/futuros."}
                     
                     for row in rows:
                         cols = row.find_all('td')
@@ -918,7 +912,7 @@ def fetch_investidor10_proventos(tickers_with_types):
                                     valor = 0.0
                                     
                                 if valor > 0:
-                                    all_dividends.append({
+                                    ticker_dividends.append({
                                         'Ativo': clean_t,
                                         'Tipo': tipo_prov,
                                         'Data Com': dt_com_str,
@@ -928,13 +922,25 @@ def fetch_investidor10_proventos(tickers_with_types):
                                     })
                     success = True
                 else:
-                    full_raw_response.append({clean_t: f"Erro HTTP {response.status_code}"})
+                    raw_info = {clean_t: f"Erro HTTP {response.status_code}"}
             except Exception as e:
-                print(f"Erro ao buscar {clean_t} no Investidor10: {e}")
-                full_raw_response.append({clean_t: f"Exception: {str(e)}"})
-                
-        import random
-        time.sleep(random.uniform(1.5, 3.5))
+                raw_info = {clean_t: f"Exception: {str(e)}"}
+
+        time.sleep(random.uniform(0.2, 0.6))
+        return ticker_dividends, raw_info
+
+    workers = min(max_workers, len(tickers_with_types))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(fetch_single_ticker, item): item for item in tickers_with_types}
+        for future in as_completed(futures):
+            try:
+                t_divs, raw_info = future.result()
+                if t_divs:
+                    all_dividends.extend(t_divs)
+                if raw_info:
+                    full_raw_response.append(raw_info)
+            except Exception as exc:
+                print(f"Exceção no worker de scraping do Investidor10: {exc}")
 
     if not all_dividends:
         return pd.DataFrame(), "", full_raw_response
@@ -942,7 +948,6 @@ def fetch_investidor10_proventos(tickers_with_types):
     df = pd.DataFrame(all_dividends)
     
     # Agrupa por chaves únicas e soma o valor para evitar duplicidades no mesmo evento (Ex: TAEE11)
-    # Isso resolve o problema de múltiplos lançamentos para o mesmo provento no Investidor10
     df = df.groupby(['Ativo', 'Tipo', 'Data Com', 'Data Pagamento'], as_index=False).agg({
         'Valor': 'sum',
         'dt_pag_raw': 'first'
@@ -952,6 +957,7 @@ def fetch_investidor10_proventos(tickers_with_types):
     df = df.drop(columns=['dt_pag_raw'])
     
     return df, "", full_raw_response
+
 
 def fetch_option_strike_opcoes_net(ticker):
     """

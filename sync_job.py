@@ -7,6 +7,7 @@ import db
 import services as svc
 
 def run_sync():
+    start_time = time.time()
     print("Iniciando rotina de Sincronização de Proventos Provisionados...")
     
     # 1. Verifica fuso horário
@@ -60,11 +61,10 @@ def run_sync():
             if a_type in ['Renda Fixa', 'Fundo CETIP']:
                 continue
             tickers_with_types.append({'ticker': ticker, 'type': a_type})
-        print(f"Encontrados {len(tickers_with_types)} ativos únicos para buscar. Iniciando Web Scraper...")
+        print(f"Encontrados {len(tickers_with_types)} ativos únicos para buscar. Iniciando Web Scraper Concorrente...")
 
-        # 4. Executa a extração (usando a função existente robusta do services.py)
-        # O services.py já tem os sleeps aleatórios e curl_cffi para evitar o Cloudflare
-        df, err, raw = svc.fetch_investidor10_proventos(tickers_with_types)
+        # 4. Executa a extração paralela (usando a função otimizada do services.py)
+        df, err, raw = svc.fetch_investidor10_proventos(tickers_with_types, max_workers=5)
         
         if df.empty and not raw:
             # Se não retornou nada e deu erro
@@ -72,7 +72,7 @@ def run_sync():
             db.log_sync_execution(today_str, 'ERROR', 'Falha no Scraping: Retorno vazio.')
             return
 
-        print(f"Scraping concluído. {len(df)} proventos futuros encontrados. Consolidando na base...")
+        print(f"Scraping concluído em paralelo. {len(df)} proventos futuros encontrados. Consolidando na base...")
 
         # 5. Salva os resultados para cada usuário que possui o ativo
         affected_users = set()
@@ -172,9 +172,11 @@ def run_sync():
                     if qty_on_date <= 0:
                         continue
 
-                    # Salva (upsert) respeitando o sufixo original do banco
-                    db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, user_valor, user_id)
+                    # Salva (upsert) respeitando o sufixo original do banco, reutilizando a conexão ativa
+                    db.upsert_provento_provisionado(db_ticker, tipo, data_com, data_pagamento, user_valor, user_id, conn=conn)
                     affected_users.add(user_id)
+            
+            conn.commit()
                     
         # 6. Sincroniza a tabela de proventos para os usuários afetados
         print(f"Atualizando tabela de proventos para {len(affected_users)} usuários...")
@@ -184,38 +186,44 @@ def run_sync():
         print("Sincronização gravada no banco de dados com sucesso!")
         db.log_sync_execution(today_str, 'SUCCESS', f"Sincronizados {len(df)} proventos para {len(tickers_with_types)} ativos.")
 
-        # --- NOVA ROTINA: Atualização de Strike de Derivativos ---
+        # --- NOVA ROTINA: Atualização de Strike de Derivativos (Paralela) ---
         print("\nIniciando atualização de strikes de derivativos abertos...")
         df_opcoes = db.get_all_open_opcoes()
         if not df_opcoes.empty:
-            updates_count = 0
-            for _, op in df_opcoes.iterrows():
-                op_id = op['id']
-                ticker = op['derivativo']
-                strike_atual = float(op['strike'])
+            from concurrent.futures import ThreadPoolExecutor
+            
+            def check_and_update_strike(row):
+                op_id = row['id']
+                ticker = row['derivativo']
+                strike_atual = float(row['strike'])
                 
                 print(f"Verificando {ticker} (Strike atual: R$ {strike_atual:.2f})...")
                 new_strike = svc.fetch_option_strike_opcoes_net(ticker)
                 
                 if new_strike and abs(new_strike - strike_atual) > 0.001:
-                    print(f"  [UPDATE] Strike ajustado detectado: R$ {strike_atual:.2f} -> R$ {new_strike:.2f}")
+                    print(f"  [UPDATE] Strike ajustado detectado para {ticker}: R$ {strike_atual:.2f} -> R$ {new_strike:.2f}")
                     db.update_opcao_strike(op_id, new_strike)
-                    updates_count += 1
+                    return 1
                 else:
-                    print(f"  [OK] Strike sem alterações.")
-                
-                # Pequeno delay para evitar bloqueio por excesso de requisições
-                import random
-                time.sleep(random.uniform(1.0, 2.5))
+                    print(f"  [OK] {ticker} Strike sem alterações.")
+                    return 0
+
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                results = list(executor.map(check_and_update_strike, [row for _, row in df_opcoes.iterrows()]))
+                updates_count = sum(results)
             
             print(f"Finalizada atualização de strikes. {updates_count} registros alterados.")
         else:
             print("Nenhum derivativo em aberto encontrado para atualização.")
 
+        elapsed = time.time() - start_time
+        print(f"\n✅ Rotina de sincronização concluída com sucesso em {elapsed:.2f}s.")
+
     except Exception as e:
         error_msg = f"Erro crítico na execução do job: {str(e)}"
         print(error_msg)
         db.log_sync_execution(today_str, 'ERROR', error_msg)
+
 
 if __name__ == "__main__":
     run_sync()

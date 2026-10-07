@@ -213,8 +213,8 @@ def get_all_total_proventos(user_id):
         res = cursor.fetchone()
         return res[0] if res[0] is not None else 0.0
 
-def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, user_id):
-    """Insere ou atualiza um provento provisionado (upsert)."""
+def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, user_id, conn=None):
+    """Insere ou atualiza um provento provisionado (upsert). Se conn for fornecido, reutiliza a conexão existente."""
     ticker = str(ticker).strip().upper()
     valor = float(valor)
     
@@ -235,10 +235,8 @@ def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, 
         logging.warning(f"Erro ao formatar data no upsert_provento: {e}")
         return
         
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        # Verifica se já existe um provento idêntico para atualizar o valor
-        # Incluímos tipo e data_com na busca para evitar que proventos diferentes na mesma data se sobreponham
+    def _execute(target_conn):
+        cursor = target_conn.cursor()
         cursor.execute(
             "SELECT id FROM proventos_provisionados WHERE ticker = %s AND tipo = %s AND data_com = %s AND data_pagamento = %s AND user_id = %s",
             (ticker, tipo, dt_com_db, dt_pag_db, user_id)
@@ -255,7 +253,14 @@ def upsert_provento_provisionado(ticker, tipo, data_com, data_pagamento, valor, 
                 "INSERT INTO proventos_provisionados (ticker, tipo, data_com, data_pagamento, valor, user_id) VALUES (%s, %s, %s, %s, %s, %s)",
                 (ticker, tipo, dt_com_db, dt_pag_db, valor, user_id)
             )
-        conn.commit()
+
+    if conn is not None:
+        _execute(conn)
+    else:
+        with get_db_connection() as c:
+            _execute(c)
+            c.commit()
+
 
 def sync_proventos_from_provisionados(user_id):
     """
