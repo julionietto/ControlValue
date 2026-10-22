@@ -591,6 +591,7 @@ def render_visao_geral_view():
         st.session_state.current_total_value = current_total_value
         try:
             db.sync_crescimento_patrimonial_current_year(st.session_state.user_id, current_total_value)
+            db.record_daily_balance(st.session_state.user_id, current_total_value)
         except Exception:
             pass
         

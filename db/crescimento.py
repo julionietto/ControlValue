@@ -146,11 +146,73 @@ def check_and_rollover_crescimento_all_users():
         uid = u['id']
         try:
             _, _, _, total_atual, _, _, _ = exec_svc.get_user_portfolio_data(uid)
-            save_crescimento_patrimonial(current_year, float(total_atual), uid)
+            val = float(total_atual)
+            save_crescimento_patrimonial(current_year, val, uid)
+            record_daily_balance(uid, val)
             count_synced += 1
         except Exception as e:
             logging.warning(f"Erro ao processar rollover de crescimento para user {uid}: {e}")
 
     clear_db_cache()
     return count_synced
+
+
+def record_daily_balance(user_id, saldo_atual, data_ref=None):
+    """
+    Registra ou atualiza o saldo atual diário do investidor para histórico contínuo (Pico Histórico).
+    Mantém para sempre o registro de cada dia para cada usuário.
+    """
+    if saldo_atual is None:
+        return False
+    user_id = int(user_id)
+    saldo_atual = float(saldo_atual)
+
+    if data_ref is None:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        try:
+            sp_tz = ZoneInfo("America/Sao_Paulo")
+            data_ref = datetime.now(sp_tz).date()
+        except Exception:
+            data_ref = datetime.now().date()
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO historico_saldo_diario (user_id, data, saldo_atual, updated_at)
+            VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id, data)
+            DO UPDATE SET 
+                saldo_atual = GREATEST(historico_saldo_diario.saldo_atual, EXCLUDED.saldo_atual),
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, data_ref, saldo_atual)
+        )
+        conn.commit()
+    return True
+
+
+def get_pico_historico(user_id):
+    """
+    Busca no banco de dados o maior valor de saldo patrimonial já registrado para o user_id,
+    considerando o histórico diário de saldos e os registros anuais de crescimento patrimonial.
+    """
+    user_id = int(user_id)
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT MAX(maior_saldo) FROM (
+                SELECT MAX(saldo_atual) AS maior_saldo FROM historico_saldo_diario WHERE user_id = %s
+                UNION ALL
+                SELECT MAX(valor_final) AS maior_saldo FROM crescimento_patrimonial WHERE user_id = %s
+            ) sub
+            """,
+            (user_id, user_id)
+        )
+        row = cursor.fetchone()
+        if row and row[0] is not None:
+            return float(row[0])
+        return 0.0
 

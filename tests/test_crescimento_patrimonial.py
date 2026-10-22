@@ -149,11 +149,13 @@ def test_check_and_rollover_crescimento_all_users():
     with patch('db.auth.get_all_users', return_value=mock_users), \
          patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 123450.0, None, None, None)), \
          patch('db.crescimento.save_crescimento_patrimonial') as mock_save, \
+         patch('db.crescimento.record_daily_balance') as mock_record, \
          patch('db.crescimento.clear_db_cache') as mock_cache:
         
         count = db_crescimento.check_and_rollover_crescimento_all_users()
         assert count == 2
         assert mock_save.call_count == 2
+        assert mock_record.call_count == 2
         assert mock_cache.called
 
 
@@ -188,4 +190,34 @@ def test_crescimento_patrimonial_table_styler():
     # Computing the styler must succeed without ValueError
     res = styled_table._compute()
     assert res is not None
+
+
+def test_record_daily_balance():
+    with patch('db.crescimento.get_db_connection') as mock_conn:
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+        mock_conn.return_value.__enter__.return_value = mock_connection
+
+        res = db_crescimento.record_daily_balance(1, 150000.0)
+        assert res is True
+        assert mock_cursor.execute.called
+        query_executed = mock_cursor.execute.call_args[0][0]
+        assert "INSERT INTO historico_saldo_diario" in query_executed
+        assert mock_connection.commit.called
+
+
+def test_get_pico_historico():
+    with patch('db.crescimento.get_db_connection') as mock_conn:
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (850000.0,)
+        mock_connection.cursor.return_value = mock_cursor
+        mock_conn.return_value.__enter__.return_value = mock_connection
+
+        res = db_crescimento.get_pico_historico(1)
+        assert res == 850000.0
+        query_executed = mock_cursor.execute.call_args[0][0]
+        assert "historico_saldo_diario" in query_executed
+        assert "crescimento_patrimonial" in query_executed
 

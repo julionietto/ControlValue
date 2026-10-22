@@ -291,6 +291,20 @@ def init_db():
         ''')
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crescimento_user_ano ON crescimento_patrimonial (user_id, ano DESC)")
 
+        # Tabela de Histórico Diário de Saldo (para rastreio contínuo do Pico Histórico)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS historico_saldo_diario (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL DEFAULT 1,
+                data DATE NOT NULL,
+                saldo_atual REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, data)
+            )
+        ''')
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_saldo_diario_user_data ON historico_saldo_diario (user_id, data DESC)")
+
         conn.commit()
 
 def _query_to_df(query, conn, params=None):

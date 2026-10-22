@@ -206,24 +206,21 @@ Você pode acessar esta funcionalidade de duas formas:
 Ao acessar o **Crescimento Patrimonial**, você verá um panorama completo da sua evolução financeira:
 
 *   **Cards de Resumo:** Na parte superior, você encontrará indicadores rápidos do seu patrimônio:
-    *   **Saldo Atual (Visão Geral):** Mostra o valor total da sua carteira no momento, exatamente como exibido na "Visão Geral" do sistema.
-    *   **Patrimônio Recente:** Exibe o valor do seu patrimônio no ano mais recente que você registrou.
-    *   **Pico Histórico:** Indica o maior valor de patrimônio que você já alcançou em qualquer ano registrado.
-    *   **Crescimento Histórico Total:** Calcula o aumento ou diminuição percentual do seu patrimônio desde o seu primeiro registro até o mais recente, dando uma visão consolidada do seu progresso.
+    *   **Saldo Atual:** Mostra o valor total da sua carteira no momento, exatamente como exibido na "Visão Geral" do sistema.
+    *   **Pico Histórico (Melhoria!):** Este card agora exibe o **maior valor de patrimônio que você já alcançou** desde que começou a usar o ControlValue, considerando tanto seus registros anuais quanto o seu saldo diário. Isso significa que ele sempre mostrará o seu recorde absoluto de patrimônio, refletindo com mais precisão sua jornada de crescimento.
 
-*   **Gerenciando Seus Registros:** Uma barra de botões facilita a manutenção do seu histórico:
-    *   **➕ Novo Registro:**
+*   **Adicionando e Gerenciando Seus Registros Anuais:** A interface para gerenciar seu histórico anual foi simplificada:
+    *   **➕ Adicionar Ano:**
         *   Clique neste botão para adicionar um novo registro do seu patrimônio para um ano específico.
-        *   Uma pequena janela se abrirá, onde você pode informar o **Ano** e o **Valor Final** do seu patrimônio naquele ano.
+        *   Uma pequena janela "📅 Registrar Patrimônio Anual" se abrirá, onde você pode informar o **Ano** e o **Valor Final** do seu patrimônio naquele ano. Esta janela é mais flexível e pode ser fechada a qualquer momento.
         *   Para sua comodidade, se você quiser registrar o valor atual da sua carteira, há um botão **"📥 Usar Saldo Atual da Carteira"** que preenche automaticamente o campo com o seu saldo do dia.
         *   Depois, basta clicar em **"💾 Salvar Registro"**.
-    *   **✏️ Alterar Registro:**
-        *   Use este botão para corrigir ou atualizar o valor de um registro de patrimônio já existente.
-        *   Ao clicar, uma janela permitirá que você selecione o **Ano** do registro que deseja modificar e, então, edite o **Valor Final**.
-        *   Você também poderá **"🗑️ Excluir"** o registro por aqui, se necessário.
-    *   **🗑️ Excluir Registro:**
-        *   Este botão é para remover um registro de patrimônio anual da sua lista.
-        *   Uma janela de confirmação aparecerá, pedindo para você selecionar o **Ano** do registro a ser excluído e confirmar a ação.
+    *   **Edição e Exclusão de Registros (Nova Interação!):**
+        *   Agora, para corrigir, atualizar ou remover um registro de patrimônio anual, basta **clicar diretamente na linha correspondente da tabela "Histórico Anual de Valor Patrimonial"** (descrita abaixo).
+        *   Ao clicar na linha, uma nova janela "Edição de Registro Patrimonial" será exibida automaticamente com os detalhes daquele ano. Nela, você poderá:
+            *   **Atualizar** o "Valor Final" e clicar em "💾 Salvar".
+            *   **Excluir** o registro clicando no botão "🗑️ Excluir". Para sua segurança, uma confirmação será solicitada antes da exclusão definitiva.
+            *   **Cancelar** a edição e fechar a janela. Esta janela também é mais flexível e pode ser fechada a qualquer momento.
 
 *   **Tabela "Histórico Anual de Valor Patrimonial":**
     *   Abaixo dos cards, você encontrará uma tabela detalhada com todos os seus registros anuais de patrimônio, listados do ano mais recente para o mais antigo.
@@ -232,7 +229,7 @@ Ao acessar o **Crescimento Patrimonial**, você verá um panorama completo da su
         *   **Valor Final (R$):** O valor total do seu patrimônio naquele ano.
         *   **Crescimento de um Ano para Outro:** Mostra a porcentagem de aumento ou diminuição do seu patrimônio em relação ao ano anterior. Se o valor cresceu, será exibido em **verde**; se diminuiu, em **vermelho**.
         *   **Variação Anual (R$):** Indica o valor absoluto (em Reais) do aumento ou diminuição do seu patrimônio em relação ao ano anterior, também com cores para facilitar a identificação do desempenho.
-    *   **Interatividade:** Você pode clicar em qualquer linha da tabela para selecionar um registro e, em seguida, usar os botões "✏️ Alterar Registro" ou "🗑️ Excluir Registro" para agir sobre ele.
+    *   **Interatividade (Melhoria!):** Você pode **clicar em qualquer linha da tabela** para abrir a janela "Edição de Registro Patrimonial" e modificar ou excluir o registro selecionado.
 
 *   **Gráfico "Evolução Patrimonial ao Longo dos Anos":**
     *   Na parte inferior da tela, um gráfico visual e interativo ilustra a sua jornada financeira.

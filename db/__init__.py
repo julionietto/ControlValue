@@ -91,5 +91,7 @@ from db.crescimento import (
     delete_crescimento_patrimonial,
     get_crescimento_record_by_year,
     sync_crescimento_patrimonial_current_year,
-    check_and_rollover_crescimento_all_users
+    check_and_rollover_crescimento_all_users,
+    record_daily_balance,
+    get_pico_historico
 )

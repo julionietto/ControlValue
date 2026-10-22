@@ -56,7 +56,7 @@ def compute_patrimonio_growth(df):
     return sorted_df
 
 
-@st.dialog("➕ Novo Registro de Patrimônio", dismissible=False)
+@st.dialog("➕ Adicionar Ano", dismissible=True)
 def dialog_novo_patrimonio(current_balance):
     st.markdown("<h4 style='text-align: center; margin-top: -10px;'>📅 Registrar Patrimônio Anual</h4>", unsafe_allow_html=True)
     st.caption("Insira o valor patrimonial final atingido em determinado ano da sua vida financeira.")
@@ -91,6 +91,7 @@ def dialog_novo_patrimonio(current_balance):
                 st.session_state.pop('novo_patrimonio_valor_temp', None)
                 st.session_state.trigger_dialog_novo_patrimonio = False
                 st.session_state.refresh_id = st.session_state.get('refresh_id', 0) + 1
+                st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
                 st.success(f"Patrimônio do ano {ano} salvo com sucesso!")
                 st.rerun()
             else:
@@ -99,17 +100,18 @@ def dialog_novo_patrimonio(current_balance):
         if st.button("Cancelar", use_container_width=True):
             st.session_state.pop('novo_patrimonio_valor_temp', None)
             st.session_state.trigger_dialog_novo_patrimonio = False
+            st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
             st.rerun()
 
 
-@st.dialog("✏️ Alterar Registro de Patrimônio", dismissible=False)
+@st.dialog("Edição de Registro Patrimonial", dismissible=True)
 def dialog_editar_patrimonio(df_records, preselected_id=None):
-    st.markdown("<h4 style='text-align: center; margin-top: -10px;'>✏️ Alterar Valor Patrimonial</h4>", unsafe_allow_html=True)
-
     if df_records.empty:
         st.info("Não há registros cadastrados para alteração.")
         if st.button("Fechar", use_container_width=True):
             st.session_state.trigger_dialog_editar_patrimonio = False
+            st.session_state.selected_patrimonio_id = None
+            st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
             st.rerun()
         return
 
@@ -135,11 +137,13 @@ def dialog_editar_patrimonio(df_records, preselected_id=None):
     st.markdown("---")
     col_u, col_d, col_c = st.columns([1.2, 1, 1])
     with col_u:
-        if st.button("💾 Atualizar", type="primary", use_container_width=True):
+        if st.button("💾 Salvar", type="primary", use_container_width=True):
             user_id = st.session_state.get('user_id', 1)
             db.update_crescimento_patrimonial(int(record['id']), selected_year, novo_valor, user_id)
             st.session_state.trigger_dialog_editar_patrimonio = False
+            st.session_state.selected_patrimonio_id = None
             st.session_state.refresh_id = st.session_state.get('refresh_id', 0) + 1
+            st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
             st.success(f"Registro do ano {selected_year} atualizado com sucesso!")
             st.rerun()
     with col_d:
@@ -147,12 +151,16 @@ def dialog_editar_patrimonio(df_records, preselected_id=None):
             user_id = st.session_state.get('user_id', 1)
             db.delete_crescimento_patrimonial(int(record['id']), user_id)
             st.session_state.trigger_dialog_editar_patrimonio = False
+            st.session_state.selected_patrimonio_id = None
             st.session_state.refresh_id = st.session_state.get('refresh_id', 0) + 1
+            st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
             st.warning(f"Registro do ano {selected_year} excluído!")
             st.rerun()
     with col_c:
         if st.button("Cancelar", use_container_width=True):
             st.session_state.trigger_dialog_editar_patrimonio = False
+            st.session_state.selected_patrimonio_id = None
+            st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
             st.rerun()
 
 
@@ -366,8 +374,17 @@ def render_crescimento_patrimonial_view():
     # Sincroniza o ano corrente automaticamente com o Saldo Atual (regra de virada e histórico)
     try:
         db.sync_crescimento_patrimonial_current_year(user_id, current_portfolio_saldo)
+        if current_portfolio_saldo > 0:
+            db.record_daily_balance(user_id, current_portfolio_saldo)
     except Exception:
         pass
+
+    # Busca o maior valor de saldo/patrimônio já registrado no banco para este investidor
+    try:
+        pico_historico = db.get_pico_historico(user_id)
+    except Exception:
+        pico_historico = current_portfolio_saldo
+    pico_historico = max(pico_historico, current_portfolio_saldo)
 
     # Busca os dados do banco de dados
     df_raw = db.get_crescimento_patrimonial(user_id)
@@ -381,81 +398,37 @@ def render_crescimento_patrimonial_view():
     if st.session_state.pop('trigger_dialog_editar_patrimonio', False):
         dialog_editar_patrimonio(df_growth, preselected_id=selected_id)
 
-    if st.session_state.pop('trigger_dialog_excluir_patrimonio', False):
-        dialog_excluir_patrimonio(df_growth, preselected_id=selected_id)
-
     # =========================================================================
-    # CARDS DE KPIs RESUMIDOS
+    # CARDS DE KPIs RESUMIDOS (SALDO ATUAL E PICO HISTÓRICO)
     # =========================================================================
-    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+    col_k1, col_k2 = st.columns(2)
 
-    # 1. Saldo Atual (Informação presente no campo Saldo Atual da Visão Geral)
+    # 1. Saldo Atual (Visão Geral)
     with col_k1:
-        create_card("Saldo Atual (Visão Geral)", format_brl(current_portfolio_saldo))
+        create_card("Saldo Atual", format_brl(current_portfolio_saldo))
 
-    # 2. Último Patrimônio Cadastrado
+    # 2. Pico Histórico (Maior saldo diário ou anual registrado no banco)
     with col_k2:
-        if not df_growth.empty:
-            latest_row = df_growth.iloc[0]
-            val_latest = float(latest_row['valor_final'])
-            ano_latest = int(latest_row['ano'])
-            create_card(f"Patrimônio Recente ({ano_latest})", format_brl(val_latest))
-        else:
-            create_card("Patrimônio Recente", "R$ 0,00")
-
-    # 3. Maior Patrimônio Registrado
-    with col_k3:
-        if not df_growth.empty:
-            max_val = df_growth['valor_final'].max()
-            max_year = int(df_growth.loc[df_growth['valor_final'] == max_val, 'ano'].iloc[0])
-            create_card(f"Pico Histórico ({max_year})", format_brl(max_val))
-        else:
-            create_card("Pico Histórico", "R$ 0,00")
-
-    # 4. Evolução Total Histórica
-    with col_k4:
-        if len(df_growth) >= 2:
-            first_val = float(df_growth.iloc[-1]['valor_final'])
-            last_val = float(df_growth.iloc[0]['valor_final'])
-            total_delta_val = last_val - first_val
-            total_delta_pct = ((total_delta_val / first_val) * 100.0) if first_val > 0 else 0.0
-            sign = "+" if total_delta_pct >= 0 else ""
-            delta_str = f"{sign}{total_delta_pct:.2f}%".replace(".", ",")
-            create_card("Crescimento Histórico Total", format_brl(total_delta_val), delta=delta_str)
-        elif len(df_growth) == 1:
-            create_card("Crescimento Histórico Total", "Ano Inicial", delta="Base")
-        else:
-            create_card("Crescimento Histórico Total", "R$ 0,00")
+        create_card("Pico Histórico", format_brl(pico_historico) if pico_historico > 0 else "R$ 0,00")
 
     st.markdown("---")
 
     # =========================================================================
-    # BARRA DE AÇÕES (NOVO, ALTERAR, EXCLUIR)
+    # BARRA DE AÇÕES (APENAS "ADICIONAR ANO")
     # =========================================================================
-    col_btn_novo, col_btn_alt, col_btn_del, col_space = st.columns([1.3, 1.3, 1.3, 4.1])
+    col_btn_novo, _ = st.columns([1.5, 6.5])
     with col_btn_novo:
-        if st.button("➕ Novo Registro", type="primary", use_container_width=True, help="Adicionar novo registro de patrimônio"):
+        if st.button("➕ Adicionar Ano", type="primary", use_container_width=True, help="Adicionar novo registro de patrimônio"):
             st.session_state.trigger_dialog_novo_patrimonio = True
-            st.rerun()
-
-    with col_btn_alt:
-        if st.button("✏️ Alterar Registro", use_container_width=True, help="Alterar o valor ou ano de um registro"):
-            st.session_state.trigger_dialog_editar_patrimonio = True
-            st.rerun()
-
-    with col_btn_del:
-        if st.button("🗑️ Excluir Registro", use_container_width=True, help="Excluir um registro de patrimônio"):
-            st.session_state.trigger_dialog_excluir_patrimonio = True
             st.rerun()
 
     # =========================================================================
     # TABELA DE DADOS (ORDENADA: ANO MAIS RECENTE PRIMEIRO)
     # =========================================================================
     st.markdown("### 📋 Histórico Anual de Valor Patrimonial")
-    st.caption("💡 O ano atual reflete continuamente o **Saldo Atual** da tela Visão Geral. A cada 1º de Janeiro, um novo ano é iniciado automaticamente e o ano anterior passa a ser histórico.")
 
     if df_growth.empty:
-        st.info("Nenhum registro patrimonial cadastrado até o momento. Clique em **➕ Novo Registro** para inserir o primeiro ano.")
+        st.info("Nenhum registro patrimonial cadastrado até o momento. Clique em **➕ Adicionar Ano** para inserir o primeiro ano.")
     else:
         # Prepara DataFrame para exibição formatada
         display_df = df_growth.copy()
@@ -517,6 +490,12 @@ def render_crescimento_patrimonial_view():
             "Variação (R$)": st.column_config.TextColumn("Variação Anual (R$)", width="medium")
         }
 
+        # Chave dinâmica para desmarcar a seleção ao fechar
+        if 'patrimonio_grid_key' not in st.session_state:
+            st.session_state.patrimonio_grid_key = 0
+
+        grid_key = f"patrimonio_grid_{st.session_state.patrimonio_grid_key}_{st.session_state.get('refresh_id', 0)}"
+
         selected_table = st.dataframe(
             styled_table,
             use_container_width=True,
@@ -524,14 +503,19 @@ def render_crescimento_patrimonial_view():
             selection_mode="single-row",
             on_select="rerun",
             column_config=col_cfg,
-            key=f"patrimonio_grid_{st.session_state.get('refresh_id', 0)}"
+            key=grid_key
         )
 
-        # Captura seleção de linha para ações rápidas
+        # Captura clique na linha / checkbox para abrir imediatamente a edição
         if selected_table and selected_table.selection and selected_table.selection.rows:
             sel_idx = selected_table.selection.rows[0]
-            clicked_row = df_growth.iloc[sel_idx]
-            st.session_state.selected_patrimonio_id = int(clicked_row['id'])
+            if sel_idx < len(df_growth):
+                clicked_row = df_growth.iloc[sel_idx]
+                st.session_state.selected_patrimonio_id = int(clicked_row['id'])
+                st.session_state.trigger_dialog_editar_patrimonio = True
+                # Desmarca a linha para que ao fechar nenhuma linha permaneça selecionada
+                st.session_state.patrimonio_grid_key = st.session_state.get('patrimonio_grid_key', 0) + 1
+                st.rerun()
 
     st.markdown("---")
 
