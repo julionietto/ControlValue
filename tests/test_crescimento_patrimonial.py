@@ -156,3 +156,36 @@ def test_check_and_rollover_crescimento_all_users():
         assert mock_save.call_count == 2
         assert mock_cache.called
 
+
+def test_crescimento_patrimonial_table_styler():
+    df = pd.DataFrame([
+        {'id': 1, 'ano': 2024, 'valor_final': 80000.0},
+        {'id': 2, 'ano': 2025, 'valor_final': 100000.0},
+    ])
+    df_growth = compute_patrimonio_growth(df)
+    display_df = df_growth.copy()
+    display_df['Ano'] = display_df['ano'].astype(str)
+    display_df['Valor Final'] = display_df['valor_final'].apply(lambda v: f"R$ {v:,.2f}")
+    display_df['Crescimento (%)'] = display_df['crescimento_pct'].apply(lambda v: f"{v:,.2f}%" if pd.notna(v) else "—")
+    display_df['Variação (R$)'] = display_df['variacao_brl'].apply(lambda v: f"R$ {v:,.2f}" if pd.notna(v) else "—")
+
+    cols_show = ['id', 'Ano', 'Valor Final', 'Crescimento (%)', 'Variação (R$)', 'crescimento_pct']
+    table_df = display_df[cols_show].copy()
+
+    def style_growth(row):
+        pct_raw = row.get('crescimento_pct')
+        color = ''
+        if pd.notna(pct_raw) and pct_raw is not None:
+            color = "color: #00CC96; font-weight: bold;" if pct_raw >= 0 else "color: #EF553B; font-weight: bold;"
+        target_cols = ['Crescimento (%)', 'Variação (R$)']
+        return [color if col in target_cols else '' for col in row.index]
+
+    styled_table = table_df.style \
+        .apply(style_growth, axis=1) \
+        .set_properties(**{'text-align': 'center'}, subset=['Ano']) \
+        .set_properties(**{'text-align': 'right'}, subset=['Valor Final', 'Crescimento (%)', 'Variação (R$)'])
+
+    # Computing the styler must succeed without ValueError
+    res = styled_table._compute()
+    assert res is not None
+

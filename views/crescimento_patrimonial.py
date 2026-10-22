@@ -490,29 +490,27 @@ def render_crescimento_patrimonial_view():
         display_df['Crescimento (%)'] = display_df['crescimento_pct'].apply(format_pct_display)
         display_df['Variação (R$)'] = display_df['variacao_brl'].apply(format_var_display)
 
-        # Seleção de colunas para exibição
-        cols_show = ['id', 'Ano', 'Valor Final', 'Crescimento (%)', 'Variação (R$)']
+        # Seleção de colunas para exibição (incluindo crescimento_pct para coloração sem conflito de shape)
+        cols_show = ['id', 'Ano', 'Valor Final', 'Crescimento (%)', 'Variação (R$)', 'crescimento_pct']
         table_df = display_df[cols_show].copy()
 
         # Estilização condicional de cores para crescimento positivo/negativo
         def style_growth(row):
             pct_raw = row.get('crescimento_pct')
-            styles = ['' for _ in row.index]
+            color = ''
             if pd.notna(pct_raw) and pct_raw is not None:
                 color = "color: #00CC96; font-weight: bold;" if pct_raw >= 0 else "color: #EF553B; font-weight: bold;"
-                if 'Crescimento (%)' in row.index:
-                    styles[row.index.get_loc('Crescimento (%)')] = color
-                if 'Variação (R$)' in row.index:
-                    styles[row.index.get_loc('Variação (R$)')] = color
-            return styles
+            target_cols = ['Crescimento (%)', 'Variação (R$)']
+            return [color if col in target_cols else '' for col in row.index]
 
         styled_table = table_df.style \
-            .apply(lambda r: style_growth(df_growth.loc[r.name]), axis=1) \
+            .apply(style_growth, axis=1) \
             .set_properties(**{'text-align': 'center'}, subset=['Ano']) \
             .set_properties(**{'text-align': 'right'}, subset=['Valor Final', 'Crescimento (%)', 'Variação (R$)'])
 
         col_cfg = {
             "id": None,  # Oculta ID técnico
+            "crescimento_pct": None,  # Oculta coluna técnica de cálculo
             "Ano": st.column_config.TextColumn("Ano", width="small"),
             "Valor Final": st.column_config.TextColumn("Valor Final (R$)", width="medium"),
             "Crescimento (%)": st.column_config.TextColumn("Crescimento de um Ano para Outro", width="medium"),
