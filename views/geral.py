@@ -590,8 +590,11 @@ def render_visao_geral_view():
         current_total_value = assets_df['current_value'].sum()
         st.session_state.current_total_value = current_total_value
         try:
-            db.sync_crescimento_patrimonial_current_year(st.session_state.user_id, current_total_value)
-            db.record_daily_balance(st.session_state.user_id, current_total_value)
+            last_synced = st.session_state.get('last_synced_crescimento_val')
+            if current_total_value > 0 and last_synced != round(current_total_value, 2):
+                db.sync_crescimento_patrimonial_current_year(st.session_state.user_id, current_total_value)
+                db.record_daily_balance(st.session_state.user_id, current_total_value)
+                st.session_state.last_synced_crescimento_val = round(current_total_value, 2)
         except Exception:
             pass
         

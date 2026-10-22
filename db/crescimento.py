@@ -1,7 +1,14 @@
 import psycopg2.extras
-from db.connection import get_db_connection, clear_db_cache
+from db.connection import get_db_connection
 import pandas as pd
 import streamlit as st
+
+def clear_crescimento_cache():
+    """Limpa o cache de crescimento patrimonial sem invalidar os caches de cotações/ativos."""
+    try:
+        get_crescimento_patrimonial.clear()
+    except Exception:
+        pass
 
 @st.cache_data(ttl=300)
 def get_crescimento_patrimonial(user_id):
@@ -41,7 +48,7 @@ def save_crescimento_patrimonial(ano, valor_final, user_id):
             (user_id, ano, valor_final)
         )
         conn.commit()
-        clear_db_cache()
+        clear_crescimento_cache()
 
 def update_crescimento_patrimonial(record_id, ano, valor_final, user_id):
     """
@@ -61,7 +68,7 @@ def update_crescimento_patrimonial(record_id, ano, valor_final, user_id):
             (ano, valor_final, record_id, user_id)
         )
         conn.commit()
-        clear_db_cache()
+        clear_crescimento_cache()
 
 def delete_crescimento_patrimonial(record_id, user_id):
     """
@@ -75,7 +82,7 @@ def delete_crescimento_patrimonial(record_id, user_id):
             (record_id, user_id)
         )
         conn.commit()
-        clear_db_cache()
+        clear_crescimento_cache()
 
 def get_crescimento_record_by_year(ano, user_id):
     """
@@ -153,7 +160,7 @@ def check_and_rollover_crescimento_all_users():
         except Exception as e:
             logging.warning(f"Erro ao processar rollover de crescimento para user {uid}: {e}")
 
-    clear_db_cache()
+    clear_crescimento_cache()
     return count_synced
 
 

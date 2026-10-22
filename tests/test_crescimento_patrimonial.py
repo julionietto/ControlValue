@@ -150,7 +150,7 @@ def test_check_and_rollover_crescimento_all_users():
          patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 123450.0, None, None, None)), \
          patch('db.crescimento.save_crescimento_patrimonial') as mock_save, \
          patch('db.crescimento.record_daily_balance') as mock_record, \
-         patch('db.crescimento.clear_db_cache') as mock_cache:
+         patch('db.crescimento.clear_crescimento_cache') as mock_cache:
         
         count = db_crescimento.check_and_rollover_crescimento_all_users()
         assert count == 2
