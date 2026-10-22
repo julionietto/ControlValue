@@ -67,8 +67,9 @@ def dialog_novo_patrimonio(current_balance):
         ano = st.number_input("Ano", min_value=1950, max_value=2100, value=current_year, step=1, key="input_novo_ano")
     with col_v:
         valor_default = float(st.session_state.get('novo_patrimonio_valor_temp', 0.0))
+        label_val = "Valor Final (Saldo Atual em R$)" if ano == current_year else f"Valor Final em 31/12/{ano} (R$)"
         valor_final = st.number_input(
-            "Valor Final (Saldo Atual em R$)",
+            label_val,
             min_value=0.0,
             value=valor_default,
             step=1000.0,
@@ -76,7 +77,7 @@ def dialog_novo_patrimonio(current_balance):
             key="input_novo_valor"
         )
 
-    if current_balance > 0:
+    if ano == current_year and current_balance > 0:
         if st.button(f"📥 Usar Saldo Atual da Carteira ({format_brl(current_balance)})", use_container_width=True):
             st.session_state.novo_patrimonio_valor_temp = float(current_balance)
             st.rerun()
@@ -132,7 +133,9 @@ def dialog_editar_patrimonio(df_records, preselected_id=None):
     record = ano_map[selected_year]
 
     val_atual = float(record['valor_final'])
-    novo_valor = st.number_input("Valor Final (R$)", min_value=0.0, value=val_atual, step=1000.0, format="%.2f", key="edit_input_valor")
+    current_year = datetime.date.today().year
+    label_edit = "Valor Final (Saldo Atual em R$)" if selected_year == current_year else f"Valor Final em 31/12/{selected_year} (R$)"
+    novo_valor = st.number_input(label_edit, min_value=0.0, value=val_atual, step=1000.0, format="%.2f", key="edit_input_valor")
 
     st.markdown("---")
     col_u, col_d, col_c = st.columns([1.2, 1, 1])
@@ -388,6 +391,23 @@ def render_crescimento_patrimonial_view():
 
     # Busca os dados do banco de dados
     df_raw = db.get_crescimento_patrimonial(user_id)
+    current_year = datetime.date.today().year
+
+    # Garante de forma determinística que o ano corrente na tabela e no gráfico reflita o Saldo Atual em tempo real
+    if current_portfolio_saldo > 0:
+        if not df_raw.empty and current_year in df_raw['ano'].values:
+            df_raw.loc[df_raw['ano'] == current_year, 'valor_final'] = current_portfolio_saldo
+        elif df_raw.empty or current_year not in df_raw['ano'].values:
+            new_row = pd.DataFrame([{
+                'id': 0,
+                'user_id': user_id,
+                'ano': current_year,
+                'valor_final': current_portfolio_saldo,
+                'created_at': datetime.datetime.now(),
+                'updated_at': datetime.datetime.now()
+            }])
+            df_raw = pd.concat([df_raw, new_row], ignore_index=True)
+
     df_growth = compute_patrimonio_growth(df_raw)
 
     # Tratamento dos gatilhos de diálogo

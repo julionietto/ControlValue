@@ -208,17 +208,18 @@ Ao acessar o **Crescimento Patrimonial**, você verá um panorama completo da su
 *   **Cards de Resumo:** Na parte superior, você encontrará indicadores rápidos do seu patrimônio:
     *   **Saldo Atual:** Mostra o valor total da sua carteira no momento, exatamente como exibido na "Visão Geral" do sistema.
     *   **Pico Histórico (Melhoria!):** Este card agora exibe o **maior valor de patrimônio que você já alcançou** desde que começou a usar o ControlValue, considerando tanto seus registros anuais quanto o seu saldo diário. Isso significa que ele sempre mostrará o seu recorde absoluto de patrimônio, refletindo com mais precisão sua jornada de crescimento.
+*   **Registro Automático do Ano Atual (Novidade!):** Para garantir que você sempre tenha a visão mais atualizada da sua jornada financeira, o ControlValue agora **registra e atualiza automaticamente o valor do seu patrimônio para o ano corrente** na tabela e no gráfico de evolução. Isso significa que a linha referente ao ano atual sempre refletirá o seu **saldo de carteira em tempo real**, sem que você precise adicioná-lo ou atualizá-lo manualmente. Os registros de anos anteriores permanecem inalterados, mostrando o valor final do seu patrimônio na virada de cada ano, proporcionando uma visão precisa do seu crescimento ao longo do tempo.
 
 *   **Adicionando e Gerenciando Seus Registros Anuais:** A interface para gerenciar seu histórico anual foi simplificada:
     *   **➕ Adicionar Ano:**
         *   Clique neste botão para adicionar um novo registro do seu patrimônio para um ano específico.
-        *   Uma pequena janela "📅 Registrar Patrimônio Anual" se abrirá, onde você pode informar o **Ano** e o **Valor Final** do seu patrimônio naquele ano. Esta janela é mais flexível e pode ser fechada a qualquer momento.
-        *   Para sua comodidade, se você quiser registrar o valor atual da sua carteira, há um botão **"📥 Usar Saldo Atual da Carteira"** que preenche automaticamente o campo com o seu saldo do dia.
+        *   Uma pequena janela "📅 Registrar Patrimônio Anual" se abrirá, onde você pode informar o **Ano** e o **Valor Final** do seu patrimônio. Para o ano atual, o campo será rotulado como **"Valor Final (Saldo Atual em R$)"** e refletirá o valor da sua carteira em tempo real. Para anos anteriores, o rótulo será **"Valor Final em 31/12/{Ano Selecionado} (R$)"**, indicando o valor de fechamento naquele ano. Esta janela é mais flexível e pode ser fechada a qualquer momento.
+        *   Para sua comodidade, se você estiver registrando o **ano atual**, há um botão **"📥 Usar Saldo Atual da Carteira"** que preenche automaticamente o campo com o seu saldo do dia.
         *   Depois, basta clicar em **"💾 Salvar Registro"**.
     *   **Edição e Exclusão de Registros (Nova Interação!):**
         *   Agora, para corrigir, atualizar ou remover um registro de patrimônio anual, basta **clicar diretamente na linha correspondente da tabela "Histórico Anual de Valor Patrimonial"** (descrita abaixo).
         *   Ao clicar na linha, uma nova janela "Edição de Registro Patrimonial" será exibida automaticamente com os detalhes daquele ano. Nela, você poderá:
-            *   **Atualizar** o "Valor Final" e clicar em "💾 Salvar".
+            *   **Atualizar** o valor, cujo campo também ajusta seu rótulo dinamicamente (para o ano atual, será **"Valor Final (Saldo Atual em R$)"**; para anos anteriores, **"Valor Final em 31/12/{Ano Selecionado} (R$)"**), e clicar em "💾 Salvar".
             *   **Excluir** o registro clicando no botão "🗑️ Excluir". Para sua segurança, uma confirmação será solicitada antes da exclusão definitiva.
             *   **Cancelar** a edição e fechar a janela. Esta janela também é mais flexível e pode ser fechada a qualquer momento.
 

@@ -221,3 +221,35 @@ def test_get_pico_historico():
         assert "historico_saldo_diario" in query_executed
         assert "crescimento_patrimonial" in query_executed
 
+
+def test_current_year_realtime_balance_and_historical_preservation():
+    import datetime
+    current_year = datetime.date.today().year
+    past_year = current_year - 1
+
+    df_raw = pd.DataFrame([
+        {'id': 1, 'ano': past_year, 'valor_final': 100000.0, 'user_id': 1},
+        {'id': 2, 'ano': current_year, 'valor_final': 120000.0, 'user_id': 1},
+    ])
+
+    current_portfolio_saldo = 135000.0
+
+    # Simula a lógica de render_crescimento_patrimonial_view
+    if current_portfolio_saldo > 0:
+        if not df_raw.empty and current_year in df_raw['ano'].values:
+            df_raw.loc[df_raw['ano'] == current_year, 'valor_final'] = current_portfolio_saldo
+
+    df_growth = compute_patrimonio_growth(df_raw)
+
+    # Verifica se o ano corrente reflete o saldo atual da carteira em tempo real
+    row_current = df_growth[df_growth['ano'] == current_year].iloc[0]
+    assert row_current['valor_final'] == 135000.0
+
+    # Verifica se o ano histórico anterior permaneceu intacto com o valor de fechamento
+    row_past = df_growth[df_growth['ano'] == past_year].iloc[0]
+    assert row_past['valor_final'] == 100000.0
+
+    # Variação calculada entre o saldo atual do ano corrente e o fechamento do ano anterior
+    assert row_current['variacao_brl'] == 35000.0
+    assert pytest.approx(row_current['crescimento_pct'], 0.01) == 35.0
+
