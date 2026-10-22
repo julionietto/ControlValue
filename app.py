@@ -175,6 +175,10 @@ try:
         from views.asset_detail import render_asset_detail_view
         render_asset_detail_view(st.session_state.viewing_history)
 
+    if current_view == "Crescimento Patrimonial":
+        from views.crescimento_patrimonial import render_crescimento_patrimonial_view
+        render_crescimento_patrimonial_view()
+
     if current_view == "Visão Geral":
         render_visao_geral_view()
 

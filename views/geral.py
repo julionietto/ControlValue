@@ -588,6 +588,7 @@ def render_visao_geral_view():
         # Resumo Geral
         total_invested = assets_df['total_invested'].sum()
         current_total_value = assets_df['current_value'].sum()
+        st.session_state.current_total_value = current_total_value
         
         # Busca Alocações de Meta do Usuário para o Balanceamento
         user_targets = db.get_user_allocations(st.session_state.user_id)

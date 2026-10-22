@@ -83,3 +83,11 @@ from db.utils import (
     check_sync_completed_today,
     log_sync_execution
 )
+
+from db.crescimento import (
+    get_crescimento_patrimonial,
+    save_crescimento_patrimonial,
+    update_crescimento_patrimonial,
+    delete_crescimento_patrimonial,
+    get_crescimento_record_by_year
+)

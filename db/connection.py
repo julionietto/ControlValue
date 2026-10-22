@@ -277,6 +277,20 @@ def init_db():
             import logging
             logging.warning(f"Aviso na migração de datas do proventos_provisionados: {e}")
     
+        # Tabela de Crescimento Patrimonial
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS crescimento_patrimonial (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL DEFAULT 1,
+                ano INTEGER NOT NULL,
+                valor_final REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, ano)
+            )
+        ''')
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_crescimento_user_ano ON crescimento_patrimonial (user_id, ano DESC)")
+
         conn.commit()
 
 def _query_to_df(query, conn, params=None):
