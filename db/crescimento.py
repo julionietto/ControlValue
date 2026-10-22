@@ -89,3 +89,68 @@ def get_crescimento_record_by_year(ano, user_id):
             (ano, user_id)
         )
         return cursor.fetchone()
+
+def sync_crescimento_patrimonial_current_year(user_id, current_saldo=None):
+    """
+    Garante que o registro do ano corrente exista e reflita o Saldo Atual do investidor.
+    Quando um novo ano começa, o ano anterior é preservado como histórico e o novo ano
+    passa a receber as atualizações contínuas do Saldo Atual.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    try:
+        sp_tz = ZoneInfo("America/Sao_Paulo")
+        current_year = datetime.now(sp_tz).year
+    except Exception:
+        current_year = datetime.now().year
+
+    if current_saldo is None:
+        try:
+            import executive_report_service as exec_svc
+            _, _, _, total_atual, _, _, _ = exec_svc.get_user_portfolio_data(user_id)
+            current_saldo = float(total_atual)
+        except Exception:
+            current_saldo = 0.0
+
+    save_crescimento_patrimonial(current_year, float(current_saldo), user_id)
+    return True
+
+def check_and_rollover_crescimento_all_users():
+    """
+    Verifica todos os usuários cadastrados e assegura que cada um possua um registro para o ano corrente.
+    A cada virada de ano (ex: 1º de Janeiro), um novo registro anual é criado automaticamente para cada
+    usuário refletindo seu Saldo Atual, enquanto os anos anteriores passam a ser puramente históricos.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import logging
+    try:
+        sp_tz = ZoneInfo("America/Sao_Paulo")
+        current_year = datetime.now(sp_tz).year
+    except Exception:
+        current_year = datetime.now().year
+
+    from db.auth import get_all_users
+    users = get_all_users()
+    if not users:
+        return 0
+
+    count_synced = 0
+    try:
+        import executive_report_service as exec_svc
+    except Exception as e:
+        logging.warning(f"Não foi possível carregar executive_report_service: {e}")
+        return 0
+
+    for u in users:
+        uid = u['id']
+        try:
+            _, _, _, total_atual, _, _, _ = exec_svc.get_user_portfolio_data(uid)
+            save_crescimento_patrimonial(current_year, float(total_atual), uid)
+            count_synced += 1
+        except Exception as e:
+            logging.warning(f"Erro ao processar rollover de crescimento para user {uid}: {e}")
+
+    clear_db_cache()
+    return count_synced
+

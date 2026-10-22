@@ -130,3 +130,29 @@ def test_db_get_crescimento_record_by_year():
         assert res is not None
         assert res['ano'] == 2025
         assert res['valor_final'] == 500000.0
+
+
+def test_sync_crescimento_patrimonial_current_year():
+    with patch('db.crescimento.save_crescimento_patrimonial') as mock_save:
+        res = db_crescimento.sync_crescimento_patrimonial_current_year(10, 750000.0)
+        assert res is True
+        assert mock_save.called
+        call_args = mock_save.call_args[0]
+        # ano deve ser int, valor_final 750000.0, user_id 10
+        assert isinstance(call_args[0], int)
+        assert call_args[1] == 750000.0
+        assert call_args[2] == 10
+
+
+def test_check_and_rollover_crescimento_all_users():
+    mock_users = [{'id': 1, 'username': 'user1'}, {'id': 2, 'username': 'user2'}]
+    with patch('db.auth.get_all_users', return_value=mock_users), \
+         patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 123450.0, None, None, None)), \
+         patch('db.crescimento.save_crescimento_patrimonial') as mock_save, \
+         patch('db.crescimento.clear_db_cache') as mock_cache:
+        
+        count = db_crescimento.check_and_rollover_crescimento_all_users()
+        assert count == 2
+        assert mock_save.call_count == 2
+        assert mock_cache.called
+

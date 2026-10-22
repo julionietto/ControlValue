@@ -152,6 +152,10 @@ try:
     if 'rollover_checked' not in st.session_state:
         if db.check_and_create_next_year_dashboard(st.session_state.user_id):
             st.session_state.refresh_id += 1
+        try:
+            db.check_and_rollover_crescimento_all_users()
+        except Exception:
+            pass
         st.session_state.rollover_checked = True
 
     # Pega a navegação inicial do estado

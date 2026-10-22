@@ -89,5 +89,7 @@ from db.crescimento import (
     save_crescimento_patrimonial,
     update_crescimento_patrimonial,
     delete_crescimento_patrimonial,
-    get_crescimento_record_by_year
+    get_crescimento_record_by_year,
+    sync_crescimento_patrimonial_current_year,
+    check_and_rollover_crescimento_all_users
 )

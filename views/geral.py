@@ -589,6 +589,10 @@ def render_visao_geral_view():
         total_invested = assets_df['total_invested'].sum()
         current_total_value = assets_df['current_value'].sum()
         st.session_state.current_total_value = current_total_value
+        try:
+            db.sync_crescimento_patrimonial_current_year(st.session_state.user_id, current_total_value)
+        except Exception:
+            pass
         
         # Busca Alocações de Meta do Usuário para o Balanceamento
         user_targets = db.get_user_allocations(st.session_state.user_id)

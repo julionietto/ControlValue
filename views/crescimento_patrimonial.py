@@ -363,6 +363,12 @@ def render_crescimento_patrimonial_view():
     # Saldo Atual da Carteira (Visão Geral)
     current_portfolio_saldo = get_current_portfolio_balance(user_id)
 
+    # Sincroniza o ano corrente automaticamente com o Saldo Atual (regra de virada e histórico)
+    try:
+        db.sync_crescimento_patrimonial_current_year(user_id, current_portfolio_saldo)
+    except Exception:
+        pass
+
     # Busca os dados do banco de dados
     df_raw = db.get_crescimento_patrimonial(user_id)
     df_growth = compute_patrimonio_growth(df_raw)
@@ -446,12 +452,14 @@ def render_crescimento_patrimonial_view():
     # TABELA DE DADOS (ORDENADA: ANO MAIS RECENTE PRIMEIRO)
     # =========================================================================
     st.markdown("### 📋 Histórico Anual de Valor Patrimonial")
+    st.caption("💡 O ano atual reflete continuamente o **Saldo Atual** da tela Visão Geral. A cada 1º de Janeiro, um novo ano é iniciado automaticamente e o ano anterior passa a ser histórico.")
 
     if df_growth.empty:
         st.info("Nenhum registro patrimonial cadastrado até o momento. Clique em **➕ Novo Registro** para inserir o primeiro ano.")
     else:
         # Prepara DataFrame para exibição formatada
         display_df = df_growth.copy()
+        current_year = datetime.date.today().year
 
         def format_pct_display(val):
             if is_hidden: return "••••••"
@@ -471,7 +479,13 @@ def render_crescimento_patrimonial_view():
             if is_hidden: return "R$ ••••••"
             return format_brl(val)
 
-        display_df['Ano'] = display_df['ano'].astype(str)
+        def format_ano_display(val):
+            ano_int = int(val)
+            if ano_int == current_year:
+                return f"{ano_int} 🟢 Atual"
+            return f"{ano_int}"
+
+        display_df['Ano'] = display_df['ano'].apply(format_ano_display)
         display_df['Valor Final'] = display_df['valor_final'].apply(format_val_display)
         display_df['Crescimento (%)'] = display_df['crescimento_pct'].apply(format_pct_display)
         display_df['Variação (R$)'] = display_df['variacao_brl'].apply(format_var_display)
