@@ -71,8 +71,9 @@ def dialog_report_executivo():
     st.markdown("---")
 
     # Tabs Visuais
-    tab_alloc, tab_prov, tab_macro = st.tabs([
+    tab_alloc, tab_crescimento, tab_prov, tab_macro = st.tabs([
         "📊 Alocação & Matriz de Aderência",
+        "📈 Crescimento Patrimonial",
         "📈 Trajetória de Renda Passiva",
         "🌐 Panorama Macroeconômico & Alertas"
     ])
@@ -115,7 +116,14 @@ def dialog_report_executivo():
                 st.dataframe(summary_df.style.format({"Total (R$)": "R$ {:,.2f}", "Peso (%)": "{:.1f}%"}), hide_index=True, use_container_width=True)
 
     # -----------------------------
-    # TAB 2: PROVENTOS & TENDÊNCIA
+    # TAB 2: CRESCIMENTO PATRIMONIAL
+    # -----------------------------
+    with tab_crescimento:
+        from views.crescimento_patrimonial import render_crescimento_patrimonial_view
+        render_crescimento_patrimonial_view(show_header=False)
+
+    # -----------------------------
+    # TAB 3: PROVENTOS & TENDÊNCIA
     # -----------------------------
     with tab_prov:
         st.markdown("#### 📈 Evolução Histórica dos Proventos e Média Mensal Real")

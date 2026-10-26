@@ -177,7 +177,7 @@ try:
 
     if current_view == "Crescimento Patrimonial":
         from views.crescimento_patrimonial import render_crescimento_patrimonial_view
-        render_crescimento_patrimonial_view()
+        render_crescimento_patrimonial_view(show_header=True)
 
     if current_view == "Visão Geral":
         render_visao_geral_view()

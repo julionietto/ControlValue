@@ -170,7 +170,7 @@ Clique no **menu do seu perfil** (o ícone do seu nome ou foto no canto superior
 
 ### O que o Report Executivo oferece?
 
-Ao emitir um novo relatório, o sistema ControlValue realiza uma análise completa e apresenta as seguintes informações:
+Ao emitir um novo relatório, o sistema ControlValue realiza uma análise completa e apresenta as seguintes informações, organizadas em abas para facilitar a navegação:
 
 *   **Métricas Financeiras Essenciais:** Na parte superior do relatório, tanto na tela quanto no PDF gerado, você encontrará um resumo dos seus indicadores mais importantes, exibidos de forma clara e organizada:
     *   **Saldo Atual (Mercado):** O valor total da sua carteira no momento.
@@ -179,12 +179,19 @@ Ao emitir um novo relatório, o sistema ControlValue realiza uma análise comple
     *   **Proventos Totais Acumulados:** A soma de todos os dividendos e rendimentos que você recebeu desde o início.
     *   **Aderência Estratégica (no PDF) / Ganho/Perda Realizado (na tela):** O sistema oferece uma porcentagem de alinhamento com seus objetivos no documento PDF e mostra seu lucro ou prejuízo real na visualização da tela.
 
-*   **Diagnóstico de Perfil e Objetivo:** O sistema avalia a composição da sua carteira e infere automaticamente qual é o seu **perfil de investidor** (Conservador, Moderado ou Arrojado) e o seu **principal objetivo patrimonial** (Foco em Renda Passiva, em Crescimento e Valorização Patrimonial, ou um Perfil Misto).
-*   **Panorama Macroeconômico Inteligente:** Você recebe uma análise atualizada do cenário econômico global, focando nos mercados do **Brasil** (com informações sobre a Taxa Selic, inflação IPCA, etc.) e dos **Estados Unidos** (considerando a taxa de juros do Fed, dólar/câmbio, e o impacto nos seus investimentos internacionais).
-*   **Ativos sob Análise e Fatos Relevantes:** O relatório identifica quais ativos da sua carteira podem estar "sob pressão" ou com um preço médio acima do seu "preço teto" ou "valor justo" estipulado. Para cada um, ele oferece explicações claras e resumidas sobre os motivos por trás dessa situação (ex: como juros altos afetam Fundos Imobiliários, a volatilidade de commodities, ou o ciclo de juros americanos nos REITs). **Importante:** Para investimentos internacionais (Stocks, Reits), os preços médios e as cotações atuais são exibidos em dólar (U$), proporcionando uma visão mais precisa na moeda original do ativo. Para ativos brasileiros, os valores são mostrados em Reais (R$).
-*   **Análise Detalhada de Proventos (Aba "Proventos" dentro do Report):** Dentro do Report Executivo, ao navegar para a aba dedicada aos seus proventos, você encontrará informações ainda mais detalhadas:
+*   **Aba "📊 Alocação & Matriz de Aderência":** Apresenta o diagnóstico do seu perfil de investidor (Conservador, Moderado ou Arrojado), o principal objetivo patrimonial (Foco em Renda Passiva, em Crescimento e Valorização Patrimonial, ou um Perfil Misto), e um radar que compara seus ativos atuais com seus objetivos de alocação.
+
+*   **Aba "📈 Crescimento Patrimonial" (Novidade!):** Dentro do Report Executivo, você encontrará uma seção dedicada à sua evolução patrimonial ao longo dos anos. Esta aba apresenta:
+    *   **Cards de Resumo:** Indicadores rápidos como seu **Saldo Atual** e o **Pico Histórico** (o maior valor de patrimônio já alcançado).
+    *   **Tabela "Histórico Anual de Valor Patrimonial":** Uma lista detalhada com seus registros anuais de patrimônio, mostrando o valor final para cada ano, o crescimento percentual e a variação em Reais em comparação com o ano anterior. O ano atual é sempre atualizado automaticamente para refletir seu saldo de carteira em tempo real.
+    *   **Gráfico "Evolução Patrimonial ao Longo dos Anos":** Uma representação visual interativa da sua jornada financeira, com barras para o valor patrimonial e uma linha para o crescimento anual em porcentagem. Esta é uma ferramenta essencial para registrar e visualizar o quão longe você chegou em seus investimentos, permitindo um acompanhamento claro do seu progresso no tempo, tudo dentro da análise do seu Report Executivo.
+
+*   **Aba "📈 Trajetória de Renda Passiva":** Anteriormente "Análise Detalhada de Proventos", esta aba agora foca ainda mais na sua renda passiva. Aqui você encontrará:
     *   **Visão Geral do Ano Atual:** Uma caixa de destaque informa o **valor total de proventos recebidos até o mês atual do ano** e o **valor médio recebido por mês** neste mesmo período, dando uma "foto" rápida da sua renda passiva anual até o momento.
     *   **Gráfico Mês a Mês — Recebidos e Provisionados:** Um novo e intuitivo gráfico visualiza, mês a mês, o desempenho dos seus proventos no ano atual. Ele mostra de forma clara e separada o que já foi **recebido** e o que está **provisionado** (valores a receber no futuro, baseados em anúncios de pagamento), além de uma linha que traça a **média acumulada** dos proventos ao longo dos meses. Isso ajuda você a planejar sua renda passiva e visualizar tendências de recebimento. **Para o ano atual, é importante saber que quaisquer totais ou médias anuais exibidos nos gráficos ou resumos desta seção do relatório serão calculados com base nos proventos recebidos apenas até o mês corrente, proporcionando uma visão precisa do seu desempenho Year-to-Date (Acumulado no Ano).**
+
+*   **Aba "🌐 Panorama Macroeconômico & Alertas":** Esta aba oferece uma análise atualizada do cenário econômico global, focando nos mercados do **Brasil** (com informações sobre a Taxa Selic, inflação IPCA, etc.) e dos **Estados Unidos** (considerando a taxa de juros do Fed, dólar/câmbio, e o impacto nos seus investimentos internacionais). Também identifica quais ativos da sua carteira podem estar "sob pressão" ou com um preço médio acima do seu "preço teto" ou "valor justo" estipulado. Para cada um, oferece explicações claras e resumidas sobre os motivos por trás dessa situação (ex: como juros altos afetam Fundos Imobiliários, a volatilidade de commodities, ou o ciclo de juros americanos nos REITs). **Importante:** Para investimentos internacionais (Stocks, Reits), os preços médios e as cotações atuais são exibidos em dólar (U$), proporcionando uma visão mais precisa na moeda original do ativo. Para ativos brasileiros, os valores são mostrados em Reais (R$).
+
 *   **Orientação Estratégica Personalizada:** Com base no seu perfil e objetivos, o sistema fornece uma visão estratégica e recomendações sobre os próximos passos para alinhar sua carteira. Isso pode incluir sugestões de rebalanceamento, onde concentrar novos aportes ou como otimizar sua renda passiva.
 *   **Relatório em PDF para Download:** Após toda a análise ser exibida na tela, você pode facilmente baixar um documento profissional em formato PDF com todas essas informações. Este PDF agora inclui a métrica de **"Aportes (Ano)"** no resumo inicial, proporcionando um registro ainda mais completo. É ideal para você ter um registro detalhado, revisar offline ou compartilhar com seu consultor financeiro.
 
@@ -198,12 +205,14 @@ A nova seção de **Crescimento Patrimonial** é uma ferramenta dedicada para vo
 
 ### Como Acessar o Crescimento Patrimonial
 Você pode acessar esta funcionalidade de duas formas:
-1.  Pelo **menu do seu perfil** (o ícone com seu nome ou foto no canto superior direito da tela), selecionando a opção **"Crescimento Patrimonial"**.
-2.  Pelo menu de navegação lateral, se disponível.
+1.  **Através do Report Executivo (Principal forma de acesso agora!):**
+    *   Clique no **menu do seu perfil** (o ícone com seu nome ou foto no canto superior direito da tela) e selecione a opção **📄 Report Executivo**.
+    *   Dentro do Report Executivo, navegue até a aba **"📈 Crescimento Patrimonial"**. Lá, você encontrará todas as informações detalhadas sobre a evolução do seu patrimônio, integradas à sua análise estratégica completa.
+2.  Pelo menu de navegação lateral, se disponível (como uma tela independente).
 
 ### O que você encontrará nesta tela?
 
-Ao acessar o **Crescimento Patrimonial**, você verá um panorama completo da sua evolução financeira:
+Ao acessar o **Crescimento Patrimonial**, seja como tela independente ou dentro do Report Executivo, você verá um panorama completo da sua evolução financeira:
 
 *   **Cards de Resumo:** Na parte superior, você encontrará indicadores rápidos do seu patrimônio:
     *   **Saldo Atual:** Mostra o valor total da sua carteira no momento, exatamente como exibido na "Visão Geral" do sistema.

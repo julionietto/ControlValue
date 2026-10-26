@@ -358,18 +358,22 @@ def render_patrimonio_chart(df_chronological, is_hidden=False):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_crescimento_patrimonial_view():
+def render_crescimento_patrimonial_view(show_header: bool = False):
     """
     Visão Principal do Crescimento Patrimonial do Investidor.
     """
     user_id = st.session_state.get('user_id', 1)
     is_hidden = st.session_state.get('hide_values', False)
 
-    # Cabeçalho Superior Unificado
-    render_top_header(
-        "📈 Crescimento Patrimonial",
-        "Acompanhe a evolução histórica do valor patrimonial ao longo da vida e o percentual de crescimento anual."
-    )
+    # Cabeçalho Superior Unificado (se executado como tela isolada)
+    if show_header:
+        render_top_header(
+            "📈 Crescimento Patrimonial",
+            "Acompanhe a evolução histórica do valor patrimonial ao longo da vida e o percentual de crescimento anual."
+        )
+    else:
+        st.markdown("#### 📈 Crescimento Patrimonial")
+        st.caption("Acompanhe a evolução histórica do valor patrimonial ao longo da vida e o percentual de crescimento anual.")
 
     # Saldo Atual da Carteira (Visão Geral)
     current_portfolio_saldo = get_current_portfolio_balance(user_id)

@@ -253,3 +253,28 @@ def test_current_year_realtime_balance_and_historical_preservation():
     assert row_current['variacao_brl'] == 35000.0
     assert pytest.approx(row_current['crescimento_pct'], 0.01) == 35.0
 
+
+def test_crescimento_patrimonial_report_executivo_integration():
+    import inspect
+    from views.crescimento_patrimonial import render_crescimento_patrimonial_view
+
+    # Verifica assinatura da função com parâmetro show_header
+    sig = inspect.signature(render_crescimento_patrimonial_view)
+    assert 'show_header' in sig.parameters
+    assert sig.parameters['show_header'].default is False
+
+    # Verifica a presença da aba de Crescimento Patrimonial em views/report_executivo.py
+    with open("views/report_executivo.py", "r", encoding="utf-8") as f:
+        rep_content = f.read()
+
+    assert '"📈 Crescimento Patrimonial"' in rep_content
+    assert '"📈 Trajetória de Renda Passiva"' in rep_content
+    assert rep_content.index('"📈 Crescimento Patrimonial"') < rep_content.index('"📈 Trajetória de Renda Passiva"')
+    assert "render_crescimento_patrimonial_view(show_header=False)" in rep_content
+
+    # Verifica que a opção foi removida do menu do usuário em components/ui.py
+    with open("components/ui.py", "r", encoding="utf-8") as f:
+        ui_content = f.read()
+
+    assert 'if st.button("Crescimento Patrimonial", use_container_width=True):' not in ui_content
+

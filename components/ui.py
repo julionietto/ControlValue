@@ -117,11 +117,6 @@ def render_profile_popover():
                     st.session_state.trigger_dialog_alocacao = True
                     st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                     st.rerun()
-                if st.button("Crescimento Patrimonial", use_container_width=True):
-                    st.session_state.navigation_tab = "Crescimento Patrimonial"
-                    st.session_state.viewing_history = None
-                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
-                    st.rerun()
                 if st.button("Sair", type="primary", use_container_width=True):
                     st.session_state.clear()
                     st.rerun()
