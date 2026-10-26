@@ -124,9 +124,13 @@ def sync_crescimento_patrimonial_current_year(user_id, current_saldo=None):
 
 def check_and_rollover_crescimento_all_users():
     """
-    Verifica todos os usuários cadastrados e assegura que cada um possua um registro para o ano corrente.
-    A cada virada de ano (ex: 1º de Janeiro), um novo registro anual é criado automaticamente para cada
-    usuário refletindo seu Saldo Atual, enquanto os anos anteriores passam a ser puramente históricos.
+    Executa a verificação diária de Pico Histórico e virada anual para todos os usuários cadastrados.
+    Lógica de atualização:
+    - Se o usuário ainda não possuir registro para o ano corrente (ex: virada de ano no dia 1º de Janeiro):
+      cria o registro inicial do ano corrente e registra o saldo diário.
+    - Se o usuário já possuir registro do ano: verifica se o saldo atual é MAIOR que o
+      pico histórico registrado. Se for maior, atualiza para o novo recorde no registro anual e no histórico diário.
+    - Se não for maior que o pico histórico: não faz nada, preservando o banco e evitando escritas desnecessárias.
     """
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -154,13 +158,30 @@ def check_and_rollover_crescimento_all_users():
         try:
             _, _, _, total_atual, _, _, _ = exec_svc.get_user_portfolio_data(uid)
             val = float(total_atual)
-            save_crescimento_patrimonial(current_year, val, uid)
-            record_daily_balance(uid, val)
-            count_synced += 1
+            if val <= 0:
+                continue
+
+            pico_atual = get_pico_historico(uid)
+            rec_ano = get_crescimento_record_by_year(current_year, uid)
+
+            # 1. Caso de virada anual / registro inexistente para o ano corrente:
+            if rec_ano is None:
+                save_crescimento_patrimonial(current_year, val, uid)
+                record_daily_balance(uid, val)
+                count_synced += 1
+                logging.info(f"Crescimento anual inicializado para user {uid}: Ano {current_year} = R$ {val:,.2f}")
+            # 2. Caso de novo recorde patrimonial (superou o pico histórico):
+            elif val > pico_atual:
+                save_crescimento_patrimonial(current_year, val, uid)
+                record_daily_balance(uid, val)
+                count_synced += 1
+                logging.info(f"Novo pico histórico registrado para user {uid}: R$ {pico_atual:,.2f} -> R$ {val:,.2f}")
+            # 3. Caso não supere o pico: não faz nada
         except Exception as e:
             logging.warning(f"Erro ao processar rollover de crescimento para user {uid}: {e}")
 
-    clear_crescimento_cache()
+    if count_synced > 0:
+        clear_crescimento_cache()
     return count_synced
 
 

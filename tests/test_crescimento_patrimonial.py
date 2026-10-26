@@ -144,10 +144,12 @@ def test_sync_crescimento_patrimonial_current_year():
         assert call_args[2] == 10
 
 
-def test_check_and_rollover_crescimento_all_users():
+def test_check_and_rollover_crescimento_all_users_novo_recorde():
     mock_users = [{'id': 1, 'username': 'user1'}, {'id': 2, 'username': 'user2'}]
     with patch('db.auth.get_all_users', return_value=mock_users), \
-         patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 123450.0, None, None, None)), \
+         patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 150000.0, None, None, None)), \
+         patch('db.crescimento.get_pico_historico', return_value=120000.0), \
+         patch('db.crescimento.get_crescimento_record_by_year', return_value={'id': 1, 'ano': 2026, 'valor_final': 120000.0}), \
          patch('db.crescimento.save_crescimento_patrimonial') as mock_save, \
          patch('db.crescimento.record_daily_balance') as mock_record, \
          patch('db.crescimento.clear_crescimento_cache') as mock_cache:
@@ -156,6 +158,42 @@ def test_check_and_rollover_crescimento_all_users():
         assert count == 2
         assert mock_save.call_count == 2
         assert mock_record.call_count == 2
+        assert mock_cache.called
+
+
+def test_check_and_rollover_crescimento_all_users_abaixo_do_pico():
+    # Saldo atual (110k) menor ou igual ao pico histórico (120k) e registro do ano já existe: não deve salvar
+    mock_users = [{'id': 1, 'username': 'user1'}]
+    with patch('db.auth.get_all_users', return_value=mock_users), \
+         patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 110000.0, None, None, None)), \
+         patch('db.crescimento.get_pico_historico', return_value=120000.0), \
+         patch('db.crescimento.get_crescimento_record_by_year', return_value={'id': 1, 'ano': 2026, 'valor_final': 120000.0}), \
+         patch('db.crescimento.save_crescimento_patrimonial') as mock_save, \
+         patch('db.crescimento.record_daily_balance') as mock_record, \
+         patch('db.crescimento.clear_crescimento_cache') as mock_cache:
+        
+        count = db_crescimento.check_and_rollover_crescimento_all_users()
+        assert count == 0
+        assert mock_save.call_count == 0
+        assert mock_record.call_count == 0
+        assert not mock_cache.called
+
+
+def test_check_and_rollover_crescimento_all_users_virada_anual():
+    # Registro do ano corrente ainda não existe (rec_ano is None): deve criar registro inicial do ano
+    mock_users = [{'id': 1, 'username': 'user1'}]
+    with patch('db.auth.get_all_users', return_value=mock_users), \
+         patch('executive_report_service.get_user_portfolio_data', return_value=(None, None, None, 115000.0, None, None, None)), \
+         patch('db.crescimento.get_pico_historico', return_value=120000.0), \
+         patch('db.crescimento.get_crescimento_record_by_year', return_value=None), \
+         patch('db.crescimento.save_crescimento_patrimonial') as mock_save, \
+         patch('db.crescimento.record_daily_balance') as mock_record, \
+         patch('db.crescimento.clear_crescimento_cache') as mock_cache:
+        
+        count = db_crescimento.check_and_rollover_crescimento_all_users()
+        assert count == 1
+        assert mock_save.call_count == 1
+        assert mock_record.call_count == 1
         assert mock_cache.called
 
 

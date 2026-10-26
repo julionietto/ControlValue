@@ -378,14 +378,6 @@ def render_crescimento_patrimonial_view(show_header: bool = False):
     # Saldo Atual da Carteira (Visão Geral)
     current_portfolio_saldo = get_current_portfolio_balance(user_id)
 
-    # Sincroniza o ano corrente automaticamente com o Saldo Atual (regra de virada e histórico)
-    try:
-        db.sync_crescimento_patrimonial_current_year(user_id, current_portfolio_saldo)
-        if current_portfolio_saldo > 0:
-            db.record_daily_balance(user_id, current_portfolio_saldo)
-    except Exception:
-        pass
-
     # Busca o maior valor de saldo/patrimônio já registrado no banco para este investidor
     try:
         pico_historico = db.get_pico_historico(user_id)

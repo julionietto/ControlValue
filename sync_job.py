@@ -216,11 +216,11 @@ def run_sync():
         else:
             print("Nenhum derivativo em aberto encontrado para atualização.")
 
-        # --- NOVA ROTINA: Atualização e Virada Anual de Crescimento Patrimonial ---
-        print("\nVerificando atualização e virada anual do Crescimento Patrimonial para todos os usuários...")
+        # --- NOVA ROTINA: Verificação de Pico Histórico e Virada Anual de Crescimento Patrimonial ---
+        print("\nVerificando novos recordes de Pico Histórico e virada anual do Crescimento Patrimonial...")
         try:
             rollover_count = db.check_and_rollover_crescimento_all_users()
-            print(f"Crescimento patrimonial sincronizado para {rollover_count} usuários.")
+            print(f"Crescimento patrimonial verificado: {rollover_count} usuários com novo recorde ou virada anual.")
         except Exception as e:
             print(f"Aviso na sincronização de crescimento patrimonial: {e}")
 
