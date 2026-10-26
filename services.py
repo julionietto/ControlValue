@@ -559,42 +559,58 @@ def get_index_history(ticker, period="1y"):
 
 @st.cache_data(ttl=3600)
 def get_bcb_history(code, start_date):
-    """Busca histórico de uma série do BCB (SGS)."""
+    """Busca histórico de uma série do BCB (SGS). Suporta paginação automática para períodos superiores a 8 anos."""
     import requests
-    from datetime import datetime
+    from datetime import datetime, timedelta
     
-    # Converte start_date (YYYY-MM-DD) para formato BCB (DD/MM/YYYY)
+    # Converte start_date (date, datetime, Timestamp ou string) para pd.Timestamp tz-naive
     try:
-        dt_obj = datetime.strptime(start_date, '%Y-%m-%d')
-        bcb_date = dt_obj.strftime('%d/%m/%Y')
-    except:
+        dt_obj = pd.to_datetime(start_date)
+        start_dt = dt_obj.tz_localize(None) if hasattr(dt_obj, 'tz_localize') and dt_obj.tzinfo else dt_obj
+    except Exception:
         sp_tz = ZoneInfo("America/Sao_Paulo")
-        bcb_date = datetime.now(sp_tz).strftime('01/01/%Y') # fallback
+        now_sp = datetime.now(sp_tz)
+        start_dt = pd.to_datetime(f"{now_sp.year}-01-01")
 
-    url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json&dataInicial={bcb_date}"
-    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+    }
+
     try:
-        # Adiciona User-Agent completo e Accept header para evitar bloqueios e erros 406
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json'
-        }
-        response = requests.get(url, timeout=30, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            if not data:
-                return pd.Series()
-                
-            df = pd.DataFrame(data)
-            df['data'] = pd.to_datetime(df['data'], dayfirst=True)
-            df['valor'] = df['valor'].astype(float)
+        end_dt = pd.to_datetime("today").tz_localize(None)
+        dfs = []
+        curr_start = start_dt
+        
+        # O BCB SGS rejeita consultas de séries diárias acima de 10 anos (HTTP 406).
+        # Fatiamos períodos longos em blocos de até 8 anos (2920 dias).
+        while curr_start <= end_dt:
+            curr_end = min(curr_start + timedelta(days=2920), end_dt)
+            ini_str = curr_start.strftime('%d/%m/%Y')
+            fim_str = curr_end.strftime('%d/%m/%Y')
+            url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{code}/dados?formato=json&dataInicial={ini_str}&dataFinal={fim_str}"
             
-            # Filtra novamente em memória apenas por segurança (dataInicial garante a janela do servidor)
-            start_dt = pd.to_datetime(start_date)
-            df = df[df['data'] >= start_dt]
-            return df.set_index('data')['valor']
-        else:
-            print(f"Erro BCB {code}: Status {response.status_code}")
+            response = requests.get(url, timeout=30, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                if data:
+                    dfs.append(pd.DataFrame(data))
+            else:
+                print(f"Erro BCB {code} [{ini_str} a {fim_str}]: Status {response.status_code}")
+                
+            curr_start = curr_end + timedelta(days=1)
+            
+        if not dfs:
+            return pd.Series()
+            
+        df = pd.concat(dfs, ignore_index=True).drop_duplicates(subset=['data'])
+        df['data'] = pd.to_datetime(df['data'], dayfirst=True)
+        if hasattr(df['data'].dt, 'tz') and df['data'].dt.tz is not None:
+            df['data'] = df['data'].dt.tz_localize(None)
+        df['valor'] = df['valor'].astype(float)
+        
+        df = df[df['data'] >= start_dt]
+        return df.set_index('data')['valor']
     except Exception as e:
         print(f"Erro ao buscar BCB {code}: {e}")
     return pd.Series()
@@ -627,7 +643,8 @@ def get_major_indices_history(months=18):
 def get_asset_price_history(ticker, start_date):
     """Busca o histórico de fechamento diário de um ativo."""
     try:
-        data = yf.download(ticker, start=start_date, progress=False)
+        start_str = pd.to_datetime(start_date).strftime('%Y-%m-%d')
+        data = yf.download(ticker, start=start_str, progress=False)
         if not data.empty:
             if 'Close' in data:
                 return data['Close']
@@ -678,7 +695,8 @@ def get_daily_cdi_history(start_date):
                 return sliced
             
     # 2. Fallback: Busca específica se o master falhar ou se a data for anterior a 2010
-    series = get_bcb_history(12, start_date)
+    start_str = dt.strftime('%Y-%m-%d')
+    series = get_bcb_history(12, start_str)
     if not series.empty:
         return (1 + series / 100)
     return pd.Series()
@@ -698,7 +716,8 @@ def get_usd_brl_history(start_date):
             
     # 2. Fallback: Busca específica
     try:
-        data = yf.download("BRL=X", start=start_date, progress=False)
+        start_str = dt.strftime('%Y-%m-%d')
+        data = yf.download("BRL=X", start=start_str, progress=False)
         if not data.empty:
             data.index = pd.to_datetime(data.index).tz_localize(None)
             if 'Close' in data:

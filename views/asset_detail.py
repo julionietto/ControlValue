@@ -625,6 +625,7 @@ def render_asset_detail_view(asset_data):
         first_op_date = history_df['date'].min() if not history_df.empty else None
         
         if first_op_date:
+            first_op_date_str = pd.to_datetime(first_op_date).strftime('%Y-%m-%d')
             with st.spinner("Calculando rentabilidade..."):
                 try:
                     import plotly.graph_objects as go
@@ -633,11 +634,11 @@ def render_asset_detail_view(asset_data):
                     fetch_ticker = get_crypto_ticker(ticker) if current_type == 'Cripto' else ticker
                     
                     # Buscar dados históricos
-                    price_history = svc.get_asset_price_history(fetch_ticker, first_op_date)
-                    cdi_factors = svc.get_daily_cdi_history(first_op_date)
+                    price_history = svc.get_asset_price_history(fetch_ticker, first_op_date_str)
+                    cdi_factors = svc.get_daily_cdi_history(first_op_date_str)
                     # Histórico de câmbio é necessário se a moeda do registro for USD OU se for Cripto mas o registro for em BRL (para converter o preço de mercado USD para BRL)
                     needs_usd_history = is_usd_based or (current_type == 'Cripto' and asset_data['currency'] == 'BRL')
-                    usd_history = svc.get_usd_brl_history(first_op_date) if needs_usd_history else pd.Series()
+                    usd_history = svc.get_usd_brl_history(first_op_date_str) if needs_usd_history else pd.Series()
                     
                     if price_history.empty:
                         st.warning(f"Histórico de preços não disponível para {fetch_ticker}.")

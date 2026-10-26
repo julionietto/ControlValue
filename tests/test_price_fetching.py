@@ -71,3 +71,42 @@ def test_fetch_dividend_yields(monkeypatch):
     assert abs(dys["VALE3"] - 7.92) < 1e-4
     assert "AAPL" in dys
 
+
+def test_get_bcb_history_date_types(monkeypatch):
+    """Testa se get_bcb_history aceita str, datetime.date e pd.Timestamp sem fallback para o ano atual."""
+    import datetime
+    from services import get_bcb_history
+    
+    captured_urls = []
+    
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return [
+                {"data": "15/01/2019", "valor": "0.024620"},
+                {"data": "16/01/2019", "valor": "0.024620"}
+            ]
+
+    def mock_get(url, **kwargs):
+        captured_urls.append(url)
+        return MockResponse()
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+    # 1. str YYYY-MM-DD
+    res_str = get_bcb_history(12, "2019-01-15")
+    assert "dataInicial=15/01/2019" in captured_urls[-1]
+    assert not res_str.empty
+
+    # 2. datetime.date
+    captured_urls.clear()
+    res_date = get_bcb_history(12, datetime.date(2019, 1, 15))
+    assert "dataInicial=15/01/2019" in captured_urls[-1]
+    assert not res_date.empty
+
+    # 3. pd.Timestamp
+    captured_urls.clear()
+    res_ts = get_bcb_history(12, pd.Timestamp("2019-01-15"))
+    assert "dataInicial=15/01/2019" in captured_urls[-1]
+    assert not res_ts.empty
+
