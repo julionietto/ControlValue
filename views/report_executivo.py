@@ -8,7 +8,7 @@ from components.ui import create_card
 import executive_report_service as exec_svc
 import db
 
-@st.dialog("📄 Report Executivo Inteligente & Panorama Macroeconômico", width="large")
+@st.dialog("📄 Report Executivo Inteligente & Panorama Macroeconômico", width="large", dismissible=False)
 def dialog_report_executivo():
     user_id = st.session_state.get('user_id', 1)
     username = st.session_state.get('username', 'Investidor')
