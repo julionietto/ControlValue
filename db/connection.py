@@ -207,6 +207,33 @@ def init_db():
                     tipo_operacao = 'VENDA'
                 WHERE status = 'Aberta' AND qtd_inicial IS NULL
             """)
+
+            # Migração de dados para registros legados (reconstrução de início, fim e resultado)
+            cursor.execute("""
+                UPDATE opcoes
+                SET tipo_operacao = COALESCE(tipo_operacao, 'VENDA'),
+                    qtd_inicial = COALESCE(qtd_inicial, quantidade),
+                    vl_opcao_inicial = COALESCE(vl_opcao_inicial, vl_opcao),
+                    vl_premio_inicial = ROUND((COALESCE(qtd_inicial, quantidade) * COALESCE(vl_opcao_inicial, vl_opcao))::numeric, 2),
+                    resultado = vl_premio,
+                    qtd_final = CASE
+                        WHEN ROUND((COALESCE(qtd_inicial, quantidade) * COALESCE(vl_opcao_inicial, vl_opcao))::numeric, 2) > ROUND(vl_premio::numeric, 2)
+                        THEN COALESCE(qtd_inicial, quantidade)
+                        ELSE 0
+                    END,
+                    vl_premio_final = CASE
+                        WHEN ROUND((COALESCE(qtd_inicial, quantidade) * COALESCE(vl_opcao_inicial, vl_opcao))::numeric, 2) > ROUND(vl_premio::numeric, 2)
+                        THEN ROUND((COALESCE(qtd_inicial, quantidade) * COALESCE(vl_opcao_inicial, vl_opcao) - vl_premio)::numeric, 2)
+                        ELSE 0
+                    END,
+                    vl_opcao_final = CASE
+                        WHEN ROUND((COALESCE(qtd_inicial, quantidade) * COALESCE(vl_opcao_inicial, vl_opcao))::numeric, 2) > ROUND(vl_premio::numeric, 2)
+                             AND COALESCE(qtd_inicial, quantidade) > 0
+                        THEN ROUND(((COALESCE(qtd_inicial, quantidade) * COALESCE(vl_opcao_inicial, vl_opcao) - vl_premio) / COALESCE(qtd_inicial, quantidade))::numeric, 2)
+                        ELSE 0
+                    END
+                WHERE resultado IS NULL
+            """)
     
             # Migração das colunas dt_operacao e dt_vencimento para DATE
             cursor.execute("SELECT data_type FROM information_schema.columns WHERE table_name='opcoes' AND column_name='dt_operacao'")

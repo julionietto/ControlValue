@@ -49,13 +49,19 @@ def render_derivativos_view():
         with c_o3:
             vl_op_ini = st.number_input("Vl Opção Inicial", value=float(op_data.get('vl_opcao_inicial') or op_data.get('vl_opcao') or 0), step=0.01, format="%.2f")
         with c_o4:
-            vl_premio_ini = st.number_input("Vl Prêmio Inicial", value=float(op_data.get('vl_premio_inicial') or op_data.get('vl_premio') or 0), step=0.01, format="%.2f")
+            vl_premio_ini_calc = round(qtd_inicial * vl_op_ini, 2)
+            vl_premio_ini = st.number_input("Vl Prêmio Inicial", value=float(vl_premio_ini_calc), step=0.01, format="%.2f")
         with c_o5:
             qtd_final = st.number_input("Qtd Final", value=int(op_data.get('qtd_final') or 0), step=100)
         with c_o6:
             vl_op_fin = st.number_input("Vl Opção Final", value=float(op_data.get('vl_opcao_final') or 0), step=0.01, format="%.2f")
         with c_o7:
-            vl_premio_fin_calc = qtd_final * vl_op_fin
+            saved_qtd_fin = int(op_data.get('qtd_final') or 0)
+            saved_vl_op_fin = round(float(op_data.get('vl_opcao_final') or 0), 2)
+            if qtd_final == saved_qtd_fin and round(vl_op_fin, 2) == saved_vl_op_fin and op_data.get('vl_premio_final') is not None:
+                vl_premio_fin_calc = float(op_data.get('vl_premio_final') or 0)
+            else:
+                vl_premio_fin_calc = round(qtd_final * vl_op_fin, 2)
             vl_premio_fin = st.number_input("Vl Prêmio Final", value=float(vl_premio_fin_calc), step=0.01, format="%.2f")
             
         # Cálculo de Saldo e Resultado
@@ -252,7 +258,7 @@ def render_derivativos_view():
         
         # --- FILTROS ---
         st.markdown("### Filtros")
-        fcol1, fcol2, fcol3, fcol4 = st.columns(4)
+        fcol1, fcol2, fcol3, fcol4, fcol5 = st.columns(5)
         
         with fcol1:
             ativos_opts = ["Todos"] + sorted(display_df['Ativo'].unique().tolist())
@@ -261,12 +267,16 @@ def render_derivativos_view():
             tp_opts = ["Todos"] + sorted(display_df['Tp Opção'].unique().tolist())
             filt_tp = st.selectbox("Tp Opção", tp_opts)
         with fcol3:
+            anos_raw = sorted(pd.to_datetime(display_df['Dt Operação'], format='%d/%m/%Y').dt.year.unique().tolist(), reverse=True)
+            anos_opts = ["Todos"] + [str(a) for a in anos_raw]
+            filt_ano = st.selectbox("Ano (Dt Operação)", anos_opts)
+        with fcol4:
             data_opts_raw = pd.to_datetime(display_df['Dt Vencimento'], format='%d/%m/%Y').dt.date.unique().tolist()
             data_opts_raw.sort()
             data_opts_str = [d.strftime('%d/%m/%Y') for d in data_opts_raw]
             data_opts = ["Todos"] + data_opts_str
             filt_dt = st.selectbox("Vencimento", data_opts)
-        with fcol4:
+        with fcol5:
             status_opts = ["Todos"] + sorted(display_df['Status'].unique().tolist())
             idx_status = status_opts.index("Aberta") if "Aberta" in status_opts else 0
             filt_status = st.selectbox("Status", status_opts, index=idx_status)
@@ -275,6 +285,8 @@ def render_derivativos_view():
             display_df = display_df[display_df['Ativo'] == filt_ativo]
         if filt_tp != "Todos":
             display_df = display_df[display_df['Tp Opção'] == filt_tp]
+        if filt_ano != "Todos":
+            display_df = display_df[pd.to_datetime(display_df['Dt Operação'], format='%d/%m/%Y').dt.year == int(filt_ano)]
         if filt_dt != "Todos":
             display_df = display_df[display_df['Dt Vencimento'] == filt_dt]
         if filt_status != "Todos":

@@ -1745,30 +1745,31 @@ def render_visao_geral_view():
     
         if has_options_data and tab_sinteticos:
             with tab_sinteticos:
-                # Gráficos de Dividendos Sintéticos (Vl Prêmio de Opções)
+                # Gráficos de Dividendos Sintéticos (Resultado Líquido de Opções)
                 opcoes_db = db.get_opcoes(st.session_state.user_id)
                 if not opcoes_db.empty:
                     opcoes_db['ano'] = pd.to_datetime(opcoes_db['dt_operacao']).dt.year
-                    resumo_sintetico = opcoes_db.groupby('ano')['vl_premio'].sum().reset_index()
+                    opcoes_db['resultado_liquido'] = opcoes_db['resultado'].fillna(opcoes_db['vl_premio'])
+                    resumo_sintetico = opcoes_db.groupby('ano')['resultado_liquido'].sum().reset_index()
                     resumo_sintetico['ano'] = resumo_sintetico['ano'].astype(str)
                     resumo_sintetico = resumo_sintetico.sort_values('ano', ascending=True)
                     
                     st.markdown('<h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;">💰 Evolução de Dividendos Sintéticos</h3>', unsafe_allow_html=True)
                     
-                    colors_sint = ['#EF553B' if val < 0 else '#636EFA' for val in resumo_sintetico['vl_premio']]
+                    colors_sint = ['#EF553B' if val < 0 else '#636EFA' for val in resumo_sintetico['resultado_liquido']]
                     
                     fig_sint = px.bar(
                         resumo_sintetico,
                         x='ano',
-                        y='vl_premio',
-                        title='Total Anual de Prêmios Recebidos (R$)',
+                        y='resultado_liquido',
+                        title='Resultado Líquido Anual com Opções (R$)',
                         text_auto='.2f',
-                        labels={'vl_premio': 'Total Prêmio (R$)', 'ano': 'Ano'}
+                        labels={'resultado_liquido': 'Resultado Líquido (R$)', 'ano': 'Ano'}
                     )
                     fig_sint.update_traces(marker_color=colors_sint)
                     
                     x_data_sint = np.arange(len(resumo_sintetico))
-                    y_data_sint = resumo_sintetico['vl_premio'].values
+                    y_data_sint = resumo_sintetico['resultado_liquido'].values
                     if len(x_data_sint) > 1:
                         z_sint = np.polyfit(x_data_sint, y_data_sint, 1)
                         p_sint = np.poly1d(z_sint)
