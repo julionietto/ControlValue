@@ -17,6 +17,103 @@ from utils.refresh_manager import is_market_open, get_market_status
 
 import datetime
 MANUAL_TYPES = ['Renda Fixa', 'Fundo CETIP']
+
+def get_target_class_key_for_asset(row):
+    """Mapeia o ativo para uma das 5 macroclasses de alocação de metas."""
+    a_type = row['asset_type']
+    ticker = str(row['ticker']).upper()
+    if a_type == 'ETF' and ticker in db.CRYPTO_ETFS:
+        return 'Criptos'
+    if a_type in ['Ações', 'ETF', 'Fundo CETIP']:
+        return 'Ações'
+    if a_type == 'Fiis':
+        return 'Fiis'
+    if a_type == 'Cripto':
+        return 'Criptos'
+    if a_type == 'Renda Fixa':
+        return 'Renda Fixa'
+    if a_type in ['Stocks', 'Reits']:
+        return 'Ativos Internacionais'
+    return None
+
+def compute_radar_winner(df, asset_types, user_targets, current_allocs_pct, current_total_value):
+    """
+    Calcula o ativo 'Melhor Compra' dentro de um grupo de tipos de ativos,
+    retornando também o déficit em % e em R$ da sua macroclasse em relação à meta.
+    Retorna None caso nenhum ativo seja elegível.
+    """
+    if df is None or df.empty:
+        return None
+    radar_df = df[(df['asset_type'].isin(asset_types)) & (df['quantity'] > 1e-5) & (df['current_value'] > 1e-5)].copy()
+    if radar_df.empty:
+        return None
+    radar_df = radar_df.sort_values(by='current_value', ascending=True)
+
+    def _is_row_eligible(row):
+        if row['asset_type'] not in MANUAL_TYPES:
+            if row['original_current_price'] >= row['price_ceiling']:
+                return False
+        t_key = get_target_class_key_for_asset(row)
+        if t_key:
+            t_pct = user_targets.get(t_key, 0.0)
+            c_pct = current_allocs_pct.get(t_key, 0.0)
+            return c_pct < t_pct
+        return False
+
+    radar_df['eligible'] = radar_df.apply(_is_row_eligible, axis=1)
+    if not radar_df['eligible'].any():
+        return None
+
+    winner_row = radar_df[radar_df['eligible']].iloc[0]
+    t_key = get_target_class_key_for_asset(winner_row)
+    target_pct = float(user_targets.get(t_key, 0.0))
+    current_pct = float(current_allocs_pct.get(t_key, 0.0))
+    deficit_pct = max(0.0, target_pct - current_pct)
+    deficit_brl = (deficit_pct / 100.0) * float(current_total_value)
+
+    return {
+        'ticker': format_ticker_for_display(winner_row['ticker']),
+        'raw_ticker': winner_row['ticker'],
+        'asset_type': winner_row['asset_type'],
+        'target_class': t_key,
+        'current_value': float(winner_row['current_value']),
+        'current_pct': current_pct,
+        'target_pct': target_pct,
+        'deficit_pct': deficit_pct,
+        'deficit_brl': deficit_brl
+    }
+
+def compare_radar_priorities(br_winner, us_winner):
+    """
+    Compara os vencedores dos quadros Brasil e Estados Unidos pelo maior déficit
+    financeiro (R$) para atingir a meta de alocação da classe (desempatando pelo
+    menor saldo atual em R$ do ativo).
+    Retorna ('BR' | 'US' | None, dict_detalhes).
+    """
+    if br_winner and not us_winner:
+        return 'BR', {'primary': br_winner, 'secondary': None, 'primary_region': 'Brasil', 'secondary_region': None}
+    if us_winner and not br_winner:
+        return 'US', {'primary': us_winner, 'secondary': None, 'primary_region': 'Estados Unidos', 'secondary_region': None}
+    if not br_winner and not us_winner:
+        return None, {'primary': None, 'secondary': None, 'primary_region': None, 'secondary_region': None}
+
+    # Ambos existem: compara pelo maior déficit em R$ da classe (ou menor posição atual se empate)
+    br_def = round(br_winner['deficit_brl'], 2)
+    us_def = round(us_winner['deficit_brl'], 2)
+    if br_def > us_def or (br_def == us_def and br_winner['current_value'] <= us_winner['current_value']):
+        return 'BR', {
+            'primary': br_winner,
+            'secondary': us_winner,
+            'primary_region': 'Brasil',
+            'secondary_region': 'Estados Unidos'
+        }
+    else:
+        return 'US', {
+            'primary': us_winner,
+            'secondary': br_winner,
+            'primary_region': 'Estados Unidos',
+            'secondary_region': 'Brasil'
+        }
 @st.dialog("Confirmar Exclusão", dismissible=False)
 def confirm_delete_dialog(asset_id, ticker):
     st.warning(f"Tem certeza que deseja excluir o ativo **{format_ticker_for_display(ticker)}**?")
@@ -949,18 +1046,8 @@ def render_visao_geral_view():
         # --- SEÇÃO RADAR ---
         st.markdown('<h2 style="text-align: center; color: #ffffff; margin-top: 0.5rem; margin-bottom: 1.5rem;">Balanceamento e Diversificação</h2>', unsafe_allow_html=True)
     
-        # Mapeamento do asset_type para a chave de user_targets
         def get_target_class_key(row):
-            a_type = row['asset_type']
-            ticker = row['ticker'].upper()
-            if a_type == 'ETF' and ticker in db.CRYPTO_ETFS:
-                return 'Criptos'
-            if a_type in ['Ações', 'ETF', 'Fundo CETIP']: return 'Ações'
-            if a_type == 'Fiis': return 'Fiis'
-            if a_type == 'Cripto': return 'Criptos'
-            if a_type == 'Renda Fixa': return 'Renda Fixa'
-            if a_type in ['Stocks', 'Reits']: return 'Ativos Internacionais'
-            return None
+            return get_target_class_key_for_asset(row)
 
         # Elegível se: 
         # 1. Preço atual < Preço Teto
@@ -986,8 +1073,75 @@ def render_visao_geral_view():
         if not any_eligible and not full_radar_df.empty:
             st.warning("Considere aportar em Renda Fixa ou revise os percentuais de alocação na opção de Alocação de Ativos")
 
-        def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct, show_usd=False):
-            st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 1rem;'>{title}</h3>", unsafe_allow_html=True)
+        br_types = ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP']
+        us_types = ['Stocks', 'Reits']
+        has_us_assets = not assets_df[assets_df['asset_type'].isin(us_types)].empty
+
+        br_winner = compute_radar_winner(assets_df, br_types, user_targets, current_allocs_pct, current_total_value)
+        us_winner = compute_radar_winner(assets_df, us_types, user_targets, current_allocs_pct, current_total_value) if has_us_assets else None
+        priority_region, priority_details = compare_radar_priorities(br_winner, us_winner)
+
+        is_hidden = st.session_state.get('hide_values', False)
+        def fmt_deficit_brl(val):
+            return "R$ ••••••" if is_hidden else format_brl_custom(val)
+        def fmt_deficit_pct(val):
+            return "••••••" if is_hidden else f"{val:,.2f}%".replace(".", ",")
+
+        # Banner de Desempate / Prioridade Global quando há recomendação
+        if priority_details['primary']:
+            p_win = priority_details['primary']
+            s_win = priority_details['secondary']
+            p_reg = priority_details['primary_region']
+            s_reg = priority_details['secondary_region']
+            p_def_brl = fmt_deficit_brl(p_win['deficit_brl'])
+            p_def_pct = fmt_deficit_pct(p_win['deficit_pct'])
+
+            if s_win:
+                s_def_brl = fmt_deficit_brl(s_win['deficit_brl'])
+                s_def_pct = fmt_deficit_pct(s_win['deficit_pct'])
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, rgba(0, 204, 150, 0.14) 0%, rgba(30, 58, 138, 0.25) 100%); border: 1px solid #00CC96; border-left: 5px solid #00CC96; border-radius: 10px; padding: 12px 18px; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span style="background-color: #00CC96; color: #090d16; font-weight: 800; font-size: 0.78rem; padding: 3px 8px; border-radius: 5px; text-transform: uppercase; margin-right: 8px;">🏆 Prioridade #1 do Aporte</span>
+                            <span style="color: #ffffff; font-weight: 700; font-size: 1.02rem;">{escape_html(p_win['ticker'])} ({escape_html(p_reg)} • Classe {escape_html(p_win['target_class'])})</span>
+                        </div>
+                        <div style="color: #00CC96; font-weight: 700; font-size: 0.95rem;">
+                            Déficit para a Meta: {p_def_brl} (-{p_def_pct})
+                        </div>
+                    </div>
+                    <div style="color: #a1a1aa; font-size: 0.85rem; margin-top: 6px;">
+                        💡 <b>Critério de Desempate (Brasil vs. EUA):</b> A classe <b>{escape_html(p_win['target_class'])}</b> possui maior déficit financeiro para atingir sua meta de alocação (<b>{p_def_brl}</b> / <b>-{p_def_pct}</b>) em comparação à 2ª opção <b>{escape_html(s_win['ticker'])}</b> em <b>{escape_html(s_reg)}</b> — classe <b>{escape_html(s_win['target_class'])}</b> (déficit de <b>{s_def_brl}</b> / <b>-{s_def_pct}</b>).
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        def show_radar_table(title, asset_types, df, user_targets, current_allocs_pct, show_usd=False, winner_info=None, priority_rank=None):
+            st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 0.4rem;'>{title}</h3>", unsafe_allow_html=True)
+
+            if winner_info:
+                w_def_brl = fmt_deficit_brl(winner_info['deficit_brl'])
+                w_def_pct = fmt_deficit_pct(winner_info['deficit_pct'])
+                if priority_rank == 1:
+                    badge_bg = "rgba(0, 204, 150, 0.15)"
+                    badge_border = "#00CC96"
+                    badge_color = "#00CC96"
+                    badge_label = f"🏆 1ª Prioridade: {escape_html(winner_info['ticker'])} ({escape_html(winner_info['target_class'])}) • Déficit da Classe: {w_def_brl} (-{w_def_pct})"
+                else:
+                    badge_bg = "rgba(59, 130, 246, 0.15)"
+                    badge_border = "#3b82f6"
+                    badge_color = "#60a5fa"
+                    badge_label = f"🥈 2ª Opção: {escape_html(winner_info['ticker'])} ({escape_html(winner_info['target_class'])}) • Déficit da Classe: {w_def_brl} (-{w_def_pct})"
+                st.markdown(
+                    f"<div style='text-align: center; background-color: {badge_bg}; border: 1px solid {badge_border}; color: {badge_color}; border-radius: 6px; padding: 6px 10px; font-size: 0.84rem; font-weight: 600; margin-bottom: 0.8rem;'>{badge_label}</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    "<div style='text-align: center; background-color: rgba(161, 161, 170, 0.08); border: 1px solid rgba(161, 161, 170, 0.25); color: #a1a1aa; border-radius: 6px; padding: 6px 10px; font-size: 0.84rem; margin-bottom: 0.8rem;'>⏸️ Nenhuma classe/ativo elegível neste quadro no momento</div>",
+                    unsafe_allow_html=True
+                )
+
             radar_df = df[(df['asset_type'].isin(asset_types)) & (df['quantity'] > 1e-5) & (df['current_value'] > 1e-5)].copy()
             
             if not radar_df.empty:
@@ -1008,7 +1162,6 @@ def render_visao_geral_view():
                 display_radar = pd.DataFrame()
                 display_radar['Ticker'] = radar_df['ticker'].apply(format_ticker_for_display)
                 
-                is_hidden = st.session_state.get('hide_values', False)
                 brl_col = "Valor em Real" if show_usd else "Valor do Ativo"
                 display_radar[brl_col] = radar_df['current_value'].apply(lambda x: "R$ ••••••" if is_hidden else format_brl_custom(x))
                 
@@ -1047,16 +1200,17 @@ def render_visao_geral_view():
             else:
                 st.info(f"Nenhum ativo do tipo {', '.join(asset_types)} para exibir no {title}.")
     
-        has_us_assets = not assets_df[assets_df['asset_type'].isin(['Stocks', 'Reits'])].empty
-    
+        br_rank = 1 if priority_region == 'BR' else (2 if br_winner else None)
+        us_rank = 1 if priority_region == 'US' else (2 if us_winner else None)
+
         if has_us_assets:
             col_radar1, col_radar2 = st.columns(2)
             with col_radar1:
-                show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP'], assets_df, user_targets, current_allocs_pct)
+                show_radar_table("Ativos no Brasil", br_types, assets_df, user_targets, current_allocs_pct, winner_info=br_winner, priority_rank=br_rank)
             with col_radar2:
-                show_radar_table("Ativos nos Estados Unidos", ['Stocks', 'Reits'], assets_df, user_targets, current_allocs_pct, show_usd=True)
+                show_radar_table("Ativos nos Estados Unidos", us_types, assets_df, user_targets, current_allocs_pct, show_usd=True, winner_info=us_winner, priority_rank=us_rank)
         else:
-            show_radar_table("Ativos no Brasil", ['Ações', 'Fiis', 'ETF', 'Renda Fixa', 'Fundo CETIP'], assets_df, user_targets, current_allocs_pct)
+            show_radar_table("Ativos no Brasil", br_types, assets_df, user_targets, current_allocs_pct, winner_info=br_winner, priority_rank=br_rank)
     
     
         # Gráficos

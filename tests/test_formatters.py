@@ -109,3 +109,105 @@ def test_empty_unified_df_columns():
     assert len(display_unified) == 0
 
 
+def test_radar_winner_and_priority_comparison():
+    import pandas as pd
+    from views.geral import get_target_class_key_for_asset, compute_radar_winner, compare_radar_priorities
+
+    # Test get_target_class_key_for_asset mapping
+    assert get_target_class_key_for_asset({'asset_type': 'Ações', 'ticker': 'PETR4.SA'}) == 'Ações'
+    assert get_target_class_key_for_asset({'asset_type': 'ETF', 'ticker': 'HASH11.SA'}) == 'Criptos'
+    assert get_target_class_key_for_asset({'asset_type': 'ETF', 'ticker': 'BOVA11.SA'}) == 'Ações'
+    assert get_target_class_key_for_asset({'asset_type': 'Fiis', 'ticker': 'HGLG11.SA'}) == 'Fiis'
+    assert get_target_class_key_for_asset({'asset_type': 'Renda Fixa', 'ticker': 'TESOURO SELIC'}) == 'Renda Fixa'
+    assert get_target_class_key_for_asset({'asset_type': 'Stocks', 'ticker': 'AAPL'}) == 'Ativos Internacionais'
+    assert get_target_class_key_for_asset({'asset_type': 'Reits', 'ticker': 'O'}) == 'Ativos Internacionais'
+
+    # Setup mock portfolio
+    df = pd.DataFrame([
+        {
+            'ticker': 'BBAS3.SA',
+            'asset_type': 'Ações',
+            'quantity': 100.0,
+            'current_value': 2500.0,
+            'original_current_price': 25.0,
+            'price_ceiling': 30.0
+        },
+        {
+            'ticker': 'VALE3.SA',
+            'asset_type': 'Ações',
+            'quantity': 100.0,
+            'current_value': 6000.0,
+            'original_current_price': 60.0,
+            'price_ceiling': 70.0
+        },
+        {
+            'ticker': 'AAPL',
+            'asset_type': 'Stocks',
+            'quantity': 10.0,
+            'current_value': 5000.0,
+            'original_current_price': 180.0,
+            'price_ceiling': 200.0
+        },
+        {
+            'ticker': 'O',
+            'asset_type': 'Reits',
+            'quantity': 20.0,
+            'current_value': 3000.0,
+            'original_current_price': 55.0,
+            'price_ceiling': 60.0
+        }
+    ])
+
+    user_targets = {
+        'Ações': 40.0,
+        'Fiis': 20.0,
+        'Criptos': 5.0,
+        'Renda Fixa': 15.0,
+        'Ativos Internacionais': 20.0
+    }
+    # Case 1: Ações has a 10% deficit (R$ 10.000), Ativos Internacionais has a 5% deficit (R$ 5.000)
+    current_allocs_pct = {
+        'Ações': 30.0,
+        'Fiis': 25.0,
+        'Criptos': 5.0,
+        'Renda Fixa': 25.0,
+        'Ativos Internacionais': 15.0
+    }
+    total_val = 100000.0
+
+    br_winner = compute_radar_winner(df, ['Ações', 'ETF', 'Fiis', 'Renda Fixa', 'Fundo CETIP'], user_targets, current_allocs_pct, total_val)
+    us_winner = compute_radar_winner(df, ['Stocks', 'Reits'], user_targets, current_allocs_pct, total_val)
+
+    assert br_winner is not None
+    assert br_winner['ticker'] == 'BBAS3'
+    assert br_winner['deficit_pct'] == 10.0
+    assert br_winner['deficit_brl'] == 10000.0
+
+    assert us_winner is not None
+    assert us_winner['ticker'] == 'O'  # smaller current_value than AAPL
+    assert us_winner['deficit_pct'] == 5.0
+    assert us_winner['deficit_brl'] == 5000.0
+
+    priority_region, details = compare_radar_priorities(br_winner, us_winner)
+    assert priority_region == 'BR'
+    assert details['primary']['ticker'] == 'BBAS3'
+    assert details['secondary']['ticker'] == 'O'
+
+    # Case 2: Ativos Internacionais has a larger deficit (12% = R$ 12.000) than Ações (5% = R$ 5.000)
+    current_allocs_pct_2 = {
+        'Ações': 35.0,
+        'Fiis': 25.0,
+        'Criptos': 5.0,
+        'Renda Fixa': 27.0,
+        'Ativos Internacionais': 8.0
+    }
+    br_winner_2 = compute_radar_winner(df, ['Ações', 'ETF', 'Fiis', 'Renda Fixa', 'Fundo CETIP'], user_targets, current_allocs_pct_2, total_val)
+    us_winner_2 = compute_radar_winner(df, ['Stocks', 'Reits'], user_targets, current_allocs_pct_2, total_val)
+
+    priority_region_2, details_2 = compare_radar_priorities(br_winner_2, us_winner_2)
+    assert priority_region_2 == 'US'
+    assert details_2['primary']['ticker'] == 'O'
+    assert details_2['secondary']['ticker'] == 'BBAS3'
+
+
+
