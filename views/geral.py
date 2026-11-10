@@ -1082,8 +1082,6 @@ def render_visao_geral_view():
         priority_region, priority_details = compare_radar_priorities(br_winner, us_winner)
 
         is_hidden = st.session_state.get('hide_values', False)
-        def fmt_deficit_brl(val):
-            return "R$ ••••••" if is_hidden else format_brl_custom(val)
         def fmt_deficit_pct(val):
             return "••••••" if is_hidden else f"{val:,.2f}%".replace(".", ",")
 
@@ -1093,11 +1091,9 @@ def render_visao_geral_view():
             s_win = priority_details['secondary']
             p_reg = priority_details['primary_region']
             s_reg = priority_details['secondary_region']
-            p_def_brl = fmt_deficit_brl(p_win['deficit_brl'])
             p_def_pct = fmt_deficit_pct(p_win['deficit_pct'])
 
             if s_win:
-                s_def_brl = fmt_deficit_brl(s_win['deficit_brl'])
                 s_def_pct = fmt_deficit_pct(s_win['deficit_pct'])
                 st.markdown(f"""
                 <div style="background: linear-gradient(135deg, rgba(0, 204, 150, 0.14) 0%, rgba(30, 58, 138, 0.25) 100%); border: 1px solid #00CC96; border-left: 5px solid #00CC96; border-radius: 10px; padding: 12px 18px; margin-bottom: 18px;">
@@ -1107,11 +1103,11 @@ def render_visao_geral_view():
                             <span style="color: #ffffff; font-weight: 700; font-size: 1.02rem;">{escape_html(p_win['ticker'])} ({escape_html(p_reg)} • Classe {escape_html(p_win['target_class'])})</span>
                         </div>
                         <div style="color: #00CC96; font-weight: 700; font-size: 0.95rem;">
-                            Déficit para a Meta: {p_def_brl} (-{p_def_pct})
+                            Déficit para a Meta: -{p_def_pct}
                         </div>
                     </div>
                     <div style="color: #a1a1aa; font-size: 0.85rem; margin-top: 6px;">
-                        💡 <b>Critério de Desempate (Brasil vs. EUA):</b> A classe <b>{escape_html(p_win['target_class'])}</b> possui maior déficit financeiro para atingir sua meta de alocação (<b>{p_def_brl}</b> / <b>-{p_def_pct}</b>) em comparação à 2ª opção <b>{escape_html(s_win['ticker'])}</b> em <b>{escape_html(s_reg)}</b> — classe <b>{escape_html(s_win['target_class'])}</b> (déficit de <b>{s_def_brl}</b> / <b>-{s_def_pct}</b>).
+                        💡 <b>Critério de Desempate (Brasil vs. EUA):</b> A classe <b>{escape_html(p_win['target_class'])}</b> possui maior déficit para atingir sua meta de alocação (<b>-{p_def_pct}</b>) em comparação à 2ª opção <b>{escape_html(s_win['ticker'])}</b> em <b>{escape_html(s_reg)}</b> — classe <b>{escape_html(s_win['target_class'])}</b> (déficit de <b>-{s_def_pct}</b>).
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1120,18 +1116,17 @@ def render_visao_geral_view():
             st.markdown(f"<h3 style='text-align: center; color: #ffffff; font-size: 1.2rem; margin-bottom: 0.4rem;'>{title}</h3>", unsafe_allow_html=True)
 
             if winner_info:
-                w_def_brl = fmt_deficit_brl(winner_info['deficit_brl'])
                 w_def_pct = fmt_deficit_pct(winner_info['deficit_pct'])
                 if priority_rank == 1:
                     badge_bg = "rgba(0, 204, 150, 0.15)"
                     badge_border = "#00CC96"
                     badge_color = "#00CC96"
-                    badge_label = f"🏆 1ª Prioridade: {escape_html(winner_info['ticker'])} ({escape_html(winner_info['target_class'])}) • Déficit da Classe: {w_def_brl} (-{w_def_pct})"
+                    badge_label = f"🏆 1ª Prioridade: {escape_html(winner_info['ticker'])} ({escape_html(winner_info['target_class'])}) • Déficit da Classe: -{w_def_pct}"
                 else:
                     badge_bg = "rgba(59, 130, 246, 0.15)"
                     badge_border = "#3b82f6"
                     badge_color = "#60a5fa"
-                    badge_label = f"🥈 2ª Opção: {escape_html(winner_info['ticker'])} ({escape_html(winner_info['target_class'])}) • Déficit da Classe: {w_def_brl} (-{w_def_pct})"
+                    badge_label = f"🥈 2ª Opção: {escape_html(winner_info['ticker'])} ({escape_html(winner_info['target_class'])}) • Déficit da Classe: -{w_def_pct}"
                 st.markdown(
                     f"<div style='text-align: center; background-color: {badge_bg}; border: 1px solid {badge_border}; color: {badge_color}; border-radius: 6px; padding: 6px 10px; font-size: 0.84rem; font-weight: 600; margin-bottom: 0.8rem;'>{badge_label}</div>",
                     unsafe_allow_html=True
