@@ -2,8 +2,8 @@ name: Sincronização Diária de Proventos Provisionados
 
 on:
   schedule:
-    # 21:00 UTC equivale a 18:00 no Horário de Brasília (BRT)
-    - cron: '00 21 * * *'
+    # 21:23 UTC equivale a 18:23 no Horário de Brasília (BRT) - minuto fora de pico para reduzir fila no GitHub Actions
+    - cron: '23 21 * * *'
   workflow_dispatch:
     # Permite rodar manualmente clicando no botão "Run workflow" na aba Actions
 

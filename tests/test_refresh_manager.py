@@ -52,3 +52,21 @@ def test_is_market_open_us_business_day_closed_early(mock_datetime):
     mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
     
     assert is_market_open('US') is False
+
+
+def test_get_logical_sync_date_midnight_rollover():
+    from sync_job import get_logical_sync_date
+    sp_tz = ZoneInfo("America/Sao_Paulo")
+
+    # Execução normal à noite (18:23 BRT ou 23:40 BRT do dia 16/11) -> ciclo 2026-11-16
+    assert get_logical_sync_date(datetime(2026, 11, 16, 18, 23, 0, tzinfo=sp_tz)) == "2026-11-16"
+    assert get_logical_sync_date(datetime(2026, 11, 16, 23, 40, 0, tzinfo=sp_tz)) == "2026-11-16"
+
+    # Execução atrasada pela fila do GitHub Actions após a meia-noite (00:19 BRT do dia 17/11) -> ainda pertence ao ciclo 2026-11-16
+    assert get_logical_sync_date(datetime(2026, 11, 17, 0, 19, 0, tzinfo=sp_tz)) == "2026-11-16"
+    assert get_logical_sync_date(datetime(2026, 11, 17, 5, 59, 59, tzinfo=sp_tz)) == "2026-11-16"
+
+    # Execução a partir das 06:00 BRT do dia 17/11 -> pertence ao ciclo 2026-11-17
+    assert get_logical_sync_date(datetime(2026, 11, 17, 6, 0, 0, tzinfo=sp_tz)) == "2026-11-17"
+    assert get_logical_sync_date(datetime(2026, 11, 17, 23, 40, 11, tzinfo=sp_tz)) == "2026-11-17"
+

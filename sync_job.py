@@ -1,25 +1,37 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import db
 import services as svc
+
+
+def get_logical_sync_date(dt_sp: datetime) -> str:
+    """
+    Calcula a data lógica do ciclo de sincronização diária (fuso de São Paulo).
+    Como o job é agendado para o fim da tarde/noite (18:23 BRT), caso a fila do
+    GitHub Actions atrase a execução para depois da meia-noite (entre 00:00 e 05:59 BRT),
+    a execução ainda pertence ao ciclo do dia anterior, evitando bloquear o job da noite seguinte.
+    """
+    return (dt_sp - timedelta(hours=6)).strftime('%Y-%m-%d')
+
 
 def run_sync():
     start_time = time.time()
     print("Iniciando rotina de Sincronização de Proventos Provisionados...")
     
-    # 1. Verifica fuso horário
+    # 1. Verifica fuso horário e data lógica do ciclo
     sp_tz = ZoneInfo("America/Sao_Paulo")
     now = datetime.now(sp_tz)
-    today_str = now.strftime('%Y-%m-%d')
+    today_str = get_logical_sync_date(now)
+    force_run = ("--force" in sys.argv) or (os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch")
     
-    print(f"Data atual (SP): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Data/hora atual (SP): {now.strftime('%Y-%m-%d %H:%M:%S')} | Data lógica do ciclo: {today_str}")
 
-    # 2. Verifica se já rodou com sucesso hoje
-    if db.check_sync_completed_today(today_str):
-        print(f"A sincronização já foi concluída com sucesso hoje ({today_str}). Abortando.")
+    # 2. Verifica se já rodou com sucesso no ciclo de hoje (exceto quando forçado manualmente)
+    if not force_run and db.check_sync_completed_today(today_str):
+        print(f"A sincronização já foi concluída com sucesso para o ciclo ({today_str}). Abortando.")
         return
 
     # Limpa a tabela de proventos provisionados antes de iniciar a nova coleta (Full Sync)
