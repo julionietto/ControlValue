@@ -332,6 +332,20 @@ def init_db():
         ''')
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_saldo_diario_user_data ON historico_saldo_diario (user_id, data DESC)")
 
+        # Tabela de Ativos e Preços de Referência (Importação pelo Admin)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ativos_precos (
+                id SERIAL PRIMARY KEY,
+                codigo TEXT NOT NULL,
+                preco_teto REAL DEFAULT 0,
+                preco_justo REAL DEFAULT 0,
+                mercado TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_ativos_precos_codigo ON ativos_precos (codigo)")
+
         conn.commit()
 
 def _query_to_df(query, conn, params=None):

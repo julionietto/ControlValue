@@ -10,6 +10,17 @@ from datetime import datetime
 def render_admin_view():
     render_top_header("🛡️ Painel de Administração", "Gestão de usuários do sistema.")
     
+    # Barra de Navegação Interna do Painel Admin
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        st.button("👥 Gestão de Usuários", type="primary", use_container_width=True, disabled=True)
+    with col_nav2:
+        if st.button("📥 Importar Ativos e Preços", use_container_width=True):
+            st.session_state.admin_view = "importar_ativos_precos"
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
     # 1. Metricas
     users_df = pd.DataFrame(db.get_all_users())
     if not users_df.empty:

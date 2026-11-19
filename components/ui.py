@@ -62,6 +62,14 @@ def render_profile_popover():
     label_suffix = "\u200b" * (pop_ctrl % 2)
     with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True, key=f"user_popover_{pop_ctrl}"):
             if st.session_state.get('is_admin', False):
+                if st.button("Gestão de Usuários", use_container_width=True):
+                    st.session_state.admin_view = "usuarios"
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
+                if st.button("Importar Ativos e Preços", use_container_width=True):
+                    st.session_state.admin_view = "importar_ativos_precos"
+                    st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
+                    st.rerun()
                 if st.button("Seu Perfil", use_container_width=True):
                     st.session_state.trigger_dialog_perfil = True
                     st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
@@ -174,12 +182,14 @@ def render_top_header(title, subtitle):
             )
             if st.button("home", key="home_logo_btn", help="Voltar para Visão Geral"):
                 st.session_state.navigation_tab = "Visão Geral"
+                st.session_state.admin_view = "usuarios"
                 st.session_state.viewing_history = None
                 st.rerun()
         else:
             # Fallback se a imagem não for encontrada
             if st.button("🏠", key="home_fallback_btn", help="Voltar para Visão Geral"):
                 st.session_state.navigation_tab = "Visão Geral"
+                st.session_state.admin_view = "usuarios"
                 st.session_state.viewing_history = None
                 st.rerun()
                 

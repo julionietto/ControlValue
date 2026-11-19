@@ -145,7 +145,12 @@ try:
     # ADMIN DASHBOARD
     # ==============================
     if st.session_state.get('is_admin', False):
-        render_admin_view()
+        admin_view = st.session_state.get('admin_view', 'usuarios')
+        if admin_view == 'importar_ativos_precos':
+            from views.admin_import_precos import render_admin_import_precos_view
+            render_admin_import_precos_view()
+        else:
+            render_admin_view()
         st.stop()
 
     # Verifica e cria dashboard do próximo ano (Automated Task)

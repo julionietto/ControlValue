@@ -95,3 +95,10 @@ from db.crescimento import (
     record_daily_balance,
     get_pico_historico
 )
+
+from db.ativos_precos import (
+    import_ativos_precos_csv,
+    get_all_ativos_precos,
+    delete_all_ativos_precos
+)
+
