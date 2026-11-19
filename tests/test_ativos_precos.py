@@ -95,3 +95,55 @@ def test_import_ativos_precos_csv_validations():
     success_inv, msg_inv, _ = import_ativos_precos_csv(csv_invalid, replace_existing=False)
     assert success_inv is False
     assert "colunas" in msg_inv.lower()
+
+
+def test_update_user_assets_from_ativos_precos():
+    from db.ativos_precos import update_user_assets_from_ativos_precos, delete_all_ativos_precos
+    from db.connection import get_db_connection
+
+    # Setup test asset in assets table
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Ensure a test asset exists for user 9999
+        cursor.execute("DELETE FROM assets WHERE user_id = 9999;")
+        cursor.execute("""
+            INSERT INTO assets (ticker, asset_type, quantity, average_price, price_ceiling, fair_value, user_id, currency)
+            VALUES ('BBAS3.SA', 'Ações', 10, 25.0, 21.0, 28.0, 9999, 'BRL'),
+                   ('AAPL', 'Stocks', 5, 150.0, 100.0, 120.0, 9999, 'BRL');
+        """)
+        conn.commit()
+
+    # Import reference prices
+    csv_ref = """Código,Preço Teto,Preço Justo,Mercado
+BBAS3,16.00,20.00,Brasil
+AAPL,180.00,210.00,EUA
+"""
+    import_ativos_precos_csv(csv_ref, replace_existing=True)
+
+    success, msg, total_upd, users_upd = update_user_assets_from_ativos_precos()
+    assert success is True
+    assert total_upd >= 2
+    assert users_upd >= 1
+
+    # Verify updated values in database
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT ticker, price_ceiling, fair_value, currency FROM assets WHERE user_id = 9999 ORDER BY ticker ASC;")
+        rows = cursor.fetchall()
+        
+        # Cleanup
+        cursor.execute("DELETE FROM assets WHERE user_id = 9999;")
+        conn.commit()
+
+    assets_dict = {r[0]: {'ceiling': float(r[1]), 'fair': float(r[2]), 'currency': r[3]} for r in rows}
+    
+    assert 'BBAS3.SA' in assets_dict
+    assert assets_dict['BBAS3.SA']['ceiling'] == 16.00
+    assert assets_dict['BBAS3.SA']['fair'] == 20.00
+    assert assets_dict['BBAS3.SA']['currency'] == 'BRL'
+
+    assert 'AAPL' in assets_dict
+    assert assets_dict['AAPL']['ceiling'] == 180.00
+    assert assets_dict['AAPL']['fair'] == 210.00
+    assert assets_dict['AAPL']['currency'] == 'USD'
+

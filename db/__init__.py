@@ -99,6 +99,7 @@ from db.crescimento import (
 from db.ativos_precos import (
     import_ativos_precos_csv,
     get_all_ativos_precos,
-    delete_all_ativos_precos
+    delete_all_ativos_precos,
+    update_user_assets_from_ativos_precos
 )
 

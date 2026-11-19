@@ -62,7 +62,7 @@ def render_profile_popover():
     label_suffix = "\u200b" * (pop_ctrl % 2)
     with st.popover(f"👤 {username_display}{label_suffix}", use_container_width=True, key=f"user_popover_{pop_ctrl}"):
             if st.session_state.get('is_admin', False):
-                if st.button("Gestão de Usuários", use_container_width=True):
+                if st.button("Painel de Usuários", use_container_width=True):
                     st.session_state.admin_view = "usuarios"
                     st.session_state.pop_ctrl = st.session_state.get('pop_ctrl', 0) + 1
                     st.rerun()

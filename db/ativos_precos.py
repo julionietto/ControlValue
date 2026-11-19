@@ -193,3 +193,46 @@ def delete_all_ativos_precos():
         cursor.execute("DELETE FROM ativos_precos;")
         conn.commit()
         clear_db_cache()
+
+
+def update_user_assets_from_ativos_precos():
+    """
+    Atualiza Preço Teto, Preço Justo e Moeda de todos os ativos de todos os usuários
+    cadastrados no sistema com base na tabela ativos_precos.
+    Retorna (sucesso: bool, mensagem: str, total_atualizados: int, total_usuarios: int).
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # 1. Verifica se existem registros na tabela de referência
+        cursor.execute("SELECT COUNT(*) FROM ativos_precos;")
+        total_ref = cursor.fetchone()[0] or 0
+        if total_ref == 0:
+            return False, "A tabela de Ativos e Preços está vazia. Importe um arquivo CSV antes de atualizar.", 0, 0
+
+        # 2. Executa a atualização de todos os ativos de todos os usuários
+        query = """
+            UPDATE assets a
+            SET 
+                price_ceiling = ap.preco_teto,
+                fair_value = ap.preco_justo,
+                currency = CASE 
+                    WHEN UPPER(TRIM(ap.mercado)) IN ('EUA', 'USA', 'US', 'ESTADOS UNIDOS') THEN 'USD'
+                    WHEN UPPER(TRIM(ap.mercado)) IN ('BRASIL', 'BR', 'BRAZIL') THEN 'BRL'
+                    WHEN a.asset_type IN ('Stocks', 'Reits') THEN 'USD'
+                    ELSE 'BRL'
+                END
+            FROM ativos_precos ap
+            WHERE UPPER(TRIM(REPLACE(a.ticker, '.SA', ''))) = UPPER(TRIM(REPLACE(ap.codigo, '.SA', '')))
+            RETURNING a.id, a.user_id;
+        """
+        cursor.execute(query)
+        updated_rows = cursor.fetchall()
+        conn.commit()
+        clear_db_cache()
+
+        total_updated = len(updated_rows)
+        affected_users = len(set(r[1] for r in updated_rows)) if updated_rows else 0
+        
+        return True, f"Atualização realizada com sucesso! {total_updated} ativo(s) atualizado(s) em {affected_users} usuário(s).", total_updated, affected_users
+

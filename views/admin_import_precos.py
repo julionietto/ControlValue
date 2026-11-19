@@ -13,18 +13,7 @@ def render_admin_import_precos_view():
     """Tela de Importação e Consulta de Ativos e Preços para o Administrador."""
     render_top_header("📥 Importar Ativos e Preços", "Upload e consulta de Preço Teto, Preço Justo e Mercado.")
 
-    # 1. Barra de Navegação Interna do Painel Admin
-    col_nav1, col_nav2 = st.columns(2)
-    with col_nav1:
-        if st.button("👥 Gestão de Usuários", use_container_width=True):
-            st.session_state.admin_view = "usuarios"
-            st.rerun()
-    with col_nav2:
-        st.button("📥 Importar Ativos e Preços", type="primary", use_container_width=True, disabled=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # 2. Área de Upload do Arquivo CSV
+    # 1. Área de Upload do Arquivo CSV
     with st.expander("📂 Carregar Novo Arquivo CSV do Dispositivo", expanded=True):
         st.markdown("""
         Selecione o arquivo CSV contendo os dados de ativos e preços de referência para o sistema.
@@ -72,7 +61,7 @@ def render_admin_import_precos_view():
 
     st.markdown("<hr style='border-color: #27272a; margin: 20px 0;'>", unsafe_allow_html=True)
 
-    # 3. Exibição dos Registros Importados na Tela
+    # 2. Exibição dos Registros Importados na Tela
     st.markdown("### 📋 Registros Importados no Banco de Dados")
 
     df = db.get_all_ativos_precos()
@@ -152,21 +141,81 @@ def render_admin_import_precos_view():
 
     # Formata colunas de exibição
     display_df['Código'] = display_df['codigo']
-    display_df['Preço Teto (R$)'] = display_df['preco_teto'].apply(lambda v: f"{v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    display_df['Preço Justo (R$)'] = display_df['preco_justo'].apply(lambda v: f"{v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+    display_df['Preço Teto'] = display_df['preco_teto'].apply(lambda v: f"{v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+    display_df['Preço Justo'] = display_df['preco_justo'].apply(lambda v: f"{v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
     display_df['Mercado'] = display_df['mercado']
 
-    cols_to_show = ['Código', 'Preço Teto (R$)', 'Preço Justo (R$)', 'Mercado', 'Atualizado em']
+    cols_to_show = ['Código', 'Preço Teto', 'Preço Justo', 'Mercado', 'Atualizado em']
     final_table = display_df[cols_to_show].reset_index(drop=True)
 
     st.caption(f"Exibindo **{len(final_table)}** de **{total_ativos}** ativos cadastrados:")
     st.dataframe(final_table, hide_index=True, use_container_width=True)
 
-    # Botão de segurança para limpar a tabela
-    with st.expander("⚠️ Opções Avançadas"):
-        st.warning("Deseja apagar todos os registros da tabela de Ativos e Preços?")
-        if st.button("🗑️ Limpar Todos os Registros da Tabela", type="secondary"):
-            db.delete_all_ativos_precos()
-            st.success("Tabela de ativos e preços limpa com sucesso.")
-            time.sleep(1)
-            st.rerun()
+    # 3. Funcionalidade: Atualizar Preços de Ativos (Botão Vermelho com Confirmação)
+    st.markdown("<hr style='border-color: #27272a; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("### ⚡ Atualizar Preços de Ativos dos Usuários")
+    st.markdown("""
+    Clique no botão abaixo para aplicar os valores de **Preço Teto** e **Preço Justo** aos ativos de 
+    **todos os usuários registrados no sistema**. 
+    Para ativos com **Mercado = EUA**, a moeda de referência será definida como **USD** ($), e para **Mercado = Brasil**, como **BRL** (R$).
+    """)
+
+    # Estilização CSS do Botão com Preenchimento Vermelho
+    st.markdown("""
+    <style>
+    div.st-key-btn_atualizar_precos_ativos button {
+        background-color: #dc2626 !important;
+        background: #dc2626 !important;
+        color: #ffffff !important;
+        border: 1px solid #b91c1c !important;
+        font-weight: 700 !important;
+        font-size: 1.05rem !important;
+        padding: 0.65rem 1.25rem !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    div.st-key-btn_atualizar_precos_ativos button:hover {
+        background-color: #b91c1c !important;
+        background: #b91c1c !important;
+        border-color: #991b1b !important;
+        box-shadow: 0 0 14px rgba(220, 38, 38, 0.5) !important;
+        transform: translateY(-1px) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if st.button("Atualizar Preços de Ativos", key="btn_atualizar_precos_ativos", use_container_width=True):
+        st.session_state.trigger_confirm_update_precos = True
+
+    @st.dialog("⚠️ Confirmação: Atualizar Preços de Ativos", dismissible=False)
+    def dialog_confirm_update_precos():
+        st.warning("⚠️ **Atenção: Ação Global no Sistema**")
+        st.markdown(f"""
+        Você está prestes a atualizar as carteiras de **todos os usuários** cadastrados no sistema com base na tabela atual de **Ativos e Preços** ({len(df)} ativos cadastrados).
+        
+        - O **Preço Teto** e o **Preço Justo** serão atualizados para cada ativo correspondente em todas as carteiras.
+        - Para ativos com **Mercado = EUA**, a moeda de referência será definida como **USD** ($).
+        - Para ativos com **Mercado = Brasil**, a moeda de referência será definida como **BRL** (R$).
+        
+        Deseja confirmar e prosseguir com a atualização?
+        """)
+        
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Sim, Atualizar Preços", type="primary", use_container_width=True):
+                with st.spinner("Atualizando registros de todos os usuários no banco de dados..."):
+                    success, msg, total_upd, users_upd = db.update_user_assets_from_ativos_precos()
+                st.session_state.trigger_confirm_update_precos = False
+                if success:
+                    st.success(f"✅ {msg}")
+                    time.sleep(2)
+                    st.rerun()
+                else:
+                    st.error(f"❌ {msg}")
+        with col_c2:
+            if st.button("Não, Cancelar", use_container_width=True):
+                st.session_state.trigger_confirm_update_precos = False
+                st.rerun()
+
+    if st.session_state.get('trigger_confirm_update_precos', False):
+        dialog_confirm_update_precos()
