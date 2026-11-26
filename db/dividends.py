@@ -182,8 +182,6 @@ def get_total_proventos_all_tickers(user_id):
         return {row[0]: float(row[1]) for row in rows if row[1] is not None}
 
 def check_and_create_next_year_dashboard(user_id):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
     sp_tz = ZoneInfo("America/Sao_Paulo")
     now = datetime.now(sp_tz)
     if now.month == 12:
@@ -193,15 +191,44 @@ def check_and_create_next_year_dashboard(user_id):
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM proventos WHERE ano = %s AND user_id = %s LIMIT 1", (next_year, user_id))
             if cursor.fetchone() is None:
-                cursor.execute("SELECT DISTINCT ticker FROM proventos WHERE ano = %s AND user_id = %s", (current_year, user_id))
-                tickers = cursor.fetchall()
-                if not tickers:
-                    cursor.execute("SELECT DISTINCT ticker FROM assets WHERE user_id = %s", (user_id,))
-                    tickers = cursor.fetchall()
-                for row in tickers:
-                    cursor.execute("INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, 1, %s, 0.0, %s)", (next_year, row[0], user_id))
+                # 1. Ativos em carteira com quantidade > 0
+                cursor.execute(
+                    "SELECT DISTINCT ticker FROM assets WHERE user_id = %s AND quantity > 0",
+                    (user_id,)
+                )
+                active_tickers = {row[0].strip().upper() for row in cursor.fetchall() if row[0]}
+
+                # 2. Exceção: ativos com quantity <= 0 (ex: vendidos no ano corrente),
+                # mas que possuam provento provisionado com pagamento previsto para o próximo ano
+                # e quantidade elegível na data_com > 0 (ou provento registrado)
+                cursor.execute("""
+                    SELECT DISTINCT COALESCE(a.ticker, p.ticker)
+                    FROM proventos_provisionados p
+                    LEFT JOIN assets a ON (a.ticker = p.ticker OR REPLACE(a.ticker, '.SA', '') = REPLACE(p.ticker, '.SA', '')) AND a.user_id = p.user_id
+                    LEFT JOIN asset_history h ON a.id IS NOT NULL AND h.asset_id = a.id AND CAST(h.date AS DATE) <= CAST(p.data_com AS DATE)
+                    WHERE p.user_id = %s
+                      AND EXTRACT(YEAR FROM CAST(p.data_pagamento AS DATE)) = %s
+                    GROUP BY p.id, p.ticker, a.ticker, p.valor
+                    HAVING COALESCE(SUM(h.quantity), 0) > 0 OR (COUNT(h.id) = 0 AND p.valor > 0)
+                """, (user_id, next_year))
+                provisioned_tickers = {row[0].strip().upper() for row in cursor.fetchall() if row[0]}
+
+                eligible_tickers = sorted(list(active_tickers | provisioned_tickers))
+                for ticker in eligible_tickers:
+                    cursor.execute(
+                        "INSERT INTO proventos (ano, mes, ticker, valor, user_id) VALUES (%s, 1, %s, 0.0, %s)",
+                        (next_year, ticker, user_id)
+                    )
                 conn.commit()
                 clear_db_cache()
+
+                # Sincroniza imediatamente proventos provisionados para o novo ano se houver
+                try:
+                    sync_proventos_from_provisionados(user_id)
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Aviso ao sincronizar proventos provisionados após criar dashboard do próximo ano: {e}")
+
                 return True
     return False
 
