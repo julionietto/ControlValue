@@ -147,3 +147,28 @@ AAPL,180.00,210.00,EUA
     assert assets_dict['AAPL']['fair'] == 210.00
     assert assets_dict['AAPL']['currency'] == 'USD'
 
+
+def test_update_ativo_preco():
+    from db.ativos_precos import update_ativo_preco, get_all_ativos_precos
+    
+    # Import reference asset
+    csv_ref = "Código,Preço Teto,Preço Justo,Mercado\nITSA4,10.00,12.00,Brasil\n"
+    import_ativos_precos_csv(csv_ref, replace_existing=True)
+
+    df_before = get_all_ativos_precos()
+    assert len(df_before) == 1
+    row = df_before.iloc[0]
+    assert row['codigo'] == 'ITSA4'
+    assert float(row['preco_teto']) == 10.00
+    assert float(row['preco_justo']) == 12.00
+
+    # Update using update_ativo_preco
+    res = update_ativo_preco(int(row['id']), 11.50, 14.25)
+    assert res is True
+
+    df_after = get_all_ativos_precos()
+    row_updated = df_after.iloc[0]
+    assert float(row_updated['preco_teto']) == 11.50
+    assert float(row_updated['preco_justo']) == 14.25
+
+

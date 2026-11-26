@@ -148,8 +148,60 @@ def render_admin_import_precos_view():
     cols_to_show = ['Código', 'Preço Teto', 'Preço Justo', 'Mercado', 'Atualizado em']
     final_table = display_df[cols_to_show].reset_index(drop=True)
 
-    st.caption(f"Exibindo **{len(final_table)}** de **{total_ativos}** ativos cadastrados:")
-    st.dataframe(final_table, hide_index=True, use_container_width=True)
+    st.caption(f"Exibindo **{len(final_table)}** de **{total_ativos}** ativos cadastrados. 💡 *Clique em uma linha para editar Preço Teto e Preço Justo.*")
+    
+    table_key_str = f"ativos_precos_table_{st.session_state.get('table_key_precos', 0)}"
+    st.dataframe(
+        final_table,
+        hide_index=True,
+        use_container_width=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key=table_key_str
+    )
+
+    # Verificação de seleção para abrir o diálogo de edição
+    table_state = st.session_state.get(table_key_str)
+    if table_state and table_state.selection.rows and not st.session_state.get('trigger_confirm_update_precos', False):
+        row_idx = table_state.selection.rows[0]
+        if row_idx < len(filtered_df):
+            item_row = filtered_df.iloc[row_idx]
+
+            @st.dialog("Editar Ativo e Preços", dismissible=False)
+            def dialog_edit_ativo_preco(item):
+                st.markdown(f"### ✏️ Ativo: `{escape_html(item['codigo'])}`")
+                st.write(f"**Mercado:** {escape_html(item['mercado'])}")
+
+                edit_teto = st.number_input(
+                    "Preço Teto",
+                    value=float(item['preco_teto']) if pd.notna(item['preco_teto']) else 0.0,
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f"
+                )
+                edit_justo = st.number_input(
+                    "Preço Justo",
+                    value=float(item['preco_justo']) if pd.notna(item['preco_justo']) else 0.0,
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f"
+                )
+
+                st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+                col_save, col_cancel = st.columns(2)
+                with col_save:
+                    if st.button("SALVAR", type="primary", use_container_width=True):
+                        db.update_ativo_preco(int(item['id']), edit_teto, edit_justo)
+                        st.session_state.table_key_precos = st.session_state.get('table_key_precos', 0) + 1
+                        st.success("Registro atualizado com sucesso!")
+                        time.sleep(0.8)
+                        st.rerun()
+                with col_cancel:
+                    if st.button("CANCELAR", use_container_width=True):
+                        st.session_state.table_key_precos = st.session_state.get('table_key_precos', 0) + 1
+                        st.rerun()
+
+            dialog_edit_ativo_preco(item_row)
 
     # 3. Funcionalidade: Atualizar Preços de Ativos (Botão Vermelho com Confirmação)
     st.markdown("<hr style='border-color: #27272a; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)

@@ -195,6 +195,22 @@ def delete_all_ativos_precos():
         clear_db_cache()
 
 
+def update_ativo_preco(item_id: int, preco_teto: float, preco_justo: float) -> bool:
+    """Atualiza o Preço Teto e Preço Justo de um registro específico na tabela ativos_precos."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE ativos_precos
+            SET preco_teto = %s,
+                preco_justo = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s;
+        """, (float(preco_teto), float(preco_justo), int(item_id)))
+        conn.commit()
+        clear_db_cache()
+        return True
+
+
 def update_user_assets_from_ativos_precos():
     """
     Atualiza Preço Teto, Preço Justo e Moeda de todos os ativos de todos os usuários
